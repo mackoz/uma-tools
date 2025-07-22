@@ -264,9 +264,38 @@ body {
 }
 
 #expandBtn {
+	background: linear-gradient(#99db44,#70be12);
+	border: 2px solid rgb(170,221,154);
+	border-radius: 6px;
 	cursor: default;
 	float: right;
-	margin-right: 10px;
+	height: 34px;
+	margin: 8px 10px 0 0;
+	position: relative;
+	width: 34px;
+}
+
+#expandBtn::after {
+	border-right: 2px solid white;
+	border-top: 2px solid white;
+	content: "";
+	display: block;
+	height: 15px;
+	left: 4px;
+	position: absolute;
+	top: 8px;
+	transform: rotate(45deg);
+	width: 15px;
+}
+
+.selected > #expandBtn {
+	background: linear-gradient(#fff,#e4e3ea);
+	border: 2px solid rgb(216,217,220);
+}
+
+.selected > #expandBtn::after {
+	border-right: 2px solid rgb(121,64,22);
+	border-top: 2px solid rgb(121,64,22);
 }
 
 #umaOverlay {

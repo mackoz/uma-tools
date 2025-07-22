@@ -441,7 +441,11 @@ function App(props) {
 	const [uma2, setUma2] = useState(() => new HorseState());
 
 	const [{mode, currentIdx, expanded}, updateUiState] = useReducer(nextUiState, DEFAULT_UI_STATE);
-	function toggleExpand(e: Event) { e.stopPropagation(); updateUiState(UiStateMsg.ToggleExpand); }
+	function toggleExpand(e: Event) {
+		e.stopPropagation();
+		postEvent('toggleExpand', {expand: !expanded});
+		updateUiState(UiStateMsg.ToggleExpand);
+	}
 
 	const [worker1, worker2] = [1,2].map(_ => useMemo(() => {
 		const w = new Worker('./simulator.worker.js');
@@ -486,10 +490,12 @@ function App(props) {
 	}
 
 	function copyUmaToRight() {
+		postEvent('copyUma', {direction: 'to-right'})
 		setUma2(uma1);
 	}
 
 	function copyUmaToLeft() {
+		postEvent('copyUma', {direction: 'to-left'})
 		setUma1(uma2);
 	}
 
@@ -584,7 +590,7 @@ function App(props) {
 	const umaTabs = (
 		<Fragment>
 			<div class={`umaTab ${currentIdx == 0 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}>Umamusume 1</div>
-			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2<div id="expandBtn" title="Expand panel" onClick={toggleExpand}>⟩</div></div>}
+			{mode == Mode.Compare && <div class={`umaTab ${currentIdx == 1 ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}>Umamusume 2<div id="expandBtn" title="Expand panel" onClick={toggleExpand} /></div>}
 		</Fragment>
 	);
 
