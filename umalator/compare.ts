@@ -57,8 +57,9 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			const skillSet = persp == Perspective.Self ? selfSet : otherSet;
 			if (id != 'asitame' && id != 'staminasyoubu') {
 				const ar = skillSet.get(id);  // activation record
-				ar[ar.length-1][1] = s.pos;  // assume the first activation of a skill ends before the second one starts
-											 // don't think there's any way around this but it should always be true
+				// assume the first activation of a skill ends before the second one starts
+				// don't think there's any way around this but it should always be true
+				ar[ar.length-1][1] = Math.min(s.pos, course.distance);
 			}
 		};
 	}
