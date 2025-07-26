@@ -20,8 +20,8 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 			.numUmas(racedef.numUmas);
 	}
 	const compare = standard.fork();
-	standard.horse(uma1);
-	compare.horse(uma2);
+	standard.horse(uma1.toJS());
+	compare.horse(uma2.toJS());
 	// ensure skills common to the two umas are added in the same order regardless of what additional skills they have
 	// this is important to make sure the rng for their activations is synced
 	const common = uma1.skills.intersect(uma2.skills).toArray().sort((a,b) => +a - +b);
