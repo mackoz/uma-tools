@@ -682,6 +682,7 @@ function App(props) {
 							<h2>2025-07-26</h2>
 							<ul>
 								<li>Update Tokyo 2400m course to remove the hill at the start to match a game bug where skills do not activate on that hill or the hill does not exist</li>
+								<li>Implement per-section int roll target speed modifier</li>
 								<li>Simulate skills with the post_number condition more accurately</li>
 								<li>Implement the random_lot condition (used by Lucky Seven/Super Lucky Seven)</li>
 								<li>Minor UI improvements</li>
