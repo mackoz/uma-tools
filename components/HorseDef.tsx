@@ -122,7 +122,7 @@ export function UmaSelector(props) {
 function rankForStat(x: number) {
 	if (x > 1200) {
 		// over 1200 letter (eg UG) goes up by 100 and minor number (eg UG8) goes up by 10
-		return 18 + Math.floor((x - 1200) / 100) * 10 + Math.floor(x / 10) % 10;
+		return Math.min(18 + Math.floor((x - 1200) / 100) * 10 + Math.floor(x / 10) % 10, 97);
 	} else if (x >= 1150) {
 		return 17; // SS+
 	} else if (x >= 1100) {
@@ -140,7 +140,7 @@ export function Stat(props) {
 	return (
 		<div class="horseParam">
 			<img src={`/uma-tools/icons/statusrank/ui_statusrank_${(100 + rankForStat(props.value)).toString().slice(1)}.png`} />
-			<input type="number" min="1" max="1999" value={props.value} tabindex={props.tabindex} onInput={(e) => props.change(+e.currentTarget.value)} />
+			<input type="number" min="1" max="2000" value={props.value} tabindex={props.tabindex} onInput={(e) => props.change(+e.currentTarget.value)} />
 		</div>
 	);
 }
