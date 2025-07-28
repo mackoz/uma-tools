@@ -55,8 +55,17 @@ export function IntroText(props) {
 					<li>Motivation is always assumed to be maximum</li>
 				</ul>
 				By and large it should be highly accurate. It has been battle-tested on the JP server for several years.
-			</details>			<details>
+			</details>
+			<details>
 				<summary>Changelog</summary>
+				<section>
+					<h2>2025-07-28</h2>
+					<ul>
+						<li>Add caveats section describing the implementation of the simulator</li>
+						<li>Allow selecting debuff skills multiple times to simulate multiple debuffers</li>
+						<li>Minor UI improvements</li>
+					</ul>
+				</section>
 				<section>
 					<h2>2025-07-26</h2>
 					<ul>
