@@ -374,14 +374,3 @@ body {
 .basinnChartPopover .expandedSkill {
 	width: 345px;
 }
-
-#changelog {
-	font-size: 14px;
-	height: 500px;
-	margin-left: 80px;
-	overflow: auto;
-}
-
-#sourcelinks {
-	font-size: 12px;
-}

@@ -20,6 +20,8 @@ import { getActivateableSkills, getNullRow, runBasinnChart, BasinnChart } from '
 
 import { initTelemetry, postEvent } from './telemetry';
 
+import { IntroText } from './IntroText';
+
 import skilldata from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skill_meta from '../skill_meta.json';
@@ -675,70 +677,7 @@ function App(props) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane">
-					<section id="changelog">
-						<h1>Changelog</h1>
-						<section>
-							<h2>2025-07-26</h2>
-							<ul>
-								<li>Update Tokyo 2400m course to remove the hill at the start to match a game bug where skills do not activate on that hill or the hill does not exist</li>
-								<li>Implement per-section int roll target speed modifier</li>
-								<li>Simulate skills with the post_number condition more accurately</li>
-								<li>Implement the random_lot condition (used by Lucky Seven/Super Lucky Seven)</li>
-								<li>Minor UI improvements</li>
-							</ul>
-						</section>
-						<section>
-							<h2>2025-07-21</h2>
-							<ul>
-								<li>Update game data</li>
-								<li>Implement debuff skills</li>
-								<li>
-									<details>
-										<summary>Fix the implementation of skills with the corner_random condition to be more accurate to mechanics of the global release</summary>
-										Primarily affects Swinging Maestro/Corner Recovery, Professor of Curvature/Corner Adept, and the strategy/distance corner skills
-									</details>
-								</li>
-								<li>Fix an issue where skills weren't displayed on the chart if they were still active at the end of a simulation run</li>
-								<li>Added changelog</li>
-								<li>Minor UI fixes</li>
-							</ul>
-						</section>
-						<section>
-							<h2>2025-07-17</h2>
-							<ul>
-								<li>Run simulations in a background thread for responsiveness</li>
-								<li>
-									<details>
-										<summary>Major improvements to the skill chart mode</summary>
-										<ul>
-											<li>Click rows in the skill efficacy table to show that run on the course chart</li>
-											<li>Radio buttons in table headers to select the statistic displayed on the course chart</li>
-											<li>Show a popup with skill information and length histogram when clicking icons in the skill efficacy table</li>
-											<li>Double-click rows on the skill efficacy table to add them to the simulated uma musume</li>
-										</ul>
-									</details>
-								</li>
-								<li>Changes to the skill chart mode to feel more responsive</li>
-							</ul>
-						</section>
-						<section>
-							<h2>2025-07-16</h2>
-							<ul>
-								<li>Initial implementation of the skill chart mode</li>
-							</ul>
-						</section>
-						<section>
-							<h2>2025-07-13</h2>
-							<ul>
-								<li>Initial release of the global version</li>
-								<li>Miscellaneous UI improvements</li>
-								<li>Bug fixes</li>
-							</ul>
-						</section>
-					</section>
-					<footer id="sourcelinks">
-						Source code: <a href="https://github.com/alpha123/uma-skill-tools">simulator</a>, <a href="https://github.com/alpha123/uma-tools">UI</a>
-					</footer>
+					<IntroText />
 				</div>
 			</div>
 		);
