@@ -15,6 +15,10 @@ import skills from '../uma-skill-tools/data/skill_data.json';
 import skillnames from '../uma-skill-tools/data/skillnames.json';
 import skill_meta from '../skill_meta.json';
 
+function skilldata(id: string) {
+	return skills[id.split('-')[0]];
+}
+
 function skillmeta(id: string) {
 	// handle the fake skills (e.g., variations of Sirius unique) inserted by make_skill_data with ids like 100701-1
 	return skill_meta[id.split('-')[0]];
@@ -183,11 +187,11 @@ const filterOps = Object.freeze({
 
 const parsedConditions = {};
 Object.keys(skills).forEach(id => {
-	parsedConditions[id] = skills[id].alternatives.map(ef => Parser.parse(Parser.tokenize(ef.condition)));
+	parsedConditions[id] = skilldata(id).alternatives.map(ef => Parser.parse(Parser.tokenize(ef.condition)));
 });
 
 function matchRarity(id, testRarity) {
-	const r = skills[id].rarity;
+	const r = skilldata(id).rarity;
 	switch (testRarity) {
 	case 'white':
 		return r == SkillRarity.White && id[0] != '9';
@@ -208,9 +212,9 @@ const classnames = Object.freeze(['', 'skill-white', 'skill-gold', 'skill-unique
 
 export function Skill(props) {
 	return (
-		<div class={`skill ${classnames[skills[props.id].rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
+		<div class={`skill ${classnames[skilldata(props.id).rarity]} ${props.selected ? 'selected' : ''}`} data-skillid={props.id}>
 			<img class="skillIcon" src={`/uma-tools/icons/${skillmeta(props.id).iconId}.png`} /> 
-			<span class="skillName"><Text id={`skillnames.${props.id}`} /></span>
+			<span class="skillName"><Text id={`skillnames.${props.id.split('-')[0]}`} /></span>
 			{props.dismissable && <span class="skillDismiss">✕</span>}
 		</div>
 	);
@@ -381,14 +385,14 @@ const formatEffect = Object.freeze({
 });
 
 export function ExpandedSkillDetails(props) {
-	const skill = skills[props.id];
+	const skill = skilldata(props.id);
 	const lang = useLanguage();
 	return (
 		<IntlProvider definition={lang == 'ja' ? STRINGS_ja : STRINGS_en}>
 			<div class={`expandedSkill ${classnames[skill.rarity]}`} data-skillid={props.id}>
 				<div class="expandedSkillHeader">
 					<img class="skillIcon" src={`/uma-tools/icons/${skillmeta(props.id).iconId}.png`} />
-					<span class="skillName"><Text id={`skillnames.${props.id}`} /></span>
+					<span class="skillName"><Text id={`skillnames.${props.id.split('-')[0]}`} /></span>
 					{props.dismissable && <span class="skillDismiss">✕</span>}
 				</div>
 				<div class="skillDetails">
@@ -396,7 +400,7 @@ export function ExpandedSkillDetails(props) {
 						<Text id="skilldetails.id" />
 						{props.id}
 					</div>
-					{skills[props.id].alternatives.map(alt =>
+					{skilldata(props.id).alternatives.map(alt =>
 						<div class="skillDetailsSection">
 							{alt.precondition.length > 0 && <Fragment>
 								<Text id="skilldetails.preconditions" />
@@ -464,7 +468,7 @@ const groups_filters = Object.freeze({
 
 function textSearch(id: string, searchText: string, searchConditions: boolean) {
 	const needle = searchText.toUpperCase();
-	if (skillnames[id].some(s => s.toUpperCase().indexOf(needle) > -1)) {
+	if (skillnames[id.split('-')[0]].some(s => s.toUpperCase().indexOf(needle) > -1)) {
 		return 1;
 	} else if (searchConditions) {
 		let op = null;
@@ -501,19 +505,40 @@ export function SkillList(props) {
 			searchInput.current.select();
 		}
 	}, [props.isOpen]);
-	
-	const selectedMap = new Map(Array.from(props.selected).map(id => [skillmeta(id).groupId, id]));
+
+	// allow selecting debuffs multiple times to simulate multiple debuffers
+	// TODO would like a slightly nicer/more general solution for this
+	// (iconId 3xxxx is the debuff icons)
+	const selectedMap = new Map(
+		Array.from(props.selected)
+			.filter(id => skillmeta(id).iconId[0] != '3')
+			.map(id => [skillmeta(id).groupId, id])
+	);
 
 	function toggleSelected(e) {
 		const se = e.target.closest('div.skill');
 		if (se == null) return;
 		e.stopPropagation();
-		const id = se.dataset.skillid;
+		let id = se.dataset.skillid;
 		const groupId = skillmeta(id).groupId;
-		const old = selectedMap.get(groupId) == id;
 		const newSelected = new Set(selectedMap.values());
+		// TODO nasty: increment a fake counter for every debuff skill added with the same id
+		const counts = new Map();
+		Array.from(props.selected).forEach(id => {
+			id = id.split('-')[0];
+			if (counts.has(id)) {
+				const n = counts.get(id);
+				newSelected.add(id + '-' + n)
+				counts.set(id, n + 1)
+			} else {
+				newSelected.add(id);
+				counts.set(id, 1);
+			}
+		});
 		if (selectedMap.has(groupId)) {
 			newSelected.delete(selectedMap.get(groupId));
+		} else if (skillmeta(id).iconId[0] == '3') {
+			id += counts.has(id) ? '-' + counts.get(id) : '';
 		}
 		newSelected.add(id);
 		props.setSelected(newSelected);

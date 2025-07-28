@@ -28,12 +28,12 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 	const commonIdx = (id) => { let i = common.indexOf(id); return i > -1 ? i : common.length; };
 	const sort = (a,b) => commonIdx(a) - commonIdx(b) || +a - +b;
 	uma1.skills.toArray().sort(sort).forEach(id => {
-		standard.addSkill(id, Perspective.Self);
-		compare.addSkill(id, Perspective.Other);
+		standard.addSkill(id.split('-')[0], Perspective.Self);
+		compare.addSkill(id.split('-')[0], Perspective.Other);
 	});
 	uma2.skills.toArray().sort(sort).forEach(id => {
-		compare.addSkill(id, Perspective.Self);
-		standard.addSkill(id, Perspective.Other);
+		compare.addSkill(id.split('-')[0], Perspective.Self);
+		standard.addSkill(id.split('-')[0], Perspective.Other);
 	});
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();

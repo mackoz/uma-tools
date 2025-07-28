@@ -14,7 +14,10 @@ import './HorseDef.css';
 import umas from '../umas.json';
 import icons from '../icons.json';
 import skills from '../uma-skill-tools/data/skill_data.json';
-import skill_meta from '../skill_meta.json';
+
+function skilldata(id: string) {
+	return skills[id.split('-')[0]];
+}
 
 const umaAltIds = Object.keys(umas).flatMap(id => Object.keys(umas[id].outfits));
 const umaNamesForSearch = {};
@@ -200,10 +203,10 @@ export function StrategySelect(props) {
 	);
 }
 
-const nonUniqueSkills = Object.keys(skills).filter(id => skills[id].rarity < 3 || skills[id].rarity > 5);
+const nonUniqueSkills = Object.keys(skills).filter(id => skilldata(id).rarity < 3 || skilldata(id).rarity > 5);
 
 function assertIsSkill(sid: string): asserts sid is keyof typeof skills {
-	console.assert(skills[sid] != null);
+	console.assert(skilldata(sid) != null);
 }
 
 function uniqueSkillForUma(oid: typeof umaAltIds[number]): keyof typeof skills {
@@ -231,7 +234,7 @@ export function HorseDef(props) {
 	}
 
 	const umaId = state.outfitId;
-	const selectableSkills = useMemo(() => nonUniqueSkills.filter(id => skills[id].rarity != 6 || id.startsWith(umaId)), [umaId]);
+	const selectableSkills = useMemo(() => nonUniqueSkills.filter(id => skilldata(id).rarity != 6 || id.startsWith(umaId)), [umaId]);
 
 	function setter(prop: keyof HorseState) {
 		return (x) => setState(state.set(prop, x));
@@ -239,7 +242,7 @@ export function HorseDef(props) {
 	const setSkills = setter('skills');
 
 	function setUma(id) {
-		let newSkills = state.skills.filter(id => skills[id].rarity < 3);
+		let newSkills = state.skills.filter(id => skilldata(id).rarity < 3);
 		if (id) newSkills = newSkills.add(uniqueSkillForUma(id));
 		setState(
 			state.set('outfitId', id)
