@@ -16,7 +16,6 @@ import { HorseState, SkillSet } from '../components/HorseDefTypes';
 import { HorseDef, horseDefTabs } from '../components/HorseDef';
 import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
 
-import { runComparison } from './compare';
 import { getActivateableSkills, getNullRow, runBasinnChart, BasinnChart } from './BasinnChart';
 
 import { initTelemetry, postEvent } from './telemetry';
