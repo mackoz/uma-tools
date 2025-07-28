@@ -76,7 +76,6 @@ export function UmaSelector(props) {
 	}
 
 	function handleInput(e) {
-		const q = e.target.value;
 		search(e.target.value);
 	}
 
@@ -95,6 +94,11 @@ export function UmaSelector(props) {
 		}
 	}
 
+	function handleBlur(e) {
+		if (e.target.value.length == 0) props.select('');
+		setOpen(false);
+	}
+
 	return (
 		<div class="umaSelector">
 			<div class="umaSelectorIconsBox" onClick={focus}>
@@ -103,7 +107,7 @@ export function UmaSelector(props) {
 			</div>
 			<div class="umaEpithet"><span>{props.value && u.outfits[props.value]}</span></div>
 			<div class="umaSelectWrapper">
-				<input type="text" class="umaSelectInput" value={query.input} tabindex={props.tabindex} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} ref={input} />
+				<input type="text" class="umaSelectInput" value={query.input} tabindex={props.tabindex} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={() => setOpen(true)} onBlur={handleBlur} ref={input} />
 				<ul class={`umaSuggestions ${open ? 'open' : ''}`} onMouseDown={handleClick} ref={suggestionsContainer}>
 					{query.suggestions.map((oid, i) => {
 						const uid = oid.slice(0,4);
@@ -235,9 +239,11 @@ export function HorseDef(props) {
 	const setSkills = setter('skills');
 
 	function setUma(id) {
+		let newSkills = state.skills.filter(id => skills[id].rarity < 3);
+		if (id) newSkills = newSkills.add(uniqueSkillForUma(id));
 		setState(
 			state.set('outfitId', id)
-				.set('skills', state.skills.filter(id => skills[id].rarity < 3).add(uniqueSkillForUma(id)))
+				.set('skills', newSkills)
 		);
 	}
 

@@ -51,7 +51,7 @@ i assume theres some kind of event for this
 this is oddly difficult, especially because i don't want the captions to also scroll so can't just wrap it in a div
 css table behavior is rather strange to me
 ** DONE race time selector
-** TODO revert to mob by deleting uma name
+** DONE revert to mob by deleting uma name
 ** DONE text search for skill picker
 ** DONE presets for CM/LOH
 i.e. course, ground type, weather, etc
