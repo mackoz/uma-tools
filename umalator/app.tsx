@@ -351,6 +351,7 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 const enum EventType { CM, LOH }
 
 const presets = [
+	{type: EventType.CM, date: '2025-09', courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, Time: Time.Midday},
 	{type: EventType.LOH, date: '2025-08', courseId: 10105, season: Season.Summer, Time: Time.Midday},
 	{type: EventType.CM, date: '2025-07-25', courseId: 10906, ground: GroundCondition.Yielding, weather: Weather.Cloudy, season: Season.Summer, time: Time.Midday},
 	{type: EventType.CM, date: '2025-06-21', courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
