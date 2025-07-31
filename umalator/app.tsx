@@ -33,7 +33,7 @@ function skillmeta(id: string) {
 
 import './app.css';
 
-const DEFAULT_COURSE_ID = CC_GLOBAL ? 10606 : 10906;
+const DEFAULT_COURSE_ID = CC_GLOBAL ? 10606 : 10807;
 const DEFAULT_SAMPLES = 500;
 
 function id(x) { return x; }
