@@ -17,7 +17,7 @@ const mockAssertFn = debug ? 'console.assert' : 'function(){}';
 const mockAssert = {
 	name: 'mockAssert',
 	setup(build) {
-		build.onResolve({filter: /^assert$/}, args => ({
+		build.onResolve({filter: /^node:assert$/}, args => ({
 			path: args.path, namespace: 'mockAssert-ns'
 		}));
 		build.onLoad({filter: /.*/, namespace: 'mockAssert-ns'}, () => ({
