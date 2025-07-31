@@ -50,7 +50,10 @@ export function UmaSelector(props) {
 		const uname = umas[oid.slice(0,4)].name[1];
 		search(uname);
 		setActiveIdx(-1);
-		input.current && input.current.blur();
+		if (input.current != null) {
+			input.current.value = uname;
+			input.current.blur();
+		}
 	}
 
 	function focus() {
