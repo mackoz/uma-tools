@@ -4,17 +4,17 @@ import * as path from 'node:path';
 import * as http from 'node:http';
 import { fileURLToPath } from 'node:url';
 
-import { program } from 'commander';
+import { program, Option } from 'commander';
 
 program
 	.option('--debug')
-	.option('--serve [port]', 'run development server on [port]', 8000);
+	.addOption(new Option('--serve [port]', 'run development server on [port]').preset(8000).implies({debug: true}));
 
 program.parse();
 const options = program.opts();
 const port = options.serve;
 const serve = port != null;
-const debug = !!options.debug || serve;
+const debug = !!options.debug;
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(dirname, '..', '..');
@@ -57,7 +57,7 @@ const redirectTable = {
 	}
 };
 
-const ctx = await esbuild.context({
+const buildOptions = {
 	entryPoints: [{in: '../umalator/app.tsx', out: 'bundle'}, '../umalator/simulator.worker.ts'],
 	bundle: true,
 	minify: !debug,
@@ -66,7 +66,7 @@ const ctx = await esbuild.context({
 	define: {CC_DEBUG: debug.toString(), CC_GLOBAL: 'true'},
 	external: ['*.ttf'],
 	plugins: [redirectData, mockAssert, redirectTable]
-});
+};
 
 const MIME_TYPES = {
 	'.html': 'text/html; charset=UTF-8',
@@ -83,20 +83,25 @@ const MIME_TYPES = {
 
 const ARTIFACTS = ['bundle.js', 'bundle.css', 'simulator.worker.js'];
 
-function runServer(port) {
+function runServer(ctx, port) {
 	const requestCount = new Map(ARTIFACTS.map(f => [f, 0]));
 	let buildCount = 0;
 	let output = null;
+	// client makes two requests for simulator.worker.js, avoid rebuilding on the second one
+	let workerState = 0;
 	http.createServer(async (req, res) => {
 		const url = req.url.endsWith('/') ? req.url + 'index.html' : req.url;
 		const filename = path.basename(url);
 		if (ARTIFACTS.indexOf(filename) > -1) {
-			const requestN = requestCount.get(filename) + 1;
+			const requestN = requestCount.get(filename) + (filename == 'simulator.worker.js' ? (workerState = +!workerState) : 1);
 			requestCount.set(filename, requestN);
 			if (requestN != buildCount) {
 				buildCount += 1;
 				console.log(`rebuilding ... => ${buildCount}`);
-				await ctx.cancel();
+				// NOTE: i feel like we should call ctx.cancel() here in case the previous build is running,
+				// but doing so causes the rebuild to not pick up new changes for some reason? slightly confused,
+				// perhaps using the API wrong
+				//await ctx.cancel();
 				output = new Promise(async resolve => {
 					const result = await ctx.rebuild();
 					resolve(new Map(result.outputFiles.map(o => [path.basename(o.path), o.contents])));
@@ -116,7 +121,7 @@ function runServer(port) {
 				res.writeHead(200, {'Content-type': MIME_TYPES[path.extname(filename)] || 'application/octet-stream'});
 				fs.createReadStream(fp).pipe(res);
 			} else {
-				console.log(`GET ${req.url} 404 not found`)
+				console.log(`GET ${req.url} 404 Not Found`)
 				res.writeHead(404).end();
 			}
 		}
@@ -124,8 +129,9 @@ function runServer(port) {
 }
 
 if (serve) {
-	runServer(port);
+	const ctx = await esbuild.context(buildOptions);
+	runServer(ctx, port);
 	console.log(`Serving on http://[::]:${port}/ ...`);
 } else {
-	await ctx.rebuild();
+	await esbuild.build(buildOptions);
 }

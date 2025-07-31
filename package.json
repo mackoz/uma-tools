@@ -7,6 +7,7 @@
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
+    "commander": "^13.1.0",
     "esbuild": "^0.19.5"
   },
   "dependencies": {
