@@ -33,6 +33,16 @@ body {
 	margin-left: 35px;
 }
 
+#seedWrapper {
+	display: flex;
+	width: 177px;
+}
+
+#seed {
+	flex: 1 1 auto;
+	width: 130px;
+}
+
 #run {
 	background: none;
 	border: 1px solid rgb(148, 150, 189);
@@ -332,6 +342,7 @@ body {
 	border: 2px solid rgb(181, 174, 187);
 	border-radius: 8px;
 	height: 60px;
+	line-height: 60px;
 	position: relative;
 	width: 60px;
 }

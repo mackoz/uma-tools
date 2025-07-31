@@ -724,7 +724,7 @@ function App(props) {
 						<label for="nsamples">Samples:</label>
 						<input type="number" id="nsamples" min="1" max="10000" value={nsamples} onInput={(e) => setSamples(+e.currentTarget.value)} />
 						<label for="seed">Seed:</label>
-						<div style="display:flex">
+						<div id="seedWrapper">
 							<input type="number" id="seed" value={seed} onInput={(e) => setSeed(+e.currentTarget.value)} />
 							<button title="Randomize seed" onClick={() => setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)}>🎲</button>
 						</div>
