@@ -492,13 +492,19 @@ function App(props) {
 	}
 
 	function copyUmaToRight() {
-		postEvent('copyUma', {direction: 'to-right'})
+		postEvent('copyUma', {direction: 'to-right'});
 		setUma2(uma1);
 	}
 
 	function copyUmaToLeft() {
-		postEvent('copyUma', {direction: 'to-left'})
+		postEvent('copyUma', {direction: 'to-left'});
 		setUma1(uma2);
+	}
+
+	function swapUmas() {
+		postEvent('copyUma', {direction: 'swap'});
+		setUma1(uma2);
+		setUma2(uma1);
 	}
 
 	const strings = {skillnames: {}, tracknames: TRACKNAMES_en};
@@ -748,8 +754,9 @@ function App(props) {
 					</div>
 					{expanded &&
 						<div id="copyUmaButtons">
-							<div id="copyUmaToRight" onClick={copyUmaToRight} />
-							<div id="copyUmaToLeft" onClick={copyUmaToLeft} />
+							<div id="copyUmaToRight" title="Copy uma 1 to uma 2" onClick={copyUmaToRight} />
+							<div id="copyUmaToLeft" title="Copy uma 2 to uma 1" onClick={copyUmaToLeft} />
+							<div id="swapUmas" title="Swap umas" onClick={swapUmas}>⮂</div>
 						</div>}
 					{mode == Mode.Compare && <div class={!expanded && currentIdx == 1 ? 'selected' : ''}>
 						<HorseDef key={uma2.outfitId} state={uma2} setState={setUma2} courseDistance={course.distance} tabstart={() => 4 + horseDefTabs()}>

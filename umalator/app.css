@@ -358,6 +358,16 @@ body {
 	transform: rotate(-135deg) translate(-15px,0);
 }
 
+#swapUmas {
+	color: rgb(121, 64, 22);
+	font-size: 36px;
+	text-align: center;
+}
+
+#swapUmas::after {
+	display: none !important;
+}
+
 .basinnChartPopover {
 	background: white;
 	border: 2px solid rgb(181, 174, 187);
