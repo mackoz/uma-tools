@@ -35,6 +35,7 @@ import './app.css';
 
 const DEFAULT_COURSE_ID = CC_GLOBAL ? 10606 : 10807;
 const DEFAULT_SAMPLES = 500;
+const DEFAULT_SEED = 2615953739;
 
 function id(x) { return x; }
 
@@ -247,10 +248,11 @@ function racedefToParams({mood, ground, weather, season, time, grade}: RaceParam
 	};
 }
 
-async function serialize(courseId: number, nsamples: number, usePosKeep: boolean, racedef: RaceParams, uma1: HorseState, uma2: HorseState) {
+async function serialize(courseId: number, nsamples: number, seed: number, usePosKeep: boolean, racedef: RaceParams, uma1: HorseState, uma2: HorseState) {
 	const json = JSON.stringify({
 		courseId,
 		nsamples,
+		seed,
 		usePosKeep,
 		racedef: racedef.toJS(),
 		uma1: uma1.toJS(),
@@ -297,6 +299,7 @@ async function deserialize(hash) {
 				return {
 					courseId: o.courseId,
 					nsamples: o.nsamples,
+					seed: o.seed || DEFAULT_SEED,  // field added later, could be undefined when loading state from existing links
 					usePosKeep: o.usePosKeep,
 					racedef: new RaceParams(o.racedef),
 					uma1: new HorseState(o.uma1).set('skills', SkillSet(o.uma1.skills)),
@@ -306,6 +309,7 @@ async function deserialize(hash) {
 				return {
 					courseId: DEFAULT_COURSE_ID,
 					nsamples: DEFAULT_SAMPLES,
+					seed: DEFAULT_SEED,
 					usePosKeep: true,
 					racedef: new RaceParams(),
 					uma1: new HorseState(),
@@ -414,6 +418,7 @@ function App(props) {
 	const [skillsOpen, setSkillsOpen] = useState(false);
 	const [racedef, setRaceDef] = useState(() => new RaceParams());
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
+	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [usePosKeep, togglePosKeep] = useReducer((b,_) => !b, true);
 	const [showHp, toggleShowHp] = useReducer((b,_) => !b, false);
 	const [{courseId, results, runData, chartData, displaying}, setSimState] = useReducer(updateResultsState, EMPTY_RESULTS_STATE);
@@ -470,6 +475,7 @@ function App(props) {
 			deserialize(window.location.hash.slice(1)).then(o => {
 				setCourseId(o.courseId);
 				setSamples(o.nsamples);
+				setSeed(o.seed);
 				if (o.usePosKeep != usePosKeep) togglePosKeep(0);
 				setRaceDef(o.racedef);
 				setUma1(o.uma1);
@@ -485,7 +491,7 @@ function App(props) {
 
 	function copyStateUrl(e) {
 		e.preventDefault();
-		serialize(courseId, nsamples, usePosKeep, racedef, uma1, uma2).then(hash => {
+		serialize(courseId, nsamples, seed, usePosKeep, racedef, uma1, uma2).then(hash => {
 			const url = window.location.protocol + '//' + window.location.host + window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
 		});
@@ -521,7 +527,7 @@ function App(props) {
 				racedef: racedefToParams(racedef),
 				uma1: uma1.toJS(),
 				uma2: uma2.toJS(),
-				options: {usePosKeep}
+				options: {seed, usePosKeep}
 			}
 		});
 	}
@@ -537,8 +543,8 @@ function App(props) {
 		const skills2 = skills.slice(Math.floor(skills.length/2));
 		updateTableData('reset');
 		updateTableData(filler);
-		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, options: {usePosKeep}}});
-		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, options: {usePosKeep}}});
+		worker1.postMessage({msg: 'chart', data: {skills: skills1, course, racedef: params, uma, options: {seed, usePosKeep}}});
+		worker2.postMessage({msg: 'chart', data: {skills: skills2, course, racedef: params, uma, options: {seed, usePosKeep}}});
 	}
 
 	function basinnChartSelection(skillId) {
@@ -717,6 +723,11 @@ function App(props) {
 						</fieldset>
 						<label for="nsamples">Samples:</label>
 						<input type="number" id="nsamples" min="1" max="10000" value={nsamples} onInput={(e) => setSamples(+e.currentTarget.value)} />
+						<label for="seed">Seed:</label>
+						<div style="display:flex">
+							<input type="number" id="seed" value={seed} onInput={(e) => setSeed(+e.currentTarget.value)} />
+							<button title="Randomize seed" onClick={() => setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)}>🎲</button>
+						</div>
 						<div>
 							<label for="poskeep">Simulate pos keep</label>
 							<input type="checkbox" id="poskeep" checked={usePosKeep} onClick={togglePosKeep} />

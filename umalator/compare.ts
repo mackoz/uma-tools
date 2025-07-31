@@ -7,7 +7,7 @@ import { HorseState } from '../components/HorseDefTypes';
 
 export function runComparison(nsamples: number, course: CourseData, racedef: RaceParameters, uma1: HorseState, uma2: HorseState, options) {
 	const standard = new RaceSolverBuilder(nsamples)
-		.seed(2615953739)
+		.seed(options.seed)
 		.course(course)
 		.mood(racedef.mood)
 		.ground(racedef.groundCondition)
