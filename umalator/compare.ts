@@ -119,7 +119,7 @@ export function runComparison(nsamples: number, course: CourseData, racedef: Rac
 		// this is not in itself a problem, but it would overestimate the difference if for example a skill
 		// continues past the end of the course. i feel like there are probably some other situations where it would
 		// be inaccurate also. if this happens we have to swap them around and run it again.
-		if (s2.pos < pos1) {
+		if (s2.pos < pos1 || isNaN(pos1)) {
 			[b,a] = [a,b];
 			[bi,ai] = [ai,bi];
 			sign *= -1;
