@@ -18,12 +18,6 @@ export function IntroText(props) {
 					</li>
 					<li>
 						<details>
-							<summary>Course data is based on the first anniversary patch</summary>
-							This is unfortunate but they changed the format that hills were stored in significantly and the simulator can't use the old format. Most of the courses should be unchanged but it's possible there are some slight divergences.
-						</details>
-					</li>
-					<li>
-						<details>
 							<summary>Downhill speed-up mode is not implemented</summary>
 							Relevant for stamina calculation since downhills save you a pretty good amount of HP on average. Consider the reported HP consumption to be worst-case currently. Minimal if any effect on skill efficacy.
 						</details>
@@ -59,6 +53,14 @@ export function IntroText(props) {
 			<details>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2025-08-17</h2>
+					<ul>
+						<li><strong>Fix to use proper data for hills from the current global version instead of an approximation using data from a later patch</strong> (thanks to <a href="https://github.com/mikumifa">mikumifa</a>)</li>
+						<li>Update game data</li>
+						<li>Fix a bug where very low stamina on long courses could cause the simulator to freeze</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2025-07-28</h2>
 					<ul>
 						<li>Add caveats section describing the implementation of the simulator</li>
@@ -84,7 +86,7 @@ export function IntroText(props) {
 						<li>
 							<details>
 								<summary>Fix the implementation of skills with the corner_random condition to be more accurate to mechanics of the global release</summary>
-																																											   Primarily affects Swinging Maestro/Corner Recovery, Professor of Curvature/Corner Adept, and the strategy/distance corner skills
+								Primarily affects Swinging Maestro/Corner Recovery, Professor of Curvature/Corner Adept, and the strategy/distance corner skills
 							</details>
 						</li>
 						<li>Fix an issue where skills weren't displayed on the chart if they were still active at the end of a simulation run</li>
