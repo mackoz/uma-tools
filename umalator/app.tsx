@@ -590,7 +590,7 @@ function App(props) {
 		{stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.7)'}
 	];
 	const skillActivations = chartData == null ? [] : chartData.sk.flatMap((a,i) => {
-		return a.keys().flatMap(id => {
+		return Array.from(a.keys()).flatMap(id => {
 			if (NO_SHOW.indexOf(skillmeta(id).iconId) > -1) return [];
 			else return a.get(id).map(ar => ({
 				type: RegionDisplayType.Textbox,
@@ -598,7 +598,7 @@ function App(props) {
 				text: skillnames[id][0],
 				regions: [{start: ar[0], end: ar[1]}]
 			}));
-		}).toArray();
+		});
 	});
 
 	const umaTabs = (
