@@ -468,7 +468,7 @@ const groups_filters = Object.freeze({
 
 function textSearch(id: string, searchText: string, searchConditions: boolean) {
 	const needle = searchText.toUpperCase();
-	if (skillnames[id.split('-')[0]].some(s => s.toUpperCase().indexOf(needle) > -1)) {
+	if ((skillnames[id.split('-')[0]] || []).some(s => s.toUpperCase().indexOf(needle) > -1)) {
 		return 1;
 	} else if (searchConditions) {
 		let op = null;
