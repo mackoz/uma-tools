@@ -346,7 +346,7 @@ export function RaceTrack(props) {
 							break;
 						}
 					}
-					state.rungs[i].push(r);
+					state.rungs[i % 10].push(r);
 					const y = 90 - 10 * i;
 					return (
 						<svg class="textbox" x={x+'%'} y={y+'%'} width={w+'%'} height="10%">
