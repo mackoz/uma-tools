@@ -33,9 +33,47 @@ function skillmeta(id: string) {
 
 import './app.css';
 
-const DEFAULT_COURSE_ID = CC_GLOBAL ? 10606 : 10807;
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
+
+class RaceParams extends Record({
+	mood: 2 as Mood,
+	ground: GroundCondition.Good,
+	weather: Weather.Sunny,
+	season: Season.Spring,
+	time: Time.Midday,
+	grade: Grade.G1
+}) {}
+
+const enum EventType { CM, LOH }
+
+const presets = (CC_GLOBAL ? [
+	{type: EventType.CM, date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.CM, date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
+] : [
+	{type: EventType.LOH, date: '2025-11', courseId: 11502, season: Season.Autumn, time: Time.Midday},
+	{type: EventType.CM, date: '2025-10', courseId: 10302, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
+	{type: EventType.CM, date: '2025-09-22', courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{type: EventType.LOH, date: '2025-08', courseId: 10105, season: Season.Summer, Time: Time.Midday},
+	{type: EventType.CM, date: '2025-07-25', courseId: 10906, ground: GroundCondition.Yielding, weather: Weather.Cloudy, season: Season.Summer, time: Time.Midday},
+	{type: EventType.CM, date: '2025-06-21', courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
+])
+	.map(def => ({
+		type: def.type,
+		date: new Date(def.date),
+		courseId: def.courseId,
+		racedef: new RaceParams({
+			mood: 2 as Mood,
+			ground: def.type == EventType.CM ? def.ground : GroundCondition.Good,
+			weather: def.type == EventType.CM ? def.weather : Weather.Sunny,
+			season: def.season,
+			time: def.time,
+			grade: Grade.G1
+		})
+	}))
+	.sort((a,b) => +b.date - +a.date);
+
+const DEFAULT_COURSE_ID = presets[presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1].courseId;
 
 function id(x) { return x; }
 
@@ -221,15 +259,6 @@ const NO_SHOW = Object.freeze([
 	'20061', '20062', '20066'
 ]);
 
-class RaceParams extends Record({
-	mood: 2 as Mood,
-	ground: GroundCondition.Good,
-	weather: Weather.Sunny,
-	season: Season.Spring,
-	time: Time.Midday,
-	grade: Grade.G1
-}) {}
-
 const ORDER_RANGE_FOR_STRATEGY = Object.freeze({
 	'Nige': [1,1],
 	'Senkou': [2,4],
@@ -352,34 +381,8 @@ function updateResultsState(state: typeof EMPTY_RESULTS_STATE, o: number | strin
 	}
 }
 
-const enum EventType { CM, LOH }
-
-const presets = [
-	{type: EventType.CM, date: '2025-09', courseId: 10807, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Sunny, Time: Time.Midday},
-	{type: EventType.LOH, date: '2025-08', courseId: 10105, season: Season.Summer, Time: Time.Midday},
-	{type: EventType.CM, date: '2025-07-25', courseId: 10906, ground: GroundCondition.Yielding, weather: Weather.Cloudy, season: Season.Summer, time: Time.Midday},
-	{type: EventType.CM, date: '2025-06-21', courseId: 10606, ground: GroundCondition.Good, weather: Weather.Sunny, season: Season.Spring, time: Time.Midday}
-]
-	.map(def => ({
-		type: def.type,
-		date: new Date(def.date),
-		courseId: def.courseId,
-		racedef: new RaceParams({
-			mood: 2 as Mood,
-			ground: def.type == EventType.CM ? def.ground : GroundCondition.Good,
-			weather: def.type == EventType.CM ? def.weather : Weather.Sunny,
-			season: def.season,
-			time: def.time,
-			grade: Grade.G1
-		})
-	}))
-	.sort((a,b) => +b.date - +a.date);
-
 function RacePresets(props) {
 	const id = useId();
-	if (CC_GLOBAL) {
-		return <Fragment></Fragment>;
-	}
 	return (
 		<Fragment>
 			<label for={id}>Preset:</label>
@@ -742,7 +745,7 @@ function App(props) {
 							: <button id="run" onClick={doBasinnChart} tabindex={1}>RUN</button>
 						}
 						<a href="#" onClick={copyStateUrl}>Copy link</a>
-							<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
+						<RacePresets set={(courseId, racedef) => { setCourseId(courseId); setRaceDef(racedef); }} />
 					</div>
 					<div id="buttonsRow">
 						<TrackSelect key={courseId} courseid={courseId} setCourseid={setCourseId} tabindex={2} />
