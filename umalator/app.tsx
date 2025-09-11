@@ -655,7 +655,7 @@ function App(props) {
 									<tr>
 										<th>{skillnames[id][0]}</th>
 										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
-									</tr>)).toArray()}
+									</tr>))}
 							</tbody>}
 					</table>
 					<table>
@@ -671,7 +671,7 @@ function App(props) {
 									<tr>
 										<th>{skillnames[id][0]}</th>
 										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
-									</tr>)).toArray()}
+									</tr>))}
 							</tbody>}
 					</table>
 				</div>
