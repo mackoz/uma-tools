@@ -651,7 +651,7 @@ function App(props) {
 						</tbody>
 						{chartData.sk[0].size > 0 &&
 							<tbody>
-								{chartData.sk[0].entries().map(([id,ars]) => ars.flatMap(pos =>
+								{Array.from(chartData.sk[0].entries()).map(([id,ars]) => ars.flatMap(pos =>
 									<tr>
 										<th>{skillnames[id][0]}</th>
 										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
@@ -667,7 +667,7 @@ function App(props) {
 						</tbody>
 						{chartData.sk[1].size > 0 &&
 							<tbody>
-								{chartData.sk[1].entries().map(([id,ars]) => ars.flatMap(pos =>
+								{Array.from(chartData.sk[1].entries()).map(([id,ars]) => ars.flatMap(pos =>
 									<tr>
 										<th>{skillnames[id][0]}</th>
 										<td>{`${pos[0].toFixed(2)} m – ${pos[1].toFixed(2)} m`}</td>
