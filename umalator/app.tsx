@@ -48,6 +48,7 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
+	{type: EventType.CM, date: '2025-10', courseId: 10602, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{type: EventType.CM, date: '2025-09', courseId: 10811, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{type: EventType.CM, date: '2025-08', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday}
 ] : [
@@ -73,7 +74,7 @@ const presets = (CC_GLOBAL ? [
 	}))
 	.sort((a,b) => +b.date - +a.date);
 
-const DEFAULT_COURSE_ID = presets[presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1].courseId;
+const DEFAULT_COURSE_ID = presets[Math.max(presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1, 0)].courseId;
 
 function id(x) { return x; }
 
