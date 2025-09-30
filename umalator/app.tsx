@@ -74,7 +74,8 @@ const presets = (CC_GLOBAL ? [
 	}))
 	.sort((a,b) => +b.date - +a.date);
 
-const DEFAULT_COURSE_ID = presets[Math.max(presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1, 0)].courseId;
+const DEFAULT_PRESET = presets[Math.max(presets.findIndex((now => p => new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now)(new Date())) - 1, 0)];
+const DEFAULT_COURSE_ID = DEFAULT_PRESET.courseId;
 
 function id(x) { return x; }
 
@@ -420,7 +421,7 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 function App(props) {
 	//const [language, setLanguage] = useLanguageSelect();
 	const [skillsOpen, setSkillsOpen] = useState(false);
-	const [racedef, setRaceDef] = useState(() => new RaceParams());
+	const [racedef, setRaceDef] = useState(() => DEFAULT_PRESET.racedef);
 	const [nsamples, setSamples] = useState(DEFAULT_SAMPLES);
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [usePosKeep, togglePosKeep] = useReducer((b,_) => !b, true);
