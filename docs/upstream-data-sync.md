@@ -70,6 +70,15 @@ The "shared keys that diverge in value" the script reports are not simply "upstr
 
 If you're looking at a dry-run report and a file shows a large "diverge in value" count, check here first before assuming something's broken.
 
+## CM (Champion's Meeting) presets
+
+`umalator/app.tsx`'s `presets` array (the "CM # - X Cup" dropdown, rendered by `RacePresets`) isn't a data file this script touches — it's a hardcoded literal in source — but it goes stale the same way and is worth documenting here since the mechanism took three attempts to get right (2026-08-19):
+
+- **Don't compare "most recent JP entry" to "most recent Global entry."** JP is always ahead of Global by design, so that's comparing two different points in time, not the same schedule offset — it'll make them look unrelated even when they're not.
+- **Global's first lap through the 12 zodiac cups and its second lap are sourced differently.** The first lap (Taurus Cup through Aries Cup) uses course/condition data from JP's *current* rotation at the time. The second lap (Taurus Cup 2 onward) replays JP's *original 2022-2023 debut* course selections for each cup, not JP's current rotation — confirmed by cross-referencing Libra Cup 2 (upstream's data: Hanshin Turf 1600m) against JP's original October 2022 Libra Cup run (also Hanshin Turf 1600m, exact match) while JP's *current* Libra Cup uses a completely different course (Kyoto Turf 3000m).
+- This fork's sequential `id` field (1 = Taurus Cup ... 18 = Libra Cup 2 ...) turns out to already match the absolute CM count used elsewhere to refer to these events (e.g. "CM 18" for Libra Cup's debut) — not a coincidence, just confirmation the numbering was already tracking the right thing.
+- When Global's list needs extending past its known entries: for cups still in lap 1 or already-published lap-2 entries, use upstream's own Global preset list. For lap-2 cups upstream hasn't reached yet, use the corresponding zodiac's original JP debut course/conditions (a JP CM history reference is the source — this isn't derivable from anything in this repo) and mark the date as estimated (`/* estimated date */`) since the real one isn't known until Global actually gets there.
+
 ## Limitations
 
 - **This only moves already-computed values.** It can't backfill anything upstream hasn't extracted or computed itself, and it can't upgrade this fork's schema (aptitudes, awakenings, `score`, `tags`, etc.) — that requires changing the generating Perl scripts, per the normal rule in `CLAUDE.md` (never hand-edit the generated JSON; edit the script and regenerate). This script is explicitly an exception to "regenerate from the script" made necessary by the fact this fork's script can't run against a current client at all right now.
