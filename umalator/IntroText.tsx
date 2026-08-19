@@ -69,6 +69,12 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2026-08-19</h2>
+					<ul>
+						<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2026-06-14</h2>
 					<ul>
 						<li>New Umas.</li>

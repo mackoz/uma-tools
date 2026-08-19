@@ -45,6 +45,7 @@ No build is required just to try the app as-is — every `bundle.js`/`bundle.css
 - **[docs/deployment.md](docs/deployment.md)** — GitHub Pages deployment, the `/uma-tools/` base-path constraint, local dev.
 - **[docs/fork-changes.md](docs/fork-changes.md)** — this fork's simulation-accuracy changes and known unfixed bugs, preserved from the original fork notes.
 - **[docs/upstream-comparison.md](docs/upstream-comparison.md)** — how this fork and upstream `alpha123/uma-tools` have diverged since the split: what each side added, and what turned out to be independent fixes for the same bug.
+- **[docs/upstream-data-sync.md](docs/upstream-data-sync.md)** — catching this fork's committed game data (umas/skills/courses/icons) up to upstream from a local checkout, since this fork's own data pipeline currently can't run against a live game client.
 - **[CLAUDE.md](CLAUDE.md)** — working conventions for AI-assisted edits in this repo (generated-file guardrails, JP/Global split, build commands).
 
 ## Lineage

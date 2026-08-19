@@ -34,6 +34,8 @@ There is no `tsc` step in any build — esbuild transpiles directly, so a build 
 
 `umadle` cannot be rebuilt from a clean `npm install` — it imports `accessible-autocomplete`, which isn't in `package.json`. Don't "fix" this by editing its bundle by hand; either add the dependency properly or leave it alone (see `docs/apps.md`).
 
+If game data looks stale (a released uma/skill/course is missing) and there's no `master.mdb` handy, check `docs/upstream-data-sync.md` before assuming a full pipeline run is required — there's a script that ports already-computed data from a local upstream checkout as a stopgap (this fork's own asset extraction is currently broken against the encrypted live client — see `docs/data-pipeline.md`).
+
 ## JP vs Global data split
 
 Two parallel datasets, both derived from the same generator logic run against different `master.mdb` files (JP client vs Global client) — see `docs/data-pipeline.md` for the full pipeline:
@@ -64,3 +66,4 @@ Icons are **not** duplicated — both datasets reference the same `icons/` tree 
 - **How do I deploy or run this locally?** → `docs/deployment.md`
 - **What did the previous maintainer change and why?** → `docs/fork-changes.md`
 - **How does this fork differ from upstream `alpha123/uma-tools`?** → `docs/upstream-comparison.md`
+- **Game data (umas/skills/courses/icons) looks stale — how do I catch it up?** → `docs/upstream-data-sync.md`
