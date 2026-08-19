@@ -1870,6 +1870,43 @@ function App(props) {
 		});
 	}
 
+	// Drag-to-resize splitter between #topPane (mode tabs/run bar/race track/control panel) and the
+	// skill chart table below it. topPaneHeight === null means "unset, behave exactly like before this
+	// feature existed" — the layout stays fully auto until the user actually drags the handle.
+	const topPaneRef = useRef<HTMLDivElement>(null);
+	const [topPaneHeight, setTopPaneHeight] = useState<number | null>(() => {
+		const v = parseInt(localStorage.getItem('umalator-toppane-height') ?? '', 10);
+		return Number.isFinite(v) && v > 0 ? v : null;
+	});
+	useEffect(() => {
+		if (topPaneHeight == null) localStorage.removeItem('umalator-toppane-height');
+		else localStorage.setItem('umalator-toppane-height', String(topPaneHeight));
+	}, [topPaneHeight]);
+
+	const SPLITTER_MIN_TOP = 120;    // keeps #modeTabs + #runBar visible
+	const SPLITTER_MIN_CHART = 200;  // always leave a usable table
+
+	function onSplitterDown(e: PointerEvent) {
+		const pane = topPaneRef.current, main = pane?.parentElement;
+		if (!pane || !main) return;
+		e.preventDefault();
+		const handle = e.currentTarget as HTMLElement;
+		handle.setPointerCapture(e.pointerId);
+		const startY = e.clientY, startH = pane.getBoundingClientRect().height;
+		const maxH = main.clientHeight - SPLITTER_MIN_CHART;
+		const move = (ev: PointerEvent) =>
+			setTopPaneHeight(Math.max(SPLITTER_MIN_TOP, Math.min(maxH, startH + (ev.clientY - startY))));
+		const up = (ev: PointerEvent) => {
+			handle.releasePointerCapture(ev.pointerId);
+			handle.removeEventListener('pointermove', move);
+			handle.removeEventListener('pointerup', up);
+			document.body.classList.remove('splitterDragging');
+		};
+		handle.addEventListener('pointermove', move);
+		handle.addEventListener('pointerup', up);
+		document.body.classList.add('splitterDragging');
+	}
+
 	const [syncRng, toggleSyncRng] = useReducer((b,_) => !b, false);
 	const [skillWisdomCheck, toggleSkillWisdomCheck] = useReducer((b,_) => !b, true);
 	const [rushedKakari, toggleRushedKakari] = useReducer((b,_) => !b, true);
@@ -3004,7 +3041,9 @@ function App(props) {
 					</div>
 				)}
 				<div id="mainContent">
-				<div id="topPane" class={chartData ? 'hasResults' : ''}>
+				<div id="topPane" ref={topPaneRef}
+					class={`${chartData ? 'hasResults' : ''} ${(mode == Mode.Chart || mode == Mode.UniquesChart) && !isMobile && topPaneHeight != null ? 'chart-split' : ''}`}
+					style={(mode == Mode.Chart || mode == Mode.UniquesChart) && !isMobile && topPaneHeight != null ? {height: topPaneHeight + 'px'} : undefined}>
 					<div id="modeTabs">
 						<div class={`modeTab ${mode == Mode.Compare ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeCompare)}>Compare</div>
 						<div class={`modeTab ${mode == Mode.Chart ? 'selected' : ''}`} onClick={() => updateUiState(UiStateMsg.SetModeChart)}>Skill Chart</div>
@@ -3108,6 +3147,10 @@ function App(props) {
 						/>
 					))}
 				</div>
+			)}
+			{(mode == Mode.Chart || mode == Mode.UniquesChart) && !isMobile && resultsPane != null && (
+				<div id="chartSplitter" onPointerDown={onSplitterDown} onDblClick={() => setTopPaneHeight(null)}
+					title="Drag to resize · double-click to reset" />
 			)}
 			{resultsPane}
 			</div>

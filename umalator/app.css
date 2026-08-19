@@ -328,6 +328,45 @@ body {
 	padding: 20px 20px 0px 20px;
 }
 
+#topPane.chart-split {
+	overflow-y: auto;
+	overflow-x: hidden;
+	min-height: 0;
+	flex: none;
+}
+
+#chartSplitter {
+	flex: none;
+	height: 10px;
+	margin: 2px 20px 0;
+	border-radius: 5px;
+	cursor: row-resize;
+	background: hsl(210 10% 88%);
+	position: relative;
+	touch-action: none;
+}
+
+#chartSplitter::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 40px;
+	height: 2px;
+	border-radius: 1px;
+	background: hsl(210 8% 62%);
+}
+
+#chartSplitter:hover {
+	background: hsl(210 12% 82%);
+}
+
+body.splitterDragging {
+	cursor: row-resize;
+	user-select: none;
+}
+
 .controlPanel {
 	background: rgb(242, 242, 242);
 	border-radius: 8px;
@@ -1539,6 +1578,15 @@ body {
   background: #333;
   color: var(--fg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.dark #chartSplitter {
+  background: var(--border, #2e2e2e);
+}
+.dark #chartSplitter::after {
+  background: #5a5a5a;
+}
+.dark #chartSplitter:hover {
+  background: #3a3a3a;
 }
 
 /* --- Dark mode: Uma tab bar --- */
