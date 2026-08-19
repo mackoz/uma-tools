@@ -72,6 +72,7 @@ export function IntroText(props) {
 					<h2>2026-08-19</h2>
 					<ul>
 						<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
+						<li>Fixed corner/straight positions on 105 Global courses that had drifted from the correct geometry (corner lengths and straight boundaries were off by a few meters to tens of meters).</li>
 					</ul>
 				</section>
 				<section>

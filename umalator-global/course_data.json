@@ -6,7 +6,7 @@
                 "start": 400
             },
             {
-                "length": 275,
+                "length": 259,
                 "start": 675
             }
         ],
@@ -28,7 +28,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 950
+                "start": 934
             }
         ],
         "surface": 1,
@@ -45,7 +45,7 @@
                 "start": 700
             },
             {
-                "length": 275,
+                "length": 259,
                 "start": 975
             }
         ],
@@ -67,7 +67,7 @@
             {
                 "end": 1500,
                 "frontType": 1,
-                "start": 1250
+                "start": 1234
             }
         ],
         "surface": 1,
@@ -88,7 +88,7 @@
                 "start": 1000
             },
             {
-                "length": 275,
+                "length": 259,
                 "start": 1275
             }
         ],
@@ -115,7 +115,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1550
+                "start": 1534
             }
         ],
         "surface": 1,
@@ -136,7 +136,7 @@
                 "start": 1200
             },
             {
-                "length": 275,
+                "length": 259,
                 "start": 1475
             }
         ],
@@ -165,7 +165,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1750
+                "start": 1734
             }
         ],
         "surface": 1,
@@ -194,7 +194,7 @@
                 "start": 1800
             },
             {
-                "length": 275,
+                "length": 259,
                 "start": 2075
             }
         ],
@@ -228,7 +228,7 @@
             {
                 "end": 2600,
                 "frontType": 1,
-                "start": 2350
+                "start": 2334
             }
         ],
         "surface": 1,
@@ -241,7 +241,7 @@
                 "start": 280
             },
             {
-                "length": 230,
+                "length": 226,
                 "start": 510
             }
         ],
@@ -263,7 +263,7 @@
             {
                 "end": 1000,
                 "frontType": 1,
-                "start": 740
+                "start": 736
             }
         ],
         "surface": 2,
@@ -284,7 +284,7 @@
                 "start": 980
             },
             {
-                "length": 230,
+                "length": 226,
                 "start": 1210
             }
         ],
@@ -313,7 +313,7 @@
             {
                 "end": 1700,
                 "frontType": 1,
-                "start": 1440
+                "start": 1436
             }
         ],
         "surface": 2,
@@ -342,7 +342,7 @@
                 "start": 1680
             },
             {
-                "length": 230,
+                "length": 226,
                 "start": 1910
             }
         ],
@@ -374,7 +374,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2140
+                "start": 2136
             }
         ],
         "surface": 2,
@@ -387,7 +387,7 @@
                 "start": 310
             },
             {
-                "length": 220,
+                "length": 208,
                 "start": 530
             }
         ],
@@ -415,7 +415,7 @@
             {
                 "end": 1000,
                 "frontType": 1,
-                "start": 750
+                "start": 738
             }
         ],
         "surface": 1,
@@ -428,7 +428,7 @@
                 "start": 510
             },
             {
-                "length": 220,
+                "length": 208,
                 "start": 730
             }
         ],
@@ -456,7 +456,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 950
+                "start": 938
             }
         ],
         "surface": 1,
@@ -477,7 +477,7 @@
                 "start": 1110
             },
             {
-                "length": 220,
+                "length": 208,
                 "start": 1330
             }
         ],
@@ -517,7 +517,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1550
+                "start": 1538
             }
         ],
         "surface": 1,
@@ -538,7 +538,7 @@
                 "start": 1310
             },
             {
-                "length": 220,
+                "length": 208,
                 "start": 1530
             }
         ],
@@ -578,7 +578,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1750
+                "start": 1738
             }
         ],
         "surface": 1,
@@ -587,28 +587,28 @@
     "10205": {
         "corners": [
             {
-                "length": 230,
-                "start": 240
+                "length": 240,
+                "start": 260
             },
             {
                 "length": 230,
-                "start": 470
+                "start": 500
             },
             {
-                "length": 230,
-                "start": 1070
+                "length": 220,
+                "start": 1120
             },
             {
-                "length": 230,
-                "start": 1300
+                "length": 220,
+                "start": 1340
             },
             {
-                "length": 230,
-                "start": 1890
+                "length": 220,
+                "start": 1910
             },
             {
-                "length": 230,
-                "start": 2120
+                "length": 208,
+                "start": 2130
             }
         ],
         "course": 1,
@@ -640,24 +640,24 @@
         ],
         "straights": [
             {
-                "end": 240,
+                "end": 260,
                 "frontType": 2,
                 "start": 0
             },
             {
-                "end": 1070,
+                "end": 1120,
                 "frontType": 1,
-                "start": 700
+                "start": 730
             },
             {
-                "end": 1890,
+                "end": 1910,
                 "frontType": 2,
-                "start": 1530
+                "start": 1560
             },
             {
                 "end": 2600,
                 "frontType": 1,
-                "start": 2350
+                "start": 2338
             }
         ],
         "surface": 1,
@@ -670,7 +670,7 @@
                 "start": 370
             },
             {
-                "length": 190,
+                "length": 180,
                 "start": 560
             }
         ],
@@ -692,7 +692,7 @@
             {
                 "end": 1000,
                 "frontType": 1,
-                "start": 750
+                "start": 740
             }
         ],
         "surface": 2,
@@ -713,7 +713,7 @@
                 "start": 1070
             },
             {
-                "length": 190,
+                "length": 180,
                 "start": 1260
             }
         ],
@@ -751,7 +751,7 @@
             {
                 "end": 1700,
                 "frontType": 1,
-                "start": 1450
+                "start": 1440
             }
         ],
         "surface": 2,
@@ -780,7 +780,7 @@
                 "start": 1770
             },
             {
-                "length": 190,
+                "length": 180,
                 "start": 1960
             }
         ],
@@ -814,7 +814,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2150
+                "start": 2140
             }
         ],
         "surface": 2,
@@ -835,7 +835,7 @@
         "slopes": [],
         "straights": [
             {
-                "end": 649.900024414062,
+                "end": 649.9,
                 "frontType": 1,
                 "start": 0
             },
@@ -852,11 +852,11 @@
         "corners": [
             {
                 "length": 200,
-                "start": 430
+                "start": 450
             },
             {
-                "length": 210,
-                "start": 640
+                "length": 192,
+                "start": 650
             }
         ],
         "course": 2,
@@ -870,14 +870,14 @@
         "slopes": [],
         "straights": [
             {
-                "end": 430,
+                "end": 450,
                 "frontType": 2,
                 "start": 0
             },
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 850
+                "start": 842
             }
         ],
         "surface": 1,
@@ -890,7 +890,7 @@
                 "start": 650
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 850
             }
         ],
@@ -912,7 +912,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1050
+                "start": 1042
             }
         ],
         "surface": 1,
@@ -925,7 +925,7 @@
                 "start": 550
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 750
             }
         ],
@@ -958,7 +958,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 950
+                "start": 942
             }
         ],
         "surface": 1,
@@ -971,7 +971,7 @@
                 "start": 750
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 950
             }
         ],
@@ -1006,7 +1006,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1150
+                "start": 1142
             }
         ],
         "surface": 1,
@@ -1027,7 +1027,7 @@
                 "start": 1250
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1450
             }
         ],
@@ -1057,7 +1057,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1650
+                "start": 1642
             }
         ],
         "surface": 1,
@@ -1070,7 +1070,7 @@
                 "start": 950
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1150
             }
         ],
@@ -1106,7 +1106,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1350
+                "start": 1342
             }
         ],
         "surface": 1,
@@ -1127,7 +1127,7 @@
                 "start": 1450
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1650
             }
         ],
@@ -1156,7 +1156,7 @@
             {
                 "end": 2200,
                 "frontType": 1,
-                "start": 1850
+                "start": 1842
             }
         ],
         "surface": 1,
@@ -1177,7 +1177,7 @@
                 "start": 1650
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1850
             }
         ],
@@ -1204,7 +1204,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2050
+                "start": 2042
             }
         ],
         "surface": 1,
@@ -1213,12 +1213,12 @@
     "10310": {
         "corners": [
             {
-                "length": 150,
-                "start": 600
+                "length": 160,
+                "start": 540
             },
             {
-                "length": 150,
-                "start": 750
+                "length": 147,
+                "start": 700
             }
         ],
         "course": 1,
@@ -1232,14 +1232,14 @@
         "slopes": [],
         "straights": [
             {
-                "end": 600,
+                "end": 540,
                 "frontType": 2,
                 "start": 0
             },
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 900
+                "start": 847
             }
         ],
         "surface": 2,
@@ -1260,7 +1260,7 @@
                 "start": 1140
             },
             {
-                "length": 160,
+                "length": 147,
                 "start": 1300
             }
         ],
@@ -1289,7 +1289,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1460
+                "start": 1447
             }
         ],
         "surface": 2,
@@ -1363,7 +1363,7 @@
                 "start": 420
             },
             {
-                "length": 200,
+                "length": 188,
                 "start": 720
             }
         ],
@@ -1391,7 +1391,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 920
+                "start": 908
             }
         ],
         "surface": 1,
@@ -1412,7 +1412,7 @@
                 "start": 1020
             },
             {
-                "length": 200,
+                "length": 188,
                 "start": 1320
             }
         ],
@@ -1447,7 +1447,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1520
+                "start": 1508
             }
         ],
         "surface": 1,
@@ -1468,7 +1468,7 @@
                 "start": 1220
             },
             {
-                "length": 200,
+                "length": 188,
                 "start": 1520
             }
         ],
@@ -1503,7 +1503,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1720
+                "start": 1708
             }
         ],
         "surface": 1,
@@ -1532,7 +1532,7 @@
                 "start": 1820
             },
             {
-                "length": 200,
+                "length": 188,
                 "start": 2120
             }
         ],
@@ -1575,7 +1575,7 @@
             {
                 "end": 2600,
                 "frontType": 1,
-                "start": 2320
+                "start": 2308
             }
         ],
         "surface": 1,
@@ -1588,7 +1588,7 @@
                 "start": 500
             },
             {
-                "length": 160,
+                "length": 145,
                 "start": 710
             }
         ],
@@ -1610,7 +1610,7 @@
             {
                 "end": 1150,
                 "frontType": 1,
-                "start": 870
+                "start": 855
             }
         ],
         "surface": 2,
@@ -1631,7 +1631,7 @@
                 "start": 1050
             },
             {
-                "length": 160,
+                "length": 145,
                 "start": 1260
             }
         ],
@@ -1666,7 +1666,7 @@
             {
                 "end": 1700,
                 "frontType": 1,
-                "start": 1420
+                "start": 1405
             }
         ],
         "surface": 2,
@@ -1695,7 +1695,7 @@
                 "start": 1750
             },
             {
-                "length": 160,
+                "length": 145,
                 "start": 1960
             }
         ],
@@ -1729,7 +1729,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2120
+                "start": 2105
             }
         ],
         "surface": 2,
@@ -1742,7 +1742,7 @@
                 "start": 300
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 650
             }
         ],
@@ -1770,7 +1770,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 900
+                "start": 890
             }
         ],
         "surface": 1,
@@ -1787,7 +1787,7 @@
                 "start": 700
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 1050
             }
         ],
@@ -1817,7 +1817,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1300
+                "start": 1290
             }
         ],
         "surface": 1,
@@ -1838,7 +1838,7 @@
                 "start": 1000
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 1250
             }
         ],
@@ -1886,7 +1886,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1500
+                "start": 1490
             }
         ],
         "surface": 1,
@@ -1907,7 +1907,7 @@
                 "start": 1200
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 1450
             }
         ],
@@ -1957,7 +1957,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1700
+                "start": 1690
             }
         ],
         "surface": 1,
@@ -1978,7 +1978,7 @@
                 "start": 1300
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 1650
             }
         ],
@@ -2024,7 +2024,7 @@
             {
                 "end": 2200,
                 "frontType": 1,
-                "start": 1900
+                "start": 1890
             }
         ],
         "surface": 1,
@@ -2053,7 +2053,7 @@
                 "start": 1700
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 1950
             }
         ],
@@ -2104,7 +2104,7 @@
             {
                 "end": 2500,
                 "frontType": 1,
-                "start": 2200
+                "start": 2190
             }
         ],
         "surface": 1,
@@ -2141,7 +2141,7 @@
                 "start": 2800
             },
             {
-                "length": 250,
+                "length": 240,
                 "start": 3050
             }
         ],
@@ -2216,7 +2216,7 @@
             {
                 "end": 3600,
                 "frontType": 1,
-                "start": 3300
+                "start": 3290
             }
         ],
         "surface": 1,
@@ -2229,7 +2229,7 @@
                 "start": 500
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 700
             }
         ],
@@ -2264,7 +2264,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 900
+                "start": 892
             }
         ],
         "surface": 2,
@@ -2285,7 +2285,7 @@
                 "start": 1100
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1300
             }
         ],
@@ -2335,7 +2335,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1500
+                "start": 1492
             }
         ],
         "surface": 2,
@@ -2364,7 +2364,7 @@
                 "start": 1700
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 1900
             }
         ],
@@ -2398,7 +2398,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2100
+                "start": 2092
             }
         ],
         "surface": 2,
@@ -2427,7 +2427,7 @@
                 "start": 1800
             },
             {
-                "length": 200,
+                "length": 192,
                 "start": 2000
             }
         ],
@@ -2459,7 +2459,7 @@
             {
                 "end": 2500,
                 "frontType": 1,
-                "start": 2200
+                "start": 2192
             }
         ],
         "surface": 2,
@@ -2472,7 +2472,7 @@
                 "start": 350
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 625
             }
         ],
@@ -2513,7 +2513,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 900
+                "start": 875
             }
         ],
         "surface": 1,
@@ -2526,7 +2526,7 @@
                 "start": 550
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 825
             }
         ],
@@ -2567,7 +2567,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1100
+                "start": 1075
             }
         ],
         "surface": 1,
@@ -2584,7 +2584,7 @@
                 "start": 750
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 1025
             }
         ],
@@ -2624,7 +2624,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1300
+                "start": 1275
             }
         ],
         "surface": 1,
@@ -2641,7 +2641,7 @@
                 "start": 950
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 1225
             }
         ],
@@ -2679,7 +2679,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1500
+                "start": 1475
             }
         ],
         "surface": 1,
@@ -2700,7 +2700,7 @@
                 "start": 1250
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 1525
             }
         ],
@@ -2745,7 +2745,7 @@
             {
                 "end": 2300,
                 "frontType": 1,
-                "start": 1800
+                "start": 1775
             }
         ],
         "surface": 1,
@@ -2766,7 +2766,7 @@
                 "start": 1350
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 1625
             }
         ],
@@ -2814,7 +2814,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 1900
+                "start": 1875
             }
         ],
         "surface": 1,
@@ -2835,7 +2835,7 @@
                 "start": 1450
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 1725
             }
         ],
@@ -2885,7 +2885,7 @@
             {
                 "end": 2500,
                 "frontType": 1,
-                "start": 2000
+                "start": 1975
             }
         ],
         "surface": 1,
@@ -2914,7 +2914,7 @@
                 "start": 2350
             },
             {
-                "length": 275,
+                "length": 250,
                 "start": 2625
             }
         ],
@@ -2977,7 +2977,7 @@
             {
                 "end": 3400,
                 "frontType": 1,
-                "start": 2900
+                "start": 2875
             }
         ],
         "surface": 1,
@@ -2990,7 +2990,7 @@
                 "start": 350
             },
             {
-                "length": 225,
+                "length": 224,
                 "start": 575
             }
         ],
@@ -3025,7 +3025,7 @@
             {
                 "end": 1300,
                 "frontType": 1,
-                "start": 800
+                "start": 799
             }
         ],
         "surface": 2,
@@ -3038,7 +3038,7 @@
                 "start": 450
             },
             {
-                "length": 225,
+                "length": 224,
                 "start": 675
             }
         ],
@@ -3073,7 +3073,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 900
+                "start": 899
             }
         ],
         "surface": 2,
@@ -3086,7 +3086,7 @@
                 "start": 650
             },
             {
-                "length": 225,
+                "length": 224,
                 "start": 875
             }
         ],
@@ -3122,7 +3122,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1100
+                "start": 1099
             }
         ],
         "surface": 2,
@@ -3143,7 +3143,7 @@
                 "start": 1150
             },
             {
-                "length": 225,
+                "length": 224,
                 "start": 1375
             }
         ],
@@ -3181,7 +3181,7 @@
             {
                 "end": 2100,
                 "frontType": 1,
-                "start": 1600
+                "start": 1599
             }
         ],
         "surface": 2,
@@ -3248,7 +3248,7 @@
                 "start": 300
             },
             {
-                "length": 250,
+                "length": 238,
                 "start": 550
             }
         ],
@@ -3281,7 +3281,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 800
+                "start": 788
             }
         ],
         "surface": 1,
@@ -3294,7 +3294,7 @@
                 "start": 500
             },
             {
-                "length": 250,
+                "length": 238,
                 "start": 750
             }
         ],
@@ -3327,7 +3327,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1000
+                "start": 988
             }
         ],
         "surface": 1,
@@ -3344,7 +3344,7 @@
                 "start": 700
             },
             {
-                "length": 250,
+                "length": 238,
                 "start": 950
             }
         ],
@@ -3379,7 +3379,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1200
+                "start": 1188
             }
         ],
         "surface": 1,
@@ -3400,7 +3400,7 @@
                 "start": 1100
             },
             {
-                "length": 250,
+                "length": 238,
                 "start": 1350
             }
         ],
@@ -3443,7 +3443,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1600
+                "start": 1588
             }
         ],
         "surface": 1,
@@ -3464,7 +3464,7 @@
                 "start": 1300
             },
             {
-                "length": 250,
+                "length": 238,
                 "start": 1550
             }
         ],
@@ -3514,7 +3514,7 @@
             {
                 "end": 2200,
                 "frontType": 1,
-                "start": 1800
+                "start": 1788
             }
         ],
         "surface": 1,
@@ -3527,7 +3527,7 @@
                 "start": 400
             },
             {
-                "length": 200,
+                "length": 190,
                 "start": 600
             }
         ],
@@ -3549,7 +3549,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 800
+                "start": 790
             }
         ],
         "surface": 2,
@@ -3562,7 +3562,7 @@
                 "start": 600
             },
             {
-                "length": 200,
+                "length": 190,
                 "start": 800
             }
         ],
@@ -3595,7 +3595,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1000
+                "start": 990
             }
         ],
         "surface": 2,
@@ -3616,7 +3616,7 @@
                 "start": 1000
             },
             {
-                "length": 200,
+                "length": 190,
                 "start": 1200
             }
         ],
@@ -3661,7 +3661,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1400
+                "start": 1390
             }
         ],
         "surface": 2,
@@ -3682,7 +3682,7 @@
                 "start": 1100
             },
             {
-                "length": 200,
+                "length": 190,
                 "start": 1300
             }
         ],
@@ -3709,7 +3709,7 @@
             {
                 "end": 1900,
                 "frontType": 1,
-                "start": 1500
+                "start": 1490
             }
         ],
         "surface": 2,
@@ -3722,7 +3722,7 @@
                 "start": 320
             },
             {
-                "length": 275,
+                "length": 277,
                 "start": 595
             }
         ],
@@ -3755,7 +3755,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 870
+                "start": 872
             }
         ],
         "surface": 1,
@@ -3768,7 +3768,7 @@
                 "start": 520
             },
             {
-                "length": 275,
+                "length": 277,
                 "start": 795
             }
         ],
@@ -3801,7 +3801,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1070
+                "start": 1072
             }
         ],
         "surface": 1,
@@ -3814,7 +3814,7 @@
                 "start": 500
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 750
             }
         ],
@@ -3852,7 +3852,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1000
+                "start": 997
             }
         ],
         "surface": 1,
@@ -3865,7 +3865,7 @@
                 "start": 720
             },
             {
-                "length": 275,
+                "length": 277,
                 "start": 995
             }
         ],
@@ -3900,7 +3900,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1270
+                "start": 1272
             }
         ],
         "surface": 1,
@@ -3913,7 +3913,7 @@
                 "start": 700
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 950
             }
         ],
@@ -3953,7 +3953,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1200
+                "start": 1197
             }
         ],
         "surface": 1,
@@ -3966,7 +3966,7 @@
                 "start": 900
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 1150
             }
         ],
@@ -4004,7 +4004,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1400
+                "start": 1397
             }
         ],
         "surface": 1,
@@ -4021,12 +4021,12 @@
                 "start": 585
             },
             {
-                "length": 250,
-                "start": 1170
+                "length": 275,
+                "start": 1120
             },
             {
-                "length": 250,
-                "start": 1420
+                "length": 277,
+                "start": 1395
             }
         ],
         "course": 2,
@@ -4058,14 +4058,14 @@
                 "start": 0
             },
             {
-                "end": 1170,
+                "end": 1120,
                 "frontType": 2,
                 "start": 770
             },
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1670
+                "start": 1672
             }
         ],
         "surface": 1,
@@ -4086,7 +4086,7 @@
                 "start": 1300
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 1550
             }
         ],
@@ -4131,7 +4131,7 @@
             {
                 "end": 2200,
                 "frontType": 1,
-                "start": 1800
+                "start": 1797
             }
         ],
         "surface": 1,
@@ -4152,7 +4152,7 @@
                 "start": 1500
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 1750
             }
         ],
@@ -4197,7 +4197,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2000
+                "start": 1997
             }
         ],
         "surface": 1,
@@ -4226,7 +4226,7 @@
                 "start": 2100
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 2350
             }
         ],
@@ -4292,7 +4292,7 @@
             {
                 "end": 3000,
                 "frontType": 1,
-                "start": 2600
+                "start": 2597
             }
         ],
         "surface": 1,
@@ -4321,7 +4321,7 @@
                 "start": 2300
             },
             {
-                "length": 250,
+                "length": 247,
                 "start": 2550
             }
         ],
@@ -4384,7 +4384,7 @@
             {
                 "end": 3200,
                 "frontType": 1,
-                "start": 2800
+                "start": 2797
             }
         ],
         "surface": 1,
@@ -4397,7 +4397,7 @@
                 "start": 400
             },
             {
-                "length": 225,
+                "length": 246,
                 "start": 625
             }
         ],
@@ -4430,7 +4430,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 850
+                "start": 871
             }
         ],
         "surface": 2,
@@ -4443,7 +4443,7 @@
                 "start": 600
             },
             {
-                "length": 225,
+                "length": 246,
                 "start": 825
             }
         ],
@@ -4476,7 +4476,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1050
+                "start": 1071
             }
         ],
         "surface": 2,
@@ -4497,7 +4497,7 @@
                 "start": 1000
             },
             {
-                "length": 225,
+                "length": 246,
                 "start": 1225
             }
         ],
@@ -4535,7 +4535,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1450
+                "start": 1471
             }
         ],
         "surface": 2,
@@ -4556,7 +4556,7 @@
                 "start": 1100
             },
             {
-                "length": 225,
+                "length": 246,
                 "start": 1325
             }
         ],
@@ -4594,7 +4594,7 @@
             {
                 "end": 1900,
                 "frontType": 1,
-                "start": 1550
+                "start": 1571
             }
         ],
         "surface": 2,
@@ -4607,7 +4607,7 @@
                 "start": 250
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 550
             }
         ],
@@ -4640,7 +4640,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 850
+                "start": 844
             }
         ],
         "surface": 1,
@@ -4653,7 +4653,7 @@
                 "start": 450
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 750
             }
         ],
@@ -4686,7 +4686,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1050
+                "start": 1044
             }
         ],
         "surface": 1,
@@ -4699,7 +4699,7 @@
                 "start": 450
             },
             {
-                "length": 350,
+                "length": 327,
                 "start": 800
             }
         ],
@@ -4734,7 +4734,7 @@
             {
                 "end": 1600,
                 "frontType": 1,
-                "start": 1150
+                "start": 1127
             }
         ],
         "surface": 1,
@@ -4747,7 +4747,7 @@
                 "start": 650
             },
             {
-                "length": 350,
+                "length": 327,
                 "start": 1000
             }
         ],
@@ -4782,7 +4782,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1350
+                "start": 1327
             }
         ],
         "surface": 1,
@@ -4803,7 +4803,7 @@
                 "start": 1050
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 1350
             }
         ],
@@ -4853,7 +4853,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1650
+                "start": 1644
             }
         ],
         "surface": 1,
@@ -4874,7 +4874,7 @@
                 "start": 1250
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 1550
             }
         ],
@@ -4924,7 +4924,7 @@
             {
                 "end": 2200,
                 "frontType": 1,
-                "start": 1850
+                "start": 1844
             }
         ],
         "surface": 1,
@@ -4945,7 +4945,7 @@
                 "start": 1250
             },
             {
-                "length": 350,
+                "length": 327,
                 "start": 1600
             }
         ],
@@ -4990,7 +4990,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 1950
+                "start": 1927
             }
         ],
         "surface": 1,
@@ -5011,7 +5011,7 @@
                 "start": 1450
             },
             {
-                "length": 350,
+                "length": 327,
                 "start": 1800
             }
         ],
@@ -5059,7 +5059,7 @@
             {
                 "end": 2600,
                 "frontType": 1,
-                "start": 2150
+                "start": 2127
             }
         ],
         "surface": 1,
@@ -5088,7 +5088,7 @@
                 "start": 2050
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 2350
             }
         ],
@@ -5143,7 +5143,7 @@
             {
                 "end": 3000,
                 "frontType": 1,
-                "start": 2650
+                "start": 2644
             }
         ],
         "surface": 1,
@@ -5156,7 +5156,7 @@
                 "start": 350
             },
             {
-                "length": 250,
+                "length": 248,
                 "start": 600
             }
         ],
@@ -5178,7 +5178,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 850
+                "start": 848
             }
         ],
         "surface": 2,
@@ -5191,7 +5191,7 @@
                 "start": 550
             },
             {
-                "length": 250,
+                "length": 248,
                 "start": 800
             }
         ],
@@ -5219,7 +5219,7 @@
             {
                 "end": 1400,
                 "frontType": 1,
-                "start": 1050
+                "start": 1048
             }
         ],
         "surface": 2,
@@ -5240,7 +5240,7 @@
                 "start": 950
             },
             {
-                "length": 250,
+                "length": 248,
                 "start": 1200
             }
         ],
@@ -5278,7 +5278,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1449
+                "start": 1448
             }
         ],
         "surface": 2,
@@ -5299,7 +5299,7 @@
                 "start": 1150
             },
             {
-                "length": 250,
+                "length": 248,
                 "start": 1400
             }
         ],
@@ -5340,7 +5340,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1650
+                "start": 1648
             }
         ],
         "surface": 2,
@@ -5369,7 +5369,7 @@
                 "start": 2250
             },
             {
-                "length": 300,
+                "length": 294,
                 "start": 2550
             }
         ],
@@ -5422,7 +5422,7 @@
             {
                 "end": 3200,
                 "frontType": 1,
-                "start": 2850
+                "start": 2844
             }
         ],
         "surface": 1,
@@ -5435,7 +5435,7 @@
                 "start": 500
             },
             {
-                "length": 205,
+                "length": 202,
                 "start": 705
             }
         ],
@@ -5465,7 +5465,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 910
+                "start": 907
             }
         ],
         "surface": 1,
@@ -5486,7 +5486,7 @@
                 "start": 1100
             },
             {
-                "length": 205,
+                "length": 202,
                 "start": 1305
             }
         ],
@@ -5519,7 +5519,7 @@
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1510
+                "start": 1507
             }
         ],
         "surface": 1,
@@ -5540,7 +5540,7 @@
                 "start": 1300
             },
             {
-                "length": 205,
+                "length": 202,
                 "start": 1505
             }
         ],
@@ -5575,7 +5575,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1710
+                "start": 1707
             }
         ],
         "surface": 1,
@@ -5604,7 +5604,7 @@
                 "start": 1900
             },
             {
-                "length": 205,
+                "length": 202,
                 "start": 2105
             }
         ],
@@ -5644,7 +5644,7 @@
             {
                 "end": 2600,
                 "frontType": 1,
-                "start": 2310
+                "start": 2307
             }
         ],
         "surface": 1,
@@ -5657,7 +5657,7 @@
                 "start": 360
             },
             {
-                "length": 180,
+                "length": 169,
                 "start": 540
             }
         ],
@@ -5681,7 +5681,7 @@
             {
                 "end": 1000,
                 "frontType": 1,
-                "start": 720
+                "start": 709
             }
         ],
         "surface": 2,
@@ -5702,7 +5702,7 @@
                 "start": 1060
             },
             {
-                "length": 180,
+                "length": 169,
                 "start": 1240
             }
         ],
@@ -5735,7 +5735,7 @@
             {
                 "end": 1700,
                 "frontType": 1,
-                "start": 1420
+                "start": 1409
             }
         ],
         "surface": 2,
@@ -5764,7 +5764,7 @@
                 "start": 1760
             },
             {
-                "length": 180,
+                "length": 169,
                 "start": 1940
             }
         ],
@@ -5796,7 +5796,7 @@
             {
                 "end": 2400,
                 "frontType": 1,
-                "start": 2120
+                "start": 2109
             }
         ],
         "surface": 2,
@@ -5809,12 +5809,15 @@
                 "start": 500
             },
             {
-                "length": 150,
+                "length": 164,
                 "start": 650
             }
         ],
         "course": 1,
-        "courseSetStatus": [],
+        "courseSetStatus": [
+            4,
+            5
+        ],
         "distance": 1200,
         "distanceType": 1,
         "finishTimeMax": 770000,
@@ -5831,7 +5834,7 @@
             {
                 "end": 1200,
                 "frontType": 1,
-                "start": 812
+                "start": 814
             }
         ],
         "surface": 2,
@@ -5852,12 +5855,14 @@
                 "start": 1100
             },
             {
-                "length": 150,
+                "length": 164,
                 "start": 1250
             }
         ],
         "course": 1,
-        "courseSetStatus": [],
+        "courseSetStatus": [
+            3
+        ],
         "distance": 1800,
         "distanceType": 2,
         "finishTimeMax": 1180000,
@@ -5872,14 +5877,14 @@
                 "start": 0
             },
             {
-                "end": 1100.22998046875,
+                "end": 1100.23,
                 "frontType": 2,
                 "start": 600
             },
             {
                 "end": 1800,
                 "frontType": 1,
-                "start": 1400
+                "start": 1414
             }
         ],
         "surface": 2,
@@ -5900,12 +5905,14 @@
                 "start": 1300
             },
             {
-                "length": 150,
+                "length": 164,
                 "start": 1450
             }
         ],
         "course": 1,
-        "courseSetStatus": [],
+        "courseSetStatus": [
+            2
+        ],
         "distance": 2000,
         "distanceType": 3,
         "finishTimeMax": 1290000,
@@ -5927,7 +5934,7 @@
             {
                 "end": 2000,
                 "frontType": 1,
-                "start": 1600
+                "start": 1614
             }
         ],
         "surface": 2,
