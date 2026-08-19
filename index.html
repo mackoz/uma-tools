@@ -1,0 +1,68 @@
+<!doctype html>
+
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>uma-tools</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #16171c;
+				--surface: #1f2129;
+				--border: #33353f;
+				--text: #e7e8ec;
+				--text-dim: #9497a3;
+				--accent: #7c9cff;
+			}
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				padding: 3rem 1.5rem;
+				background: var(--bg);
+				color: var(--text);
+				font-family: -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+				display: flex;
+				justify-content: center;
+			}
+			main { width: 100%; max-width: 640px; }
+			h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+			p.tagline { color: var(--text-dim); margin: 0 0 2rem; }
+			ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+			li a {
+				display: block;
+				padding: 0.9rem 1.1rem;
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				background: var(--surface);
+				color: var(--text);
+				text-decoration: none;
+			}
+			li a:hover { border-color: var(--accent); }
+			li a .name { font-weight: 600; }
+			li a .desc { display: block; color: var(--text-dim); font-size: 0.85rem; margin-top: 0.15rem; }
+			li.secondary a { opacity: 0.75; }
+			footer { margin-top: 2.5rem; color: var(--text-dim); font-size: 0.8rem; }
+			footer a { color: inherit; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>uma-tools</h1>
+			<p class="tagline">Uma Musume: Pretty Derby race simulator and toolset.</p>
+			<ul>
+				<li><a href="umalator-global/"><span class="name">Umalator (Global)</span><span class="desc">Compare two umas' stats and skills on a course</span></a></li>
+				<li><a href="umalator/"><span class="name">Umalator (JP)</span><span class="desc">Same tool, JP server data</span></a></li>
+				<li><a href="skill-visualizer-global/"><span class="name">Skill Visualizer (Global)</span><span class="desc">See where a skill activates on a course</span></a></li>
+				<li><a href="skill-visualizer/"><span class="name">Skill Visualizer (JP)</span><span class="desc">Same tool, JP server data</span></a></li>
+				<li class="secondary"><a href="build-planner/"><span class="name">Build Planner</span><span class="desc">Skill list + region overlay for a reference horse</span></a></li>
+				<li class="secondary"><a href="courseimages/"><span class="name">Course Images</span><span class="desc">Export course diagrams as PNG</span></a></li>
+				<li class="secondary"><a href="umadle/"><span class="name">Umadle</span><span class="desc">Wordle, but it's an uma</span></a></li>
+				<li class="secondary"><a href="rougelike/"><span class="name">Rougelike</span><span class="desc">Wordle, but it's a hex color</span></a></li>
+			</ul>
+			<footer>
+				<a href="https://github.com/mackoz/uma-tools">Source on GitHub</a> · GPL-3.0-or-later
+			</footer>
+		</main>
+	</body>
+</html>
