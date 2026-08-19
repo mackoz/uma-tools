@@ -75,7 +75,23 @@ class RaceParams extends Record({
 const enum EventType { CM, LOH }
 
 const presets = (CC_GLOBAL ? [
-	{id: 11, type: EventType.CM, name: 'Aquarius Cup', date: '2026-03', courseId: 10914, season: Season.Spring, ground: GroundCondition.Heavy, weather: Weather.Rainy, time: Time.Midday},
+	// ids 19-24: dates are estimated (upstream's own list doesn't reach these yet) - course/conditions
+	// come from JP's original 2022-2023 debut run of each cup (Global's 2nd zodiac lap replays JP's
+	// historical back-catalog, not JP's current rotation - see docs/upstream-data-sync.md)
+	{id: 24, type: EventType.CM, name: 'Aries Cup 2', date: '2026-12-29' /* estimated date */, courseId: 10811, season: Season.Spring, ground: GroundCondition.Firm, weather: Weather.Sunny, time: Time.Midday},
+	{id: 23, type: EventType.CM, name: 'Pisces Cup 2', date: '2026-12-08' /* estimated date */, courseId: 10504, season: Season.Spring, ground: GroundCondition.Firm, weather: Weather.Sunny, time: Time.Midday},
+	{id: 22, type: EventType.CM, name: 'Aquarius Cup 2', date: '2026-11-17' /* estimated date */, courseId: 10611, season: Season.Winter, ground: GroundCondition.Soft, weather: Weather.Snowy, time: Time.Midday},
+	{id: 21, type: EventType.CM, name: 'Capricorn Cup 2', date: '2026-10-27' /* estimated date */, courseId: 10701, season: Season.Winter, ground: GroundCondition.Firm, weather: Weather.Sunny, time: Time.Midday},
+	{id: 20, type: EventType.CM, name: 'Sagittarius Cup 2', date: '2026-10-06' /* estimated date */, courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
+	{id: 19, type: EventType.CM, name: 'Scorpio Cup 2', date: '2026-09-15' /* estimated date */, courseId: 10808, season: Season.Autumn, ground: GroundCondition.Firm, weather: Weather.Sunny, time: Time.Midday},
+	{id: 18, type: EventType.CM, name: 'Libra Cup 2', date: '2026-08-25', courseId: 10903, season: Season.Autumn, ground: GroundCondition.Good, weather: Weather.Cloudy, time: Time.Midday},
+	{id: 17, type: EventType.CM, name: 'Virgo Cup 2', date: '2026-08-05', courseId: 11103, season: Season.Autumn, ground: GroundCondition.Yielding, weather: Weather.Sunny, time: Time.Midday},
+	{id: 16, type: EventType.CM, name: 'Leo Cup 2', date: '2026-07-25', courseId: 10501, season: Season.Summer, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 15, type: EventType.CM, name: 'Cancer Cup 2', date: '2026-06-24', courseId: 10906, season: Season.Summer, ground: GroundCondition.Yielding, weather: Weather.Cloudy, time: Time.Midday},
+	{id: 14, type: EventType.CM, name: 'Gemini Cup 2', date: '2026-06-04', courseId: 10602, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 13, type: EventType.CM, name: 'Taurus Cup 2', date: '2026-05-10', courseId: 10606, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 12, type: EventType.CM, name: 'Aries Cup', date: '2026-04-23', courseId: 10504, season: Season.Spring, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
+	{id: 11, type: EventType.CM, name: 'Pisces Cup', date: '2026-03', courseId: 10914, season: Season.Spring, ground: GroundCondition.Heavy, weather: Weather.Rainy, time: Time.Midday},
 	{id: 10, type: EventType.CM, name: 'Aquarius Cup', date: '2026-02', courseId: 10611, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
 	{id: 9, type: EventType.CM, name: 'Capricorn Cup', date: '2026-02', courseId: 10701, season: Season.Winter, ground: GroundCondition.Soft, weather: Weather.Snowy, time: Time.Midday},
 	{id: 8, type: EventType.CM, name: 'Sagittarius Cup', date: '2026-01', courseId: 10506, season: Season.Winter, ground: GroundCondition.Good, weather: Weather.Sunny, time: Time.Midday},
