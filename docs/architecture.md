@@ -1,6 +1,6 @@
 # Architecture
 
-This page explains how a race simulation actually runs, file by file, and lists the known rough edges in the engine.
+This page explains how a race simulation actually runs, file by file, and lists the known rough edges in the engine. See [upstream-architecture.md](upstream-architecture.md) for the equivalent pass over upstream's own engine and app layer, or [architecture-comparison.md](architecture-comparison.md) for the two put side by side with plain-language explanations.
 
 ## The engine lives in `uma-skill-tools/`
 

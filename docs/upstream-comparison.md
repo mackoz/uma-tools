@@ -9,20 +9,22 @@ This is a point-in-time comparison, not a live diff — see [Snapshot](#snapshot
 | | Upstream (`alpha123/uma-tools`) | This fork |
 |---|---|---|
 | Fork point | `292309c` ("rebuild"), 2025-10-09 | same |
-| Commits since fork point | **351** | 205 |
-| HEAD at snapshot time | `cdb7ead`, 2026-08-18 | `4401e25`, 2026-07-07 |
-| JP umas / skills / courses | **141 / 2097 / 121*** | 130 / 1861 / 121 |
-| Global umas / skills / courses | 64 / **692** / **119** | 64 / 652 / 107 |
+| Commits since fork point | **351** | 209 |
+| HEAD at snapshot time | `cdb7ead`, 2026-08-18 | `7e6a584`, 2026-08-19 |
+| JP umas / skills / courses | 141 / 2097 / 121* | 141 / **2097** / **139*** |
+| Global umas / skills / courses | 64 / 692 / 119 | **65** / 692 / 119 |
 | Race solver (`RaceSolver.ts`) | 670–762 lines (see [three reference points](#the-comparison-has-three-reference-points-not-two)) | **1508 lines** |
 | Docs / CI | none | this `docs/` tree, GitHub Actions deploy |
 
-*JP course count is from the engine repo's own data, not the pinned submodule — see below.
+**Since this table was first written, this fork ran the [upstream-data-sync.md](upstream-data-sync.md) script** (2026-08-19), which closed nearly the entire game-data gap — JP umas and Global courses are now at parity with upstream, and JP skill_meta is now *exactly* equal (both 2097). What's left: Global has 1 more uma than upstream (65 vs 64 — the sync also picks up new umas upstream hasn't extracted icons for yet in some cases, see the sync doc's limitations), and JP courses now *exceed* upstream's pinned-submodule count (139 vs 121) — see the footnote below, this isn't a fork lead, it's upstream's own engine data having grown past its pin too.
+
+*JP course count needs the [A/B distinction](upstream-architecture.md#four-reference-points-not-three): upstream's pinned engine submodule (**A**, `6ba5ca0`) has 121 JP courses, matching the table above, but the engine repo's own `origin/master` (**B**, `8b3f5e2`) already has 138 — 17 more, added after the pin. `sync-upstream-data.mjs` defaults to comparing against B, not A (see [upstream-data-sync.md](upstream-data-sync.md#setup)), which is why this fork's JP course count (139) tracks B rather than the 121 in this table — it's one *above* even B, not investigated further, flagging in case it's worth checking whether that's a real extra course or a sync-script artifact.
 
 Upstream is ahead on commit count, game data, and general UI polish. This fork is ahead on race-solver depth (multi-uma simulation, lane movement, position-keep states, compete/lead competition). Several features both changelogs describe as their own turn out to be **independent implementations of the same fix**, not something one side has and the other lacks — see [Where both converged independently](#where-both-converged-independently).
 
 ## The comparison has three reference points, not two
 
-This is the single most important thing to get right when reading (or extending) this doc — a plain `diff` between the two checked-out repos gives a misleading answer.
+This is the single most important thing to get right when reading (or extending) this doc — a plain `diff` between the two checked-out repos gives a misleading answer. (There's actually a fourth — upstream's own app code calls a handful of `RaceSolverBuilder` methods, like `.otherHorse()` and `.withItidoriarasoi()`, that exist in neither public engine checkout below, implying an unpublished local engine state on alpha123's side. See [upstream-architecture.md](upstream-architecture.md#four-reference-points-not-three) for the evidence. It doesn't change anything below — those APIs aren't reachable from any checkout we can diff against — but it's worth knowing the comparison's "B" reference point isn't upstream's actual current engine, just the newest *public* one.)
 
 | Reference point | What it is | `RaceSolver.ts` |
 |---|---|---|
@@ -185,6 +187,6 @@ This comparison reflects:
 - **Upstream `uma-tools`:** `cdb7ead`, 2026-08-18 ("update game data (global)")
 - **Upstream `uma-skill-tools` (engine repo, `origin/master`):** `8b3f5e2`, 2026-03-17
 - **Upstream `uma-skill-tools` (as pinned by upstream's `uma-tools`):** `6ba5ca0`, 2025-07-31
-- **This fork:** `4401e25`, 2026-07-07
+- **This fork:** `7e6a584`, 2026-08-19
 
-Re-run the commands above against newer commits if you need a current answer.
+Re-run the commands above against newer commits if you need a current answer. Note the "At a glance" game-data counts were refreshed on 2026-08-19 after [upstream-data-sync.md](upstream-data-sync.md) closed most of the gap; everything else in this page (lineage, engine-feature diffs, converged-independently list) reflects the commits above and hasn't been re-verified since.
