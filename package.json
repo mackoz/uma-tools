@@ -3,7 +3,15 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "dev": "cd umalator-global && node build.mjs --serve",
+    "dev:global": "cd umalator-global && node build.mjs --serve",
+    "dev:skill-visualizer-global": "cd skill-visualizer-global && node build.mjs --serve",
+    "build:umalator": "cd umalator && node build.mjs",
+    "build:umalator-global": "cd umalator-global && node build.mjs",
+    "build:skill-visualizer-global": "cd skill-visualizer-global && node build.mjs",
+    "build": "npm run build:umalator && npm run build:umalator-global && npm run build:skill-visualizer-global"
+  },
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "devDependencies": {

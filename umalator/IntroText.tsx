@@ -69,6 +69,14 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2026-08-19</h2>
+					<ul>
+						<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
+						<li>Fixed corner/straight positions on 105 Global courses that had drifted from the correct geometry (corner lengths and straight boundaries were off by a few meters to tens of meters).</li>
+						<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2026-06-14</h2>
 					<ul>
 						<li>New Umas.</li>

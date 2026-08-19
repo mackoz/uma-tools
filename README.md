@@ -1,32 +1,57 @@
-An umalator fork
+# uma-tools
 
-Umalator is a great CM-planning tool to check where skills proc and how effective they are - but on Global it has been used and abused as a race simulator (i.e. comparing 2 umas with different pow, wit, etc or running 'stamina calculations' by brute-forcing recovery skill length gains in the skill chart).
+A browser-based race simulator and toolset for **Uma Musume: Pretty Derby**. The headline app, Umalator, runs Monte Carlo race simulations comparing two umas (stats + skills) on a chosen course and reports the resulting length (バ身/basinn) gain — plus a skill-activation chart, an HP/spurt chart, and course-comparison tooling.
 
-Comparing 2 umas in the vacuum of a simulation is inherently flawed regardless, and should never, ever be the end-all decider of which uma you use. But if we're going to have a tool that lets you compare 2 umas, it should at least be somewhat accurate.
+This is a fork of [`alpha123/uma-tools`](https://github.com/alpha123/uma-tools) — see [Lineage](#lineage) — with several simulation-accuracy fixes and features layered on top. See [docs/fork-changes.md](docs/fork-changes.md) for the reasoning behind those changes, and [docs/upstream-comparison.md](docs/upstream-comparison.md) for how this fork and upstream have diverged since (upstream is still active and ahead on several fronts, including game data).
 
-# 'Improvements'
-- Implemented wit variance mechanics: Downhill Mode, Rushed, Skill Proc Chance.
-  - This is primarily for accurate spurt rate calculations - which after cross-referencing with in-game packet data umalator with wit variance gives you an accurate spurt rate within a few %
-- Extended position keep functionality
-  - Allow customization of pacer uma (skills, wit/pow, etc).
-  - Allow more than 1 pacer uma (i.e. simulating 2 fronts, or 2 runaways, 1 runaway, etc).
-  - Implemented mee1080 position keeping logic to observe the effects of position keep beyond early-race.
-- Desynced uma 1 and 2 race solver RNG in compare mode - there is an option to re-enable RNG sync when wit variance is turned off.
-- Removed HP consumption when using the skill/uma chart.
-  - Spurt/survival rate is the only thing that should ever be used to determine course stam requirements - people have been abusing the skill chart to check at what point recovery skills stop giving +L which has resulted in a lot of misinformation RE: stam requirements (hai refdoc)
-  <br><br>TODO: Remove stam skills from the skill chart entirely (unless they have a velocity component)
-- Aaaand something that's not exactly an improvement... and makes the sim run slower... and maybe should be disabled... lane movement! We can now evaluate the effectiveness of lane movement skills which is fairly niche, but interesting nonetheless.
+Everything runs client-side: no backend, no build-time API calls, no server-rendered anything. It's a set of static Preact apps bundled with esbuild.
 
-One thing that's not an improvement is the code quality (and not all of it is my fault >x< - this is actually a fork of a fork: https://github.com/IHATEJEKUTO/VFalator-Umalator-Fork-Yeah) buuut at least I fixed some of the base umalator bugs.
+## Quick start
 
-# Bug fixes
-- Fixed start dash acceleration. In the original umalator, there is no start dash modifier on the 1st acceleration frame, and the start dash modifier incorrectly carries over for 1 frame after start dash.
-- Fixed velocity clamping. In the original umalator, when a targetspeed skill runs out and an uma is decelerating, they will incorrectly slow down below their target speed for 1 frame.
-- Fixed skill chart trigger region desync caused by skills that target other umas.
-- Fixed non-full spurts. In the original umalator, full spurts are always delayed by 60m + candidate delay distance.
-- Fixed section modifier applying beyond late-race.
+```sh
+npm install
+cd umalator-global
+node build.mjs --serve
+```
 
-# Bugs I dunno how to fix:
-- Static/dynamic conditions do not interact properly because of how trigger regions are implemented. The most prevalent example of this is Restless on Kyoto 3000m.
-The immediate trigger region is the 1st uphill (pre-calculated), and then in the race solver the dynamic condition is resolved (accumulatetime >= 5s).
-After 5s the uma is already on the 2nd uphill (outside the pre-calculated trigger region) so the skill never activates. Not sure how to properly fix this.
+Then open `http://localhost:8000/uma-tools/umalator-global/`.
+
+> **Note:** the dev server serves static assets (icons, fonts) from the *parent* of your checkout directory, so this only resolves cleanly if your local clone is named `uma-tools`. See [docs/deployment.md](docs/deployment.md#local-dev-gotcha) if you hit missing icons.
+
+No build is required just to try the app as-is — every `bundle.js`/`bundle.css` is committed to git and current, so you can also just open `index.html` through any static file server (see [docs/deployment.md](docs/deployment.md)).
+
+## What's in here
+
+| Path | What it is |
+|---|---|
+| `uma-skill-tools/` | The simulation engine — race physics, skill-condition parsing, Monte Carlo sampling. No UI dependencies; also used by CLI tools and tests. |
+| `umalator-global/` | **Primary app.** Global/EN race comparison simulator. Builds from `umalator/`'s source against Global game data. |
+| `umalator/` | JP version of the same app; also the shared source both `umalator/` and `umalator-global/` build from. |
+| `skill-visualizer/`, `skill-visualizer-global/` | Standalone tool: visualize where a skill's activation regions fall on a course, without running a full comparison. |
+| `build-planner/` | Skill-list + region-overlay viewer for a fixed reference horse. |
+| `courseimages/` | Utility to export course-diagram PNGs. |
+| `umadle/` | An Uma Musume Wordle clone. |
+| `rougelike/` | A hex-color-guessing Wordle clone — not Uma-related, just lives here. |
+| `components/`, `strings/` | Shared Preact components (skill list/picker, course track SVG, uma editor) and i18n strings, used across the apps above. |
+| `icons/`, `fonts/`, `courseimages*` | Static assets, referenced by an absolute `/uma-tools/...` URL prefix — see [docs/deployment.md](docs/deployment.md). |
+| `vendor/` | Vendored copy of TanStack table-core + a Preact adapter, used by Umalator's results table. |
+| `*.pl` scripts, `umalator-global/*.pl` | The data pipeline that regenerates uma/skill/course JSON from the game client — see [docs/data-pipeline.md](docs/data-pipeline.md). |
+
+## Docs
+
+- **[docs/architecture.md](docs/architecture.md)** — how a simulation actually runs, file by file, plus known rough edges in the engine.
+- **[docs/apps.md](docs/apps.md)** — what each sub-app does, how to build it, and its gotchas.
+- **[docs/data-pipeline.md](docs/data-pipeline.md)** — regenerating uma/skill/course data from the game client.
+- **[docs/deployment.md](docs/deployment.md)** — GitHub Pages deployment, the `/uma-tools/` base-path constraint, local dev.
+- **[docs/fork-changes.md](docs/fork-changes.md)** — this fork's simulation-accuracy changes and known unfixed bugs, preserved from the original fork notes.
+- **[docs/upstream-comparison.md](docs/upstream-comparison.md)** — how this fork and upstream `alpha123/uma-tools` have diverged since the split: what each side added, and what turned out to be independent fixes for the same bug.
+- **[docs/upstream-data-sync.md](docs/upstream-data-sync.md)** — catching this fork's committed game data (umas/skills/courses/icons) up to upstream from a local checkout, since this fork's own data pipeline currently can't run against a live game client.
+- **[CLAUDE.md](CLAUDE.md)** — working conventions for AI-assisted edits in this repo (generated-file guardrails, JP/Global split, build commands).
+
+## Lineage
+
+`alpha123/uma-tools` was forked directly by kachi-dev on 2025-10-09, whose first commit squashed in changes from [`IHATEJEKUTO/VFalator-Umalator-Fork-Yeah`](https://github.com/IHATEJEKUTO/VFalator-Umalator-Fork-Yeah) (a separate, earlier fork of alpha123) rather than descending from it — VFalator is a source that got merged in, not an ancestor in a linear chain. IHATEJEKUTO went on to commit directly into kachi-dev's repo from 2025-10-13 onward. `kachi-dev/uma-tools` → this fork. See [docs/upstream-comparison.md](docs/upstream-comparison.md#lineage-accurately) for the commit-level evidence.
+
+## License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE).
