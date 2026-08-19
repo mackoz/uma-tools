@@ -128,6 +128,8 @@ The fork's data is a **strict subset** of upstream's on every key checked — no
 
 (One place the fork's *numbers* look higher — `uma-skill-tools/data/{skill_data,skillnames}.json`, ~1861/2474 fork vs ~1716/2284 in upstream's checkout — is an artifact of upstream's stale submodule pin, not better fork data. Upstream's live root `skill_meta.json` above is ahead either way.)
 
+These counts are a snapshot and will drift out of date immediately — see [upstream-data-sync.md](upstream-data-sync.md) for a script that reports (and can close) the current gap, rather than trying to keep exact numbers in sync across two docs.
+
 ## Divergent by design
 
 Not gaps on either side — genuinely different choices for the same problem:
