@@ -480,6 +480,16 @@ body.splitterDragging {
 	border-radius: 6px;
 }
 
+.runBarError {
+	font-family: inherit;
+	font-size: 13px;
+	color: #b91c1c;
+	background: rgba(185, 28, 28, 0.08);
+	border: 1px solid rgba(185, 28, 28, 0.25);
+	border-radius: 6px;
+	padding: 4px 10px;
+}
+
 .runBarGroup {
 	display: flex;
 	align-items: center;
