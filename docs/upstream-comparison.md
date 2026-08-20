@@ -30,7 +30,7 @@ This is the single most important thing to get right when reading (or extending)
 |---|---|---|
 | **A. Upstream app, as pinned** | Upstream's `uma-tools` repo still treats `uma-skill-tools/` as a **git submodule**, pinned at commit `6ba5ca0`, dated **2025-07-31** — i.e. *before* the fork point. | 670 lines |
 | **B. Upstream engine repo, HEAD** | `alpha123/uma-skill-tools`'s own `origin/master`, **51 commits past the pin**, last touched 2026-03-17 (`8b3f5e2`). | 762 lines |
-| **C. This fork** | Vendored in-tree (submodule removed in `7a4949a`, 2025-10-12). | **1508 lines** |
+| **C. This fork** | Vendored in-tree from 2025-10-12 (`7a4949a` flattened the submodule) until this doc's update on 2026-08-19, when it went back to being a submodule — now pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools), a fork of A/B's `alpha123/uma-skill-tools` carrying the kachi-lineage import (see `plans/engine-comparison/forks.md`). Line counts below still describe this fork's engine code, unaffected by which mechanism currently tracks it. | **1508 lines** |
 
 Upstream's own `uma-tools` checkout points at a **year-stale** engine pin — corroborated by upstream's own app code calling `buildSkillData` with 9 arguments against the pinned engine's 8-parameter signature (a mismatch that would only make sense if the app had moved past what's pinned).
 

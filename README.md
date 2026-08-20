@@ -9,6 +9,7 @@ Everything runs client-side: no backend, no build-time API calls, no server-rend
 ## Quick start
 
 ```sh
+git submodule update --init
 npm install
 cd umalator-global
 node build.mjs --serve
@@ -24,7 +25,7 @@ No build is required just to try the app as-is — every `bundle.js`/`bundle.css
 
 | Path | What it is |
 |---|---|
-| `uma-skill-tools/` | The simulation engine — race physics, skill-condition parsing, Monte Carlo sampling. No UI dependencies; also used by CLI tools and tests. |
+| `uma-skill-tools/` | The simulation engine — race physics, skill-condition parsing, Monte Carlo sampling. No UI dependencies; also used by CLI tools and tests. A git submodule ([`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools)) — `git submodule update --init` after cloning. |
 | `umalator-global/` | **Primary app.** Global/EN race comparison simulator. Builds from `umalator/`'s source against Global game data. |
 | `umalator/` | JP version of the same app; also the shared source both `umalator/` and `umalator-global/` build from. |
 | `skill-visualizer/`, `skill-visualizer-global/` | Standalone tool: visualize where a skill's activation regions fall on a course, without running a full comparison. |
