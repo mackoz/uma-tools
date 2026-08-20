@@ -73,6 +73,9 @@ export function IntroText(props) {
 					<ul>
 						<li>Fixed Pace Down mode's speed penalty using the wrong value in mid-race (was always 0.915x instead of 0.945x mid-race after the 1.5th anniversary).</li>
 						<li>Fixed Pace Down mode ending too late in mid-race after the 1.5th anniversary.</li>
+						<li>Fixed importing an uma (single or roster) crashing when it carries a skill with no simulator data (Carnival Bonus and ~330 similar cases) — those skills are now skipped instead of erroring.</li>
+						<li>Added support for roster imports with a per-uma creation date, so the Umas tab’s "Created" sort and date badge work on freshly-exported rosters.</li>
+						<li>Updated the roster export tool link (it moved to uma.guide/roster-viewer).</li>
 					</ul>
 				</section>
 				<section>
