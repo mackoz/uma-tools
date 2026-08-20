@@ -8,7 +8,7 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
    - `*/bundle.js`, `*/bundle.css`, `*/bundle.2.js`, `*/simulator.worker.js` — esbuild output. Edit the `.tsx`/`.ts` source and rebuild instead.
    - `umas.json`, `skill_meta.json`, `icons.json`, and the `umalator-global/` equivalents — Perl-generated from the game's `master.mdb`. Edit the generating `.pl` script (see `docs/data-pipeline.md`) and regenerate, don't patch the JSON directly. `uma-skill-tools/data/{skill_data,skillnames,course_data,tracknames}.json` are the same story but live in the `uma-skill-tools` submodule (see the submodule section below) — the generating `.pl` scripts are there too, and a fix means committing and pushing in that repo, not editing the checked-out copy here.
 
-2. **Bundles are committed to git.** If you change source under `umalator/`, `umalator-global/`, or `skill-visualizer-global/` — including a submodule bump, see below — you must rebuild that app's bundle (see commands below) and commit the rebuilt output, or the deployed site keeps running the old code with no error or warning. (CI rebuilds these three on push — see `.github/workflows/deploy.yml` — but don't rely on that alone if you're testing locally.)
+2. **Bundles are *not* committed to git — CI is the only build path.** `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages`, `rougelike`, and `umadle` all have a `build.mjs` and are gitignored (see `.gitignore`); `deploy.yml` rebuilds all seven on every push to `master`, and GitHub Pages is configured (`build_type: workflow`) to serve exactly that CI-built artifact — there is no separate "legacy" branch-source deploy racing it anymore. This means you do **not** need to rebuild-and-commit before pushing, but you should still build locally (see commands below) to catch a broken build before it reaches CI. `build-planner` is the one exception: its `bundle.js`/`bundle.2.js` stay committed because its source doesn't currently compile (see `docs/apps.md#build-planner`) — don't add it to CI without fixing that first.
 
 3. **`umalator-global/` has no source of its own.** It's a build target: `umalator-global/build.mjs` compiles `../umalator/app.tsx` with `CC_GLOBAL: 'true'` against the JSON data in `umalator-global/`. **Any edit to `umalator/app.tsx` (or its imports) affects both apps.** If you change it, rebuild *both* `umalator/` and `umalator-global/`, and check whether the change needs to branch on the `CC_GLOBAL` define (stat defaults, label text, feature availability all already do this in places — grep `CC_GLOBAL` before assuming a change applies uniformly).
 
@@ -26,6 +26,14 @@ cd umalator-global && node build.mjs --serve # dev server on :8000, implies --de
 cd umalator && node build.mjs [--debug]      # JP app; no --serve mode
 
 cd skill-visualizer-global && node build.mjs [--debug|--serve [port]]
+
+# also CI-built, same [--debug] flag, no --serve mode:
+cd skill-visualizer && node build.mjs
+cd courseimages && node build.mjs
+cd rougelike && node build.mjs
+cd umadle && node build.mjs
+
+npm run build                                # all of the above in one shot
 ```
 
 `build.mjs` is authoritative for every app that has one. The legacy `build.bat` files (all apps have one; some — `build-planner`, `skill-visualizer`, `umadle`, `rougelike`, `courseimages` — have *only* a `.bat`) are Windows-oriented esbuild-then-unassert-then-minify scripts; the ones that also have a `.mjs` predate it and don't emit `simulator.worker.js`, so don't treat them as sufficient for `umalator`/`umalator-global`/`skill-visualizer-global`.
