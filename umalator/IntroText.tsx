@@ -76,6 +76,8 @@ export function IntroText(props) {
 						<li>Fixed importing an uma (single or roster) crashing when it carries a skill with no simulator data (Carnival Bonus and ~330 similar cases) — those skills are now skipped instead of erroring.</li>
 						<li>Added support for roster imports with a per-uma creation date, so the Umas tab’s "Created" sort and date badge work on freshly-exported rosters.</li>
 						<li>Updated the roster export tool link (it moved to uma.guide/roster-viewer).</li>
+						<li>Fixed 4 skill conditions that crashed the simulation instead of computing: <em>Dreams Donned with Pride!</em> (Special Week [Ruler of Japan]'s unique and its inherited copy), <em>Presents from X</em> (Biwa Hayahide [Rouge Caroler]'s unique and its inherited copy), <em>Defeatist</em>, and <em>Racing Spirit: Wit</em>.</li>
+						<li>Skills that reference a still-unsupported condition (currently <em>Trick (Front)</em>, <em>Trick (Rear)</em>, <em>Tantalizing Trick</em>, <em>Catch 'Em Off Guard</em>, and <em>Oppression</em>) now show a clear error naming the condition instead of leaving the run stuck on "Simulation Running..." forever.</li>
 					</ul>
 				</section>
 				<section>
