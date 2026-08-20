@@ -1830,6 +1830,7 @@ function App(props) {
 	const [seed, setSeed] = useState(DEFAULT_SEED);
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+	const [simulationError, setSimulationError] = useState('');
 	const [displayRun, setDisplayRun] = useState<'mean' | 'median' | 'min' | 'max'>('median');
 	const [simulationProgress, setSimulationProgress] = useState<{round: number, total: number} | null>(null);
 	const chartWorkersCompletedRef = useRef(0);
@@ -2090,6 +2091,17 @@ function App(props) {
 					break;
 			}
 		});
+		w.addEventListener('error', function (e) {
+			// an uncaught exception inside the worker (e.g. a skill referencing a condition the engine
+			// doesn't implement — ConditionParser now throws a named ParseError instead of silently
+			// resolving to undefined) otherwise leaves the run bar spinning forever with no feedback.
+			e.preventDefault();
+			setSimulationError(e.message || 'Simulation failed');
+			setIsSimulationRunning(false);
+			setSimulationProgress(null);
+			chartWorkersCompletedRef.current = 0;
+			setLoadingAdditionalSamples(new Set());
+		});
 		return w;
 	}, []));
 
@@ -2244,6 +2256,7 @@ function App(props) {
 
 	function doComparison() {
 		postEvent('doComparison', {});
+		setSimulationError('');
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
 		worker1.postMessage({
@@ -2272,6 +2285,7 @@ function App(props) {
 
 	function doRunOnce() {
 		postEvent('doRunOnce', {});
+		setSimulationError('');
 		setIsSimulationRunning(true);
 		const effectiveSeed = seed + runOnceCounter;
 		setRunOnceCounter(prev => prev + 1);
@@ -2317,6 +2331,7 @@ function App(props) {
 		setLastRunChartUma(uma1);
 		setLastRunChartCourseId(courseId);
 		chartWorkersCompletedRef.current = 0;
+		setSimulationError('');
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
 		const params = racedefToParams(racedef, uma1.strategy);
@@ -3073,6 +3088,7 @@ function App(props) {
 								<button title="Randomize seed" onClick={() => { setSeed(Math.floor(Math.random() * (-1 >>> 0)) >>> 0); setRunOnceCounter(0); }}>🎲</button>
 							</div>
 						</div>
+						{simulationError && <div class="runBarError">{simulationError}</div>}
 					</div>
 					<div class="racetrackRow">
 					<RaceTrack
