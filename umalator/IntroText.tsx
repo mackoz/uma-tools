@@ -2,69 +2,105 @@ import { h } from 'preact';
 
 import './IntroText.css';
 
-
-
-export function INTRO(props){
-	return(
-		<div id="REALINTROTEXT">
-
-			
-		</div>
-
-
-	)
-
-
+export function INTRO(props) {
+	return <div id="REALINTROTEXT"></div>;
 }
-
-
-
 
 export function IntroText(props) {
 	return (
 		<div id="introtext">
 			<details>
 				<summary>Caveats</summary>
-				The simulator is fairly complete and implements nearly all relevant game mechanics, with the following exceptions:
+				The simulator is fairly complete and implements nearly all relevant game
+				mechanics, with the following exceptions:
 				<ul>
 					<li>
 						<details>
-							<summary>Spot Struggle ignores LaneGap activation condition and is based solely on the distance between umas.</summary>
-							<p>Due to the difficulty of accurately simulating lane movement, Spot Struggle is activated when two or more Front Runner umas are within 3.75m of one another (5m for Runaway).</p>
-							<p>We do simulate lane movement, however, this is simply an approximation for the purpose of determining the effectiveness of lane movement skills post 1st-anniversary.</p>
+							<summary>
+								Spot Struggle ignores LaneGap activation condition and is based
+								solely on the distance between umas.
+							</summary>
+							<p>
+								Due to the difficulty of accurately simulating lane movement,
+								Spot Struggle is activated when two or more Front Runner umas
+								are within 3.75m of one another (5m for Runaway).
+							</p>
+							<p>
+								We do simulate lane movement, however, this is simply an
+								approximation for the purpose of determining the effectiveness
+								of lane movement skills post 1st-anniversary.
+							</p>
 						</details>
 					</li>
 
 					<li>
 						<details>
-							<summary>Early-race lane movement is simulated approximately as this mechanic is dependent on other umas in the race.</summary>
-							<p>Specifically, your lane movement largely depends on overtake targets and blocking.</p>
-							<p>We have used logic from the mee1080 race simulator to approximate lane movement for the purposes of observing the effect of certain lane movement skills, however, it is not accurate enough to use for mechanics like Spot Struggle and Dueling.</p>
+							<summary>
+								Early-race lane movement is simulated approximately as this
+								mechanic is dependent on other umas in the race.
+							</summary>
+							<p>
+								Specifically, your lane movement largely depends on overtake
+								targets and blocking.
+							</p>
+							<p>
+								We have used logic from the mee1080 race simulator to
+								approximate lane movement for the purposes of observing the
+								effect of certain lane movement skills, however, it is not
+								accurate enough to use for mechanics like Spot Struggle and
+								Dueling.
+							</p>
 						</details>
 					</li>
 
 					<li>
 						<details>
-							<summary>Pseudo-random skills based on the location of other umas use a best-effort estimation for the distribution of their activation locations which may not be perfectly reflective of in-game behavior in all circumstances</summary>
-							<p>Skills that have conditions that require you to be blocked, are based on other umas in your proximity, etc, are modeled according to statistical distributions intended to simulate their in-game behavior but may not be perfectly accurate. It should always find the correct minimum and maximum but the reported mean and median should sometimes be taken with a grain of salt. For example skills with blocked conditions are generally better in races with more umas and worse with fewer. Use your better judgement.</p>
-							<p>Skills with conditions with <code>_random</code> in the name (e.g. <code>phase_random</code>, <code>corner_random</code>, <code>straight_random</code>) are implemented identically to the in-game logic and will have more accurate mean/median values, as are skills based purely on the course geometry with no blocked front/side/surrounded conditions.</p>
+							<summary>
+								Pseudo-random skills based on the location of other umas use a
+								best-effort estimation for the distribution of their activation
+								locations which may not be perfectly reflective of in-game
+								behavior in all circumstances
+							</summary>
+							<p>
+								Skills that have conditions that require you to be blocked, are
+								based on other umas in your proximity, etc, are modeled
+								according to statistical distributions intended to simulate
+								their in-game behavior but may not be perfectly accurate. It
+								should always find the correct minimum and maximum but the
+								reported mean and median should sometimes be taken with a grain
+								of salt. For example skills with blocked conditions are
+								generally better in races with more umas and worse with fewer.
+								Use your better judgement.
+							</p>
+							<p>
+								Skills with conditions with <code>_random</code> in the name
+								(e.g. <code>phase_random</code>, <code>corner_random</code>,{' '}
+								<code>straight_random</code>) are implemented identically to the
+								in-game logic and will have more accurate mean/median values, as
+								are skills based purely on the course geometry with no blocked
+								front/side/surrounded conditions.
+							</p>
 						</details>
 					</li>
 
 					<li>
 						<details>
 							<summary>Skill cooldowns are not implemented</summary>
-							Skills only ever activate once even if they have a cooldown like Professor of Curvature or Beeline Burst. 
+							Skills only ever activate once even if they have a cooldown like
+							Professor of Curvature or Beeline Burst.
 						</details>
 					</li>
 					<li>
 						<details>
-							<summary>Unique skill scaling with levels is not implemented</summary>
+							<summary>
+								Unique skill scaling with levels is not implemented
+							</summary>
 							Unique skills are always simulated as a base level 3★ unique.
 						</details>
 					</li>
 				</ul>
-				By and large it should be highly accurate. It has been battle-tested on the JP server for several years.
+				By and large it should be highly accurate. It has been battle-tested on
+				the JP server for several years.
 			</details>
 			<details open={true}>
 				<summary>Changelog</summary>
@@ -72,38 +108,116 @@ export function IntroText(props) {
 					<details class="release" open={true}>
 						<summary>2026-08-20</summary>
 						<ul>
-							<li>Fixed Pace Down mode's speed penalty using the wrong value in mid-race (was always 0.915x instead of 0.945x mid-race after the 1.5th anniversary).</li>
-							<li>Fixed Pace Down mode ending too late in mid-race after the 1.5th anniversary.</li>
-							<li>Fixed importing an uma (single or roster) crashing when it carries a skill with no simulator data (Carnival Bonus and ~330 similar cases) — those skills are now skipped instead of erroring.</li>
-							<li>Added support for roster imports with a per-uma creation date, so the Umas tab’s "Created" sort and date badge work on freshly-exported rosters.</li>
-							<li>Updated the roster export tool link (it moved to uma.guide/roster-viewer).</li>
-							<li>Fixed 4 skill conditions that crashed the simulation instead of computing: <em>Dreams Donned with Pride!</em> (Special Week [Ruler of Japan]'s unique and its inherited copy), <em>Presents from X</em> (Biwa Hayahide [Rouge Caroler]'s unique and its inherited copy), <em>Defeatist</em>, and <em>Racing Spirit: Wit</em>.</li>
-							<li>Skills that reference a still-unsupported condition (currently <em>Trick (Front)</em>, <em>Trick (Rear)</em>, <em>Tantalizing Trick</em>, <em>Catch 'Em Off Guard</em>, and <em>Oppression</em>) now show a clear error naming the condition instead of leaving the run stuck on "Simulation Running..." forever.</li>
+							<li>
+								Fixed Pace Down mode's speed penalty using the wrong value in
+								mid-race (was always 0.915x instead of 0.945x mid-race after the
+								1.5th anniversary).
+							</li>
+							<li>
+								Fixed Pace Down mode ending too late in mid-race after the 1.5th
+								anniversary.
+							</li>
+							<li>
+								Fixed importing an uma (single or roster) crashing when it
+								carries a skill with no simulator data (Carnival Bonus and ~330
+								similar cases) — those skills are now skipped instead of
+								erroring.
+							</li>
+							<li>
+								Added support for roster imports with a per-uma creation date,
+								so the Umas tab’s "Created" sort and date badge work on
+								freshly-exported rosters.
+							</li>
+							<li>
+								Updated the roster export tool link (it moved to
+								uma.guide/roster-viewer).
+							</li>
+							<li>
+								Fixed 4 skill conditions that crashed the simulation instead of
+								computing: <em>Dreams Donned with Pride!</em> (Special Week
+								[Ruler of Japan]'s unique and its inherited copy),{' '}
+								<em>Presents from X</em> (Biwa Hayahide [Rouge Caroler]'s unique
+								and its inherited copy), <em>Defeatist</em>, and{' '}
+								<em>Racing Spirit: Wit</em>.
+							</li>
+							<li>
+								Skills that reference a still-unsupported condition (currently{' '}
+								<em>Trick (Front)</em>, <em>Trick (Rear)</em>,{' '}
+								<em>Tantalizing Trick</em>, <em>Catch 'Em Off Guard</em>, and{' '}
+								<em>Oppression</em>) now show a clear error naming the condition
+								instead of leaving the run stuck on "Simulation Running..."
+								forever.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
 						<summary>2026-08-19</summary>
 						<ul>
-							<li>Synced game data: 11 new JP umas, 1 new Global uma (Yukino Bijin), 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had (Global: Winning Ticket [Dream Deliverer], Agnes Digital [Fanatic♡Jiangshi], Narita Taishin [Difference Engineer], Smart Falcon [Twilight Triumph], Meisho Doto [Dot-o'-Lantern]).</li>
-							<li>Fixed corner/straight positions on 105 Global courses that had drifted from the correct geometry (corner lengths and straight boundaries were off by a few meters to tens of meters).</li>
-							<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
-							<li>Fixed a bug where 3 skills (Nothing Ventured, Risky Business, It's All or Nothing) drained 100% of max HP instead of the intended small amount. In-game this is a random roll — 60% chance of 0%, 30% chance of -2%, 10% chance of -4% — but we don't yet model per-activation randomness for this effect, so for now every activation is hardcoded to the -4% worst case (the roll's actual value 10% of the time).</li>
-							<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
-							<li>Fixed skill conditions checking whether an uma is currently Rushed, or has been Rushed at all this race — they were being ignored entirely (21 skills affected).</li>
-							<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed: <em>Frenzied Front Runners</em>, <em>Frenzied Pace Chasers</em>, <em>Frenzied Late Surgers</em>, and <em>Frenzied End Closers</em>.</li>
-							<li>Added a drag-to-resize splitter between the top pane and the skill/uma chart table, so the table can be given more room instead of always getting whatever space is left over. Double-click the splitter to reset to the default layout; your chosen height is remembered per-browser.</li>
+							<li>
+								Synced game data: 11 new JP umas, 1 new Global uma (Yukino
+								Bijin), 236 new JP skills, 40 new Global skills, 12 new Global
+								courses, plus missing alt-costume outfits and icons backfilled
+								on umas we already had (Global: Winning Ticket [Dream
+								Deliverer], Agnes Digital [Fanatic♡Jiangshi], Narita Taishin
+								[Difference Engineer], Smart Falcon [Twilight Triumph], Meisho
+								Doto [Dot-o'-Lantern]).
+							</li>
+							<li>
+								Fixed corner/straight positions on 105 Global courses that had
+								drifted from the correct geometry (corner lengths and straight
+								boundaries were off by a few meters to tens of meters).
+							</li>
+							<li>
+								Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24
+								(Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24
+								use estimated dates since they haven't run in Global yet.
+							</li>
+							<li>
+								Fixed a bug where 3 skills (Nothing Ventured, Risky Business,
+								It's All or Nothing) drained 100% of max HP instead of the
+								intended small amount. In-game this is a random roll — 60%
+								chance of 0%, 30% chance of -2%, 10% chance of -4% — but we
+								don't yet model per-activation randomness for this effect, so
+								for now every activation is hardcoded to the -4% worst case (the
+								roll's actual value 10% of the time).
+							</li>
+							<li>
+								Fixed a rare case where a very-low-speed uma's last-spurt
+								calculation could silently fail.
+							</li>
+							<li>
+								Fixed skill conditions checking whether an uma is currently
+								Rushed, or has been Rushed at all this race — they were being
+								ignored entirely (21 skills affected).
+							</li>
+							<li>
+								Fixed a crash affecting 4 skills that check other umas' running
+								styles for being Rushed: <em>Frenzied Front Runners</em>,{' '}
+								<em>Frenzied Pace Chasers</em>, <em>Frenzied Late Surgers</em>,
+								and <em>Frenzied End Closers</em>.
+							</li>
+							<li>
+								Added a drag-to-resize splitter between the top pane and the
+								skill/uma chart table, so the table can be given more room
+								instead of always getting whatever space is left over.
+								Double-click the splitter to reset to the default layout; your
+								chosen height is remembered per-browser.
+							</li>
 						</ul>
 					</details>
 				</div>
 			</details>
 			<details>
-				<summary>Older changelog (before this site had its current maintainer)</summary>
+				<summary>Older Changelog (previous maintainers)</summary>
 				<div class="releaseList">
 					<details class="release">
 						<summary>2026-06-14</summary>
 						<ul>
 							<li>New Umas.</li>
-							<li>No further updates will be made, will be on vacation for 2 weeks! - Jecht</li>
+							<li>
+								No further updates will be made, will be on vacation for 2
+								weeks! - Jecht
+							</li>
 						</ul>
 					</details>
 					<details class="release">
@@ -117,7 +231,9 @@ export function IntroText(props) {
 					<details class="release">
 						<summary>2026-02-19</summary>
 						<ul>
-							<li>Merged UI changes from fork https://github.com/TheCing/uma-tools</li>
+							<li>
+								Merged UI changes from fork https://github.com/TheCing/uma-tools
+							</li>
 							<li>Merged accumulatetime bugfix from upstream.</li>
 							<li>Added umas tab.</li>
 						</ul>
@@ -134,17 +250,26 @@ export function IntroText(props) {
 							<li>
 								<details>
 									<summary>Added dueling.</summary>
-									Dueling is an extremely non-trivial (and arguably pointless) mechanic to simulate as it is entirely based on lobby compositions which are not predictable.
-									Using in-game data, we've approximated the dueling frequency of each strategy which is the best we can do for now.
+									Dueling is an extremely non-trivial (and arguably pointless)
+									mechanic to simulate as it is entirely based on lobby
+									compositions which are not predictable. Using in-game data,
+									we've approximated the dueling frequency of each strategy
+									which is the best we can do for now.
 								</details>
 							</li>
-							<li>Added the skill proc graphs from the skill chart to compare mode (expand the skill on the left side and click 'View Proc Data')</li>
+							<li>
+								Added the skill proc graphs from the skill chart to compare mode
+								(expand the skill on the left side and click 'View Proc Data')
+							</li>
 						</ul>
 					</details>
 					<details class="release">
 						<summary>2025-12-11</summary>
 						<ul>
-							<li>Added back simplified wit toggles just in-case people want to experiment with them.</li>
+							<li>
+								Added back simplified wit toggles just in-case people want to
+								experiment with them.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
@@ -152,8 +277,15 @@ export function IntroText(props) {
 						<ul>
 							<li>
 								<details>
-									<summary>Removed Wit Variance toggle as it is no longer relevant - wit-related mechanics are now always enabled.</summary>
-									If you still want to observe race variance where skills proc in different locations, or 1 uma procs a recovery skill and the other doesn't, you can turn off 'Sync RNG' - though this means you will need to run more samples to achieve accurate mean/median length results.
+									<summary>
+										Removed Wit Variance toggle as it is no longer relevant -
+										wit-related mechanics are now always enabled.
+									</summary>
+									If you still want to observe race variance where skills proc
+									in different locations, or 1 uma procs a recovery skill and
+									the other doesn't, you can turn off 'Sync RNG' - though this
+									means you will need to run more samples to achieve accurate
+									mean/median length results.
 								</details>
 							</li>
 							<li>Synced fork with alpha123 latest changes.</li>
@@ -163,7 +295,10 @@ export function IntroText(props) {
 						<summary>2025-11-30</summary>
 						<ul>
 							<li>Fixed non-full spurts always being delayed by 60m.</li>
-							<li>Added cute utools graphs to skill/uma chart when you click on a skill.</li>
+							<li>
+								Added cute utools graphs to skill/uma chart when you click on a
+								skill.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
@@ -172,7 +307,10 @@ export function IntroText(props) {
 							<li>Updated global data.</li>
 							<li>Fixed umalator target speed clamping during deceleration.</li>
 							<li>Fixed last spurt candidate selection logic.</li>
-							<li>Fixed skills that target other umas (i.e. HRice unique) causing desync issues with skill charts.</li>
+							<li>
+								Fixed skills that target other umas (i.e. HRice unique) causing
+								desync issues with skill charts.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
@@ -180,11 +318,24 @@ export function IntroText(props) {
 						<ul>
 							<li>Updated skill/uma/track data to latest global version.</li>
 							<li>Added Spot Struggle simulation.</li>
-							<li>Added basic lane movement simulation (primarily for Dodging Danger/Prudent Positioning).</li>
-							<li>Added spurt/stamina survival rate. Initial comparisons with in-game spurt rate shows that vfalator is actually more accurate than mee1080, but more testing is needed.</li>
+							<li>
+								Added basic lane movement simulation (primarily for Dodging
+								Danger/Prudent Positioning).
+							</li>
+							<li>
+								Added spurt/stamina survival rate. Initial comparisons with
+								in-game spurt rate shows that vfalator is actually more accurate
+								than mee1080, but more testing is needed.
+							</li>
 							<li>Fixed start delay logic.</li>
-							<li>Fixed early-race velocity bug causing umas to accelerate faster than they should.</li>
-							<li>... and probably other stuffs I forgot since there hasn't been a changelog in a while...</li>
+							<li>
+								Fixed early-race velocity bug causing umas to accelerate faster
+								than they should.
+							</li>
+							<li>
+								... and probably other stuffs I forgot since there hasn't been a
+								changelog in a while...
+							</li>
 						</ul>
 					</details>
 					<details class="release">
@@ -197,35 +348,73 @@ export function IntroText(props) {
 						<summary>2025-10-07</summary>
 						<ul>
 							<li>Implemented rushed status effect</li>
-							<li>Implemented downhill speed-up mode along with the 60% HP consumption reduction. Special thanks to Transparent Dino and Justus0246 for the math</li>
-							<li>Virtual pacemaker for nerds who want to relive the glory days of Urara PDM</li>
-							<li>YOU CAN NOW FORCE SKILLS ACTIVATIONS AT CERTAIN DISTANCES!!! LIKE PROFESSOR OF CURVATURE ON A STRAIGHT!</li>
-							<li>Enhanced Spurt Calculations coded by Transparent Dino, used the Me1080 formula</li>
+							<li>
+								Implemented downhill speed-up mode along with the 60% HP
+								consumption reduction. Special thanks to Transparent Dino and
+								Justus0246 for the math
+							</li>
+							<li>
+								Virtual pacemaker for nerds who want to relive the glory days of
+								Urara PDM
+							</li>
+							<li>
+								YOU CAN NOW FORCE SKILLS ACTIVATIONS AT CERTAIN DISTANCES!!!
+								LIKE PROFESSOR OF CURVATURE ON A STRAIGHT!
+							</li>
+							<li>
+								Enhanced Spurt Calculations coded by Transparent Dino, used the
+								Me1080 formula
+							</li>
 						</ul>
 					</details>
 					<details class="release">
 						<summary>2025-08-17</summary>
 						<ul>
-							<li><strong>Fix to use proper data for hills from the current global version instead of an approximation using data from a later patch</strong> (thanks to <a href="https://github.com/mikumifa">mikumifa</a>)</li>
+							<li>
+								<strong>
+									Fix to use proper data for hills from the current global
+									version instead of an approximation using data from a later
+									patch
+								</strong>{' '}
+								(thanks to <a href="https://github.com/mikumifa">mikumifa</a>)
+							</li>
 							<li>Update game data</li>
-							<li>Fix a bug where very low stamina on long courses could cause the simulator to freeze</li>
+							<li>
+								Fix a bug where very low stamina on long courses could cause the
+								simulator to freeze
+							</li>
 						</ul>
 					</details>
 					<details class="release">
 						<summary>2025-07-28</summary>
 						<ul>
-							<li>Add caveats section describing the implementation of the simulator</li>
-							<li>Allow selecting debuff skills multiple times to simulate multiple debuffers</li>
+							<li>
+								Add caveats section describing the implementation of the
+								simulator
+							</li>
+							<li>
+								Allow selecting debuff skills multiple times to simulate
+								multiple debuffers
+							</li>
 							<li>Minor UI improvements</li>
 						</ul>
 					</details>
 					<details class="release">
 						<summary>2025-07-26</summary>
 						<ul>
-							<li>Update Tokyo 2400m course to remove the hill at the start to match a game bug where skills do not activate on that hill or the hill does not exist</li>
+							<li>
+								Update Tokyo 2400m course to remove the hill at the start to
+								match a game bug where skills do not activate on that hill or
+								the hill does not exist
+							</li>
 							<li>Implement per-section int roll target speed modifier</li>
-							<li>Simulate skills with the post_number condition more accurately</li>
-							<li>Implement the random_lot condition (used by Lucky Seven/Super Lucky Seven)</li>
+							<li>
+								Simulate skills with the post_number condition more accurately
+							</li>
+							<li>
+								Implement the random_lot condition (used by Lucky Seven/Super
+								Lucky Seven)
+							</li>
 							<li>Minor UI improvements</li>
 						</ul>
 					</details>
@@ -236,11 +425,20 @@ export function IntroText(props) {
 							<li>Implement debuff skills</li>
 							<li>
 								<details>
-									<summary>Fix the implementation of skills with the corner_random condition to be more accurate to mechanics of the global release</summary>
-									Primarily affects Swinging Maestro/Corner Recovery, Professor of Curvature/Corner Adept, and the strategy/distance corner skills
+									<summary>
+										Fix the implementation of skills with the corner_random
+										condition to be more accurate to mechanics of the global
+										release
+									</summary>
+									Primarily affects Swinging Maestro/Corner Recovery, Professor
+									of Curvature/Corner Adept, and the strategy/distance corner
+									skills
 								</details>
 							</li>
-							<li>Fix an issue where skills weren't displayed on the chart if they were still active at the end of a simulation run</li>
+							<li>
+								Fix an issue where skills weren't displayed on the chart if they
+								were still active at the end of a simulation run
+							</li>
 							<li>Added changelog</li>
 							<li>Minor UI fixes</li>
 						</ul>
@@ -253,10 +451,22 @@ export function IntroText(props) {
 								<details>
 									<summary>Major improvements to the skill chart mode</summary>
 									<ul>
-										<li>Click rows in the skill efficacy table to show that run on the course chart</li>
-										<li>Radio buttons in table headers to select the statistic displayed on the course chart</li>
-										<li>Show a popup with skill information and length histogram when clicking icons in the skill efficacy table</li>
-										<li>Double-click rows on the skill efficacy table to add them to the simulated uma musume</li>
+										<li>
+											Click rows in the skill efficacy table to show that run on
+											the course chart
+										</li>
+										<li>
+											Radio buttons in table headers to select the statistic
+											displayed on the course chart
+										</li>
+										<li>
+											Show a popup with skill information and length histogram
+											when clicking icons in the skill efficacy table
+										</li>
+										<li>
+											Double-click rows on the skill efficacy table to add them
+											to the simulated uma musume
+										</li>
 									</ul>
 								</details>
 							</li>
@@ -283,22 +493,44 @@ export function IntroText(props) {
 				<summary>Credits</summary>
 				<dl id="credits">
 					<dt>alpha123</dt>
-					<dd>The original Umalator — race simulation engine, skill condition system, and UI</dd>
+					<dd>
+						The original Umalator — race simulation engine, skill condition
+						system, and UI
+					</dd>
 					<dt>Transparent Dino</dt>
-					<dd>Enhanced Spurt calculator (taken from mee1080), Virtual Pacemaker, Downhills, Rushed</dd>
+					<dd>
+						Enhanced Spurt calculator (taken from mee1080), Virtual Pacemaker,
+						Downhills, Rushed
+					</dd>
 					<dt>jechtoff2dudes</dt>
-					<dd>Frontrunner Overtake/Speedup mode, Dragging Skill Markers, Downhills, Skill Activation check</dd>
+					<dd>
+						Frontrunner Overtake/Speedup mode, Dragging Skill Markers,
+						Downhills, Skill Activation check
+					</dd>
 					<dt>Kachi</dt>
-					<dd>Fixing all the bugs and UI issues, mood, UI improvements, rewriting poskeep, reworking RNG, uniques chart (utools at home), spot struggle/dueling, lane movement</dd>
+					<dd>
+						Fixing all the bugs and UI issues, mood, UI improvements, rewriting
+						poskeep, reworking RNG, uniques chart (utools at home), spot
+						struggle/dueling, lane movement
+					</dd>
 					<dt>mackoz</dt>
-					<dd>Game data syncs, Global course geometry and Champions Meeting presets, skill condition and race mechanics fixes, roster import fixes, resizable skill chart</dd>
+					<dd>
+						Game data syncs, Global course geometry and Champions Meeting
+						presets, skill condition and race mechanics fixes, roster import
+						fixes, resizable skill chart
+					</dd>
 				</dl>
 			</details>
 			<footer id="sourcelinks">
-				Original Umalator Source code: <a href="https://github.com/alpha123/uma-skill-tools">simulator</a>, <a href="https://github.com/alpha123/uma-tools">UI</a>
+				Original Umalator Source code:{' '}
+				<a href="https://github.com/alpha123/uma-skill-tools">simulator</a>,{' '}
+				<a href="https://github.com/alpha123/uma-tools">UI</a>
 				<br />
-				Forked from <a href="https://github.com/kachi-dev/uma-tools">kachi-dev</a>: <a href="https://github.com/kachi-dev/uma-skill-tools">simulator</a>, <a href="https://github.com/kachi-dev/uma-tools">UI</a>
+				Forked from{' '}
+				<a href="https://github.com/kachi-dev/uma-tools">kachi-dev</a>:{' '}
+				<a href="https://github.com/kachi-dev/uma-skill-tools">simulator</a>,{' '}
+				<a href="https://github.com/kachi-dev/uma-tools">UI</a>
 			</footer>
 		</div>
 	);
-	;}
+}
