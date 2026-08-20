@@ -74,7 +74,7 @@ export function IntroText(props) {
 						<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
 						<li>Fixed corner/straight positions on 105 Global courses that had drifted from the correct geometry (corner lengths and straight boundaries were off by a few meters to tens of meters).</li>
 						<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
-						<li>Fixed a bug where 3 skills (あやしげな作戦 and variants) drained 100% of max HP instead of the intended small amount.</li>
+						<li>Fixed a bug where 3 skills (Gamester, Questionable Strategy, All or Nothing) drained 100% of max HP instead of the intended small amount.</li>
 						<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
 					</ul>
 				</section>
