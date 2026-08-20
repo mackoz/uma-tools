@@ -84,13 +84,13 @@ export function IntroText(props) {
 					<details class="release">
 						<summary>2026-08-19</summary>
 						<ul>
-							<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
+							<li>Synced game data: 11 new JP umas, 1 new Global uma (Yukino Bijin), 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had (Global: Winning Ticket [Dream Deliverer], Agnes Digital [Fanatic♡Jiangshi], Narita Taishin [Difference Engineer], Smart Falcon [Twilight Triumph], Meisho Doto [Dot-o'-Lantern]).</li>
 							<li>Fixed corner/straight positions on 105 Global courses that had drifted from the correct geometry (corner lengths and straight boundaries were off by a few meters to tens of meters).</li>
 							<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
 							<li>Fixed a bug where 3 skills (Nothing Ventured, Risky Business, It's All or Nothing) drained 100% of max HP instead of the intended small amount.</li>
 							<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
 							<li>Fixed skill conditions checking whether an uma is currently Rushed, or has been Rushed at all this race — they were being ignored entirely (21 skills affected).</li>
-							<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed.</li>
+							<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed: <em>Frenzied Front Runners</em>, <em>Frenzied Pace Chasers</em>, <em>Frenzied Late Surgers</em>, and <em>Frenzied End Closers</em>.</li>
 							<li>Added a drag-to-resize splitter between the top pane and the skill/uma chart table, so the table can be given more room instead of always getting whatever space is left over. Double-click the splitter to reset to the default layout; your chosen height is remembered per-browser.</li>
 						</ul>
 					</details>
