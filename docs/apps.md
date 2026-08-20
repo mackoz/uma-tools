@@ -1,6 +1,6 @@
 # Sub-apps
 
-Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. All of them ship their built `bundle.js`/`bundle.css` (and `simulator.worker.js` where relevant) committed to git — see [deployment.md](deployment.md) for why and what that means for you.
+Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Seven of the eight are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
 
 ## `umalator-global/` — the primary app (Global/EN data)
 
@@ -23,26 +23,32 @@ Same UI as Global, built with `CC_GLOBAL: 'false'` against the JP dataset (`uma-
 
 Standalone tool: pick skills, see color-coded regions on a `RaceTrack` showing where each activates for a chosen course (no compare, no HP/spurt modelling).
 
-- `skill-visualizer/` — JP data, has a language switch, build via `build.bat` only (no `.mjs`).
+- `skill-visualizer/` — JP data, has a language switch. `build.mjs` (`node build.mjs [--debug]`), CI-built; a legacy `build.bat` also exists but `build.mjs` is authoritative.
 - `skill-visualizer-global/` — hard-locked to English, has both `build.bat` and `build.mjs` (`node build.mjs [--debug|--serve [port]]`). Its `redirectData` plugin points `datadir` at `../umalator-global`, so **it has no JSON data of its own** — it reuses umalator-global's dataset.
 
 ## `build-planner/`
 
-Renders `SkillList` + a `RaceTrack` region overlay for a fixed hardcoded horse (all stats 2000, Nige, S distance aptitude). Build via `build.bat`.
+Renders `SkillList` + a `RaceTrack` region overlay for a fixed hardcoded horse (all stats 2000, Nige, S distance aptitude).
 
-- **Gotcha:** `build-planner/index.html` loads `bundle.2.js`, not `bundle.js` — its `build.bat` has the minify-and-delete step commented out, so the intermediate `unassert` output (`bundle.2.js`) is the one actually served. Both files are committed; if you rebuild this app, make sure `bundle.2.js` stays in sync.
+- **⚠️ Currently broken in production.** The committed `bundle.js` was built from a stale source tree that still imported from a `../../skilltool/` path (the pre-rename name for what's now `uma-skill-tools/`) and calls `require("assert")` at module-eval time — `require` doesn't exist in a browser, so the app throws immediately on load, before rendering anything. Confirmed by running the committed bundle in a bare JS context with no `require` global. Matches [upstream-comparison.md](upstream-comparison.md)'s note that this app's source is a "75-line 2023-era stub" — it predates the `uma-skill-tools` rename.
+- **Not rebuilt by CI and not gitignored** — its current source (`app.tsx`) doesn't compile against the present `uma-skill-tools` layout at all (`--external:assert` in its `build.bat` doesn't match the `node:assert` specifier the engine now imports; a raw esbuild run errors outright). Fixing it means updating `app.tsx`'s imports for the current directory layout and giving it a real `build.mjs` (the `mockAssert` plugin pattern used by `courseimages`/`skill-visualizer` would resolve the `node:assert` half) — a separate, larger task than a docs/CI change, not done here.
+- **Gotcha (still applies to the stale committed bundle):** `build-planner/index.html` loads `bundle.2.js`, not `bundle.js` — its `build.bat` has the minify-and-delete step commented out, so the intermediate `unassert` output (`bundle.2.js`) is the one actually served. Both files are committed; if you ever rebuild this app, make sure `bundle.2.js` stays in sync.
 
 ## `courseimages/`
 
-Utility app, not linked from the main UI. Renders a `RaceTrack` for a selected course, inlines computed styles onto the SVG, rasterizes it via canvas, and offers a PNG download (e.g. `tokyo-2400-out-dirt.png`). Build via `build.bat`.
+Utility app, not linked from the main UI. Renders a `RaceTrack` for a selected course, inlines computed styles onto the SVG, rasterizes it via canvas, and offers a PNG download (e.g. `tokyo-2400-out-dirt.png`).
+
+- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative — it adds the `mockAssert` plugin so `CourseData.ts`'s `node:assert` import resolves in the browser, which the raw `.bat` pipeline doesn't handle (see the `build-planner` note above for what that failure looks like when it's not caught).
 
 ## `umadle/`
 
 An Uma Musume Wordle clone — guess the character in 10 tries with per-stat high/low/correct feedback. Self-contained data (`umadle/icons.json`, `umadle/numbers.json`, `umadle/icons/`), daily puzzle seeded via `Rule30CARng` from `uma-skill-tools/Random`.
 
-- **Build:** `build.bat` only.
-- **⚠️ Cannot rebuild from a clean `npm install`.** `umadle/app.tsx` imports `accessible-autocomplete/preact`, which is **not listed in the root `package.json`**. Only the committed `bundle.js`/`bundle.css` work until this dependency is either added to `package.json` or the import is replaced with `components/autocomplete.jsx` (a vendored copy that currently sits unused — see [architecture.md](architecture.md#known-issues)).
+- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative.
+- `accessible-autocomplete` is now a real `package.json` dependency (previously the long-standing gap here — `umadle/app.tsx` imports `accessible-autocomplete/preact`, which used to not be listed anywhere). Installed with `--legacy-peer-deps`: its `peerDependencies` wants `preact@^8`, this repo is on `preact@^10`, and the peer is marked optional but npm still errors on the version mismatch without the flag. That resolution is baked into `package-lock.json`, so a plain `npm ci` (what CI runs) needs no flag itself. `components/autocomplete.jsx`, a vendored alternative that sits unused, is still there as a fallback if this dependency ever becomes unmaintainable — see [architecture.md](architecture.md#known-issues).
 
 ## `rougelike/`
 
-Not Uma-related — a hex-color-guessing Wordle clone (`colorconversion.js` does OKHSV↔sRGB conversion). Included here only because it lives in this repo and shares the build pattern. Build via `build.bat`.
+Not Uma-related — a hex-color-guessing Wordle clone (`colorconversion.js` does OKHSV↔sRGB conversion). Included here only because it lives in this repo and shares the build pattern.
+
+- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative.

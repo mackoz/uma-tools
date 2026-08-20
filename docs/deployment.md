@@ -16,11 +16,9 @@ This means **the site only works correctly when served under a URL path that lit
 
 Hosts that serve at the domain root (Cloudflare Pages, Netlify, Vercel, a plain nginx vhost) will 404 every icon and font unless the repo is staged under a `uma-tools/` subfolder of whatever they serve, or the source is changed to make the prefix configurable and rebuilt. Out of scope for this doc — GitHub Pages is the supported path.
 
-## GitHub Pages (recommended, zero build required)
+## GitHub Pages
 
-The committed bundles are current — `git ls-files` shows every `*/bundle.js`, `*/bundle.css`, and `*/simulator.worker.js` tracked in git, and the repo's `.gitignore` only excludes `node_modules/`. GitHub Pages can therefore serve the repository directly with no build step:
-
-1. Repo Settings → Pages → **Source: Deploy from a branch** → branch `master`, folder `/ (root)`.
+1. Repo Settings → Pages → **Source: GitHub Actions**. (Confirmed via `gh api repos/mackoz/uma-tools/pages` → `"build_type": "workflow"`.)
 2. Confirm `.nojekyll` exists at repo root (added alongside these docs) so GitHub Pages doesn't run Jekyll processing over directories like `_`-prefixed ones — harmless here since none exist, but it's a standard safety net and costs nothing.
 3. Once published, the apps are reachable at:
    - `https://mackoz.github.io/uma-tools/umalator-global/` — primary Global simulator
@@ -33,13 +31,9 @@ The committed bundles are current — `git ls-files` shows every `*/bundle.js`, 
 
 ## Automated builds via GitHub Actions
 
-`.github/workflows/deploy.yml` rebuilds the three apps that have a `build.mjs` (`umalator`, `umalator-global`, `skill-visualizer-global`) on every push to `master`, then publishes the whole repo tree to Pages. This exists so source changes don't silently go stale relative to their committed bundles (see the `CLAUDE.md` guardrail on this).
+`.github/workflows/deploy.yml` rebuilds every app that has a `build.mjs` — `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages`, `rougelike`, `umadle` — on every push to `master`, then publishes the whole repo tree to Pages via `upload-pages-artifact`. This is now the **only** deploy path: Pages' `build_type` is `workflow`, not the legacy branch-source builder, so there's nothing serving the committed tree in parallel. (It used to be both at once — the legacy branch-source pipeline and this workflow both created a `github-pages` deployment on every push, seconds apart, and whichever finished last silently won; that's why bundles used to need to be committed and current. Fixed 2026-08-20 by flipping Pages' source to GitHub Actions via `gh api -X PUT repos/mackoz/uma-tools/pages -f build_type=workflow`.)
 
-It deliberately does **not** rebuild:
-- `umadle` — its `build.bat` depends on `accessible-autocomplete`, which isn't in `package.json` (see [apps.md](apps.md#umadle)); a clean `npm ci` can't build it.
-- `build-planner`, `courseimages`, `skill-visualizer`, `rougelike` — `.bat`-only, Windows-oriented build scripts not easily run in CI as-is.
-
-Those four ship whatever's currently committed. If you change their source, rebuild locally (Wine, a Windows runner, or by hand-translating the `.bat` into equivalent `esbuild` CLI flags) and commit the result.
+None of those seven apps' `bundle.js`/`bundle.css`/`simulator.worker.js` are tracked in git anymore — see `.gitignore`. `build-planner` is the one app CI does **not** rebuild: its source doesn't compile against the current `uma-skill-tools` layout, and its committed bundle is in fact already broken in production as a result — see [apps.md#build-planner](apps.md#build-planner) for the specifics. That one bundle stays committed until someone fixes the underlying source.
 
 ## Local dev
 
@@ -51,7 +45,7 @@ node build.mjs --serve        # port 8000 by default; node build.mjs --serve 300
 
 Then open `http://localhost:8000/uma-tools/umalator-global/`.
 
-The other `build.mjs`-capable apps (`umalator/`, `skill-visualizer-global/`) work the same way from their own directories (`umalator/` has no `--serve` mode — use `node build.mjs --debug` and reload manually, or serve statically).
+The other `build.mjs`-capable apps (`umalator/`, `skill-visualizer-global/`, `skill-visualizer/`, `courseimages/`, `rougelike/`, `umadle/`) work the same way from their own directories — only `umalator-global/` and `skill-visualizer-global/` have a `--serve` mode; the rest use `node build.mjs [--debug]` and reload manually, or serve statically. `npm run build` at the repo root builds all of them in one shot.
 
 ### Local dev gotcha: the server root is your checkout's *parent* directory
 
