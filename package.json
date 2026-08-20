@@ -20,7 +20,8 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "commander": "^13.1.0",
-    "esbuild": "^0.19.5"
+    "esbuild": "^0.19.5",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.2",
