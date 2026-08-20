@@ -94,6 +94,11 @@ export function IntroText(props) {
 							<li>Added a drag-to-resize splitter between the top pane and the skill/uma chart table, so the table can be given more room instead of always getting whatever space is left over. Double-click the splitter to reset to the default layout; your chosen height is remembered per-browser.</li>
 						</ul>
 					</details>
+				</div>
+			</details>
+			<details>
+				<summary>Older changelog (before this site had its current maintainer)</summary>
+				<div class="releaseList">
 					<details class="release">
 						<summary>2026-06-14</summary>
 						<ul>
