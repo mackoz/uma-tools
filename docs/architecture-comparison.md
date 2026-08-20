@@ -12,11 +12,9 @@ A side-by-side comparison of *how this fork and upstream are built*, not what ga
 
 ## Where the engine lives
 
-Upstream keeps `uma-skill-tools` as a real **git submodule** — `.gitmodules` points at `alpha123/uma-skill-tools`, pinned to a specific commit, and `git submodule update --init` fetches it as its own repo-within-a-repo.
+Both sides keep `uma-skill-tools` as a real **git submodule** now — `.gitmodules` points at a specific fork, pinned to a specific commit, `git submodule update --init` fetches it as its own repo-within-a-repo. Upstream points at `alpha123/uma-skill-tools`; this fork points at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools) (itself a fork of `alpha123/uma-skill-tools`, carrying the modifications described throughout this doc). The real remaining difference is *which engine fork* each side pins, not *whether* one is vendored.
 
-This fork **vendors it in-tree**: no `.gitmodules` anywhere, `uma-skill-tools/` is 63 ordinary tracked files in this repo's own git history (flattened in commit `7a4949a`). It still carries its own leftover `package.json`/`tsconfig.json`/`LICENSE` from when it was a submodule, but nothing installs or resolves them separately anymore.
-
-Consequence: upstream can pull in a newer engine with `git submodule update`. This fork can't — there's no submodule to update — which is the whole reason `scripts/sync-upstream-data.mjs` and [upstream-data-sync.md](upstream-data-sync.md) exist as a manual workaround.
+This wasn't always true: this fork vendored the engine in-tree for a while (flattened out of a submodule in commit `7a4949a`, re-submodule'd later) — while it was vendored, it couldn't pull in a newer engine with `git submodule update`, which is the whole reason `scripts/sync-upstream-data.mjs` and [upstream-data-sync.md](upstream-data-sync.md) exist as a manual workaround for *game data* specifically. That workaround is still needed for data (this fork's own pipeline can't run against the encrypted live client — see `data-pipeline.md`), even though the engine *code* itself can now be pulled in the normal way.
 
 **ELI5:** Upstream's simulator code is a separate project that gets *linked in*, like a library you install. This fork's copy of that same code was cut loose from its original project and pasted directly into the repo — it works fine, but it can no longer be updated with a simple "pull the latest library," someone has to manually copy changes over.
 
@@ -153,7 +151,7 @@ A few things that look fork-exclusive if you compare against upstream's *pinned*
 
 | | Upstream | This fork |
 |---|---|---|
-| Engine vendoring | git submodule, pinned | vendored in-tree, no submodule |
+| Engine vendoring | git submodule, pinned at `alpha123/uma-skill-tools` | git submodule, pinned at `mackoz/uma-skill-tools` (a fork) |
 | What's simulated | 1 uma + reference-clock pacer | whole field, N umas |
 | Integrator | velocity-Verlet | forward Euler w/ clamping |
 | Position update timing | before hills/phase/skills | after everything, last |
