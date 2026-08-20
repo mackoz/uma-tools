@@ -32,6 +32,8 @@ This is the step that populates `icons/`, `icons/chara/`, `icons/mob/`, `icons/s
 
 ## JP dataset (repo root + `uma-skill-tools/data/`)
 
+`uma-skill-tools/` is a git submodule (`mackoz/uma-skill-tools`) — the `.pl` scripts and generated JSON under it live in that repo, not this one. Running `make_skill_data.pl` etc. against `master.mdb` still works exactly as documented below (the checked-out submodule has the same file layout), but committing the result means committing *inside* `uma-skill-tools/` and pushing there first, then coming back here to commit the resulting gitlink bump — not a direct commit in this repo's own history. See `CLAUDE.md`'s submodule section.
+
 | Script | Usage | Output |
 |---|---|---|
 | `uma-skill-tools/tools/make_skill_data.pl` | `make_skill_data.pl master.mdb > uma-skill-tools/data/skill_data.json` | Skill effects: `{ "<skillId>": { rarity, alternatives: [{precondition, condition, baseDuration, effects: [{type, modifier, target}]}] } }`. Hardcodes a scenario-skill list (Aoharu, Make A New Track, Grand Live, updated URA, Grand Masters, RFTS) whose modifiers get ×1.2 to match in-game scenario scaling that isn't in the DB. **Shared logic with Global** — same script, run against a different `master.mdb`. |
