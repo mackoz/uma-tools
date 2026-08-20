@@ -66,4 +66,6 @@ Icons are **not** duplicated — both datasets reference the same `icons/` tree 
 - **How do I deploy or run this locally?** → `docs/deployment.md`
 - **What did the previous maintainer change and why?** → `docs/fork-changes.md`
 - **How does this fork differ from upstream `alpha123/uma-tools`?** → `docs/upstream-comparison.md`
+- **How does upstream's own engine/app layer work, on its own terms?** → `docs/upstream-architecture.md`
+- **How is the fork's design different from upstream's, structurally (with plain-language explanations)?** → `docs/architecture-comparison.md`
 - **Game data (umas/skills/courses/icons) looks stale — how do I catch it up?** → `docs/upstream-data-sync.md`
