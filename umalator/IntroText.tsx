@@ -69,6 +69,13 @@ export function IntroText(props) {
 			<details open={true}>
 				<summary>Changelog</summary>
 				<section>
+					<h2>2026-08-20</h2>
+					<ul>
+						<li>Fixed Pace Down mode's speed penalty using the wrong value in mid-race (was always 0.915x instead of 0.945x mid-race after the 1.5th anniversary).</li>
+						<li>Fixed Pace Down mode ending too late in mid-race after the 1.5th anniversary.</li>
+					</ul>
+				</section>
+				<section>
 					<h2>2026-08-19</h2>
 					<ul>
 						<li>Synced game data: 11 new JP umas, 1 new Global uma, 236 new JP skills, 40 new Global skills, 12 new Global courses, plus missing alt-costume outfits and icons backfilled on umas we already had.</li>
@@ -76,14 +83,19 @@ export function IntroText(props) {
 						<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
 						<li>Fixed a bug where 3 skills (Nothing Ventured, Risky Business, It's All or Nothing) drained 100% of max HP instead of the intended small amount.</li>
 						<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
+						<li>Fixed skill conditions checking whether an uma is currently Rushed, or has been Rushed at all this race — they were being ignored entirely (21 skills affected).</li>
+						<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed.</li>
 					</ul>
 				</section>
+			</details>
+			<details>
+				<summary>Older changelog</summary>
 				<section>
 					<h2>2026-06-14</h2>
 					<ul>
 						<li>New Umas.</li>
 						<li>No further updates will be made, will be on vacation for 2 weeks! - Jecht</li>
-						
+
 					</ul>
 				</section>
 				<section>
