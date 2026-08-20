@@ -1,3 +1,4 @@
 [submodule "uma-skill-tools"]
 	path = uma-skill-tools
 	url = https://github.com/mackoz/uma-skill-tools
+	branch = master
