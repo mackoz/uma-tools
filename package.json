@@ -14,13 +14,23 @@
     "build:courseimages": "cd courseimages && node build.mjs",
     "build:rougelike": "cd rougelike && node build.mjs",
     "build:umadle": "cd umadle && node build.mjs",
-    "build": "npm run build:umalator && npm run build:umalator-global && npm run build:skill-visualizer-global && npm run build:skill-visualizer && npm run build:courseimages && npm run build:rougelike && npm run build:umadle"
+    "build": "npm run build:umalator && npm run build:umalator-global && npm run build:skill-visualizer-global && npm run build:skill-visualizer && npm run build:courseimages && npm run build:rougelike && npm run build:umadle",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "author": "pecan",
   "license": "GPL-3.0-or-later",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,css}": "biome check --write --no-errors-on-unmatched"
+  },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.9",
     "commander": "^13.1.0",
     "esbuild": "^0.19.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "typescript": "^7.0.2"
   },
   "dependencies": {
