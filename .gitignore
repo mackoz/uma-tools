@@ -1,1 +1,10 @@
 node_modules/
+
+# Local-only planning notes (backlog ideas, not part of the shipped repo).
+# No trailing slash: plans/ is a symlink to a sibling repo (../uma-tools-plans) on this
+# machine, and a trailing-slash pattern only matches real directories, not symlinks.
+plans
+
+# Extracted game client DB used locally to regenerate skill/uma/course data.
+# Large binary, never meant to be committed - see docs/data-pipeline.md.
+master.mdb
