@@ -76,6 +76,8 @@ export function IntroText(props) {
 						<li>Updated Global CM presets from CM 11 (Aquarius Cup) up to CM 24 (Aries Cup 2), fixing a mislabeled entry along the way. CM 19-24 use estimated dates since they haven't run in Global yet.</li>
 						<li>Fixed a bug where 3 skills (Nothing Ventured, Risky Business, It's All or Nothing) drained 100% of max HP instead of the intended small amount.</li>
 						<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
+						<li>Fixed skill conditions checking whether an uma is currently Rushed, or has been Rushed at all this race — they were being ignored entirely (21 skills affected).</li>
+						<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed.</li>
 					</ul>
 				</section>
 				<section>
