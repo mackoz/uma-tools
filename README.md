@@ -19,7 +19,7 @@ Then open `http://localhost:8000/uma-tools/umalator-global/`.
 
 > **Note:** the dev server serves static assets (icons, fonts) from the *parent* of your checkout directory, so this only resolves cleanly if your local clone is named `uma-tools`. See [docs/deployment.md](docs/deployment.md#local-dev-gotcha) if you hit missing icons.
 
-No build is required just to try the app as-is — every `bundle.js`/`bundle.css` is committed to git and current, so you can also just open `index.html` through any static file server (see [docs/deployment.md](docs/deployment.md)).
+Bundles aren't committed to git — GitHub Actions rebuilds every app on every push and Pages serves that CI output directly (see [docs/deployment.md](docs/deployment.md)), so `https://mackoz.github.io/uma-tools/` is always current with zero effort on your end. To try it locally instead of just visiting that URL, `npm install && npm run build` builds every app once (no `--serve`, no live reload — just run it again after editing source).
 
 ## What's in here
 

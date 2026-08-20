@@ -8,3 +8,26 @@ plans
 # Extracted game client DB used locally to regenerate skill/uma/course data.
 # Large binary, never meant to be committed - see docs/data-pipeline.md.
 master.mdb
+
+# esbuild output for every app with a build.mjs. deploy.yml rebuilds these on
+# every push and Pages is configured to serve that CI artifact (build_type:
+# workflow) — see docs/deployment.md. Do NOT add a blanket */bundle.js here:
+# build-planner's source doesn't compile against the current uma-skill-tools
+# layout (see docs/apps.md), so its stale bundle.js/bundle.2.js stay committed
+# on purpose, same for the other apps that are still .bat-only.
+/umalator/bundle.js
+/umalator/bundle.css
+/umalator/simulator.worker.js
+/umalator-global/bundle.js
+/umalator-global/bundle.css
+/umalator-global/simulator.worker.js
+/skill-visualizer-global/bundle.js
+/skill-visualizer-global/bundle.css
+/skill-visualizer/bundle.js
+/skill-visualizer/bundle.css
+/courseimages/bundle.js
+/courseimages/bundle.css
+/rougelike/bundle.js
+/rougelike/bundle.css
+/umadle/bundle.js
+/umadle/bundle.css
