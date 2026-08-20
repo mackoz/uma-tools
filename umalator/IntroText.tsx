@@ -91,6 +91,7 @@ export function IntroText(props) {
 							<li>Fixed a rare case where a very-low-speed uma's last-spurt calculation could silently fail.</li>
 							<li>Fixed skill conditions checking whether an uma is currently Rushed, or has been Rushed at all this race — they were being ignored entirely (21 skills affected).</li>
 							<li>Fixed a crash affecting 4 skills that check other umas' running styles for being Rushed.</li>
+							<li>Added a drag-to-resize splitter between the top pane and the skill/uma chart table, so the table can be given more room instead of always getting whatever space is left over. Double-click the splitter to reset to the default layout; your chosen height is remembered per-browser.</li>
 						</ul>
 					</details>
 					<details class="release">
