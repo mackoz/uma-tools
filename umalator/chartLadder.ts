@@ -14,6 +14,8 @@
 // and the lower bound of the current top candidates -- not because a handful of early samples
 // happened to look unimpressive. See evaluateRound() below for the exact rule.
 
+import type { SkillStatistics } from './statisticalAnalysis';
+
 export type AnalysisPresetName = 'quick' | 'balanced' | 'thorough';
 
 export interface LadderRound {
@@ -119,12 +121,23 @@ export interface BlockLike {
 // check never has to re-scan a skill's earlier rounds; the full sample arrays (needed only for
 // percentiles, help/hurt/tie counts, and a final BCa bootstrap) are concatenated lazily, on the
 // rare path where a skill's final summary is actually being computed.
+// Which (blockSeed, blockSize) a chunk of samples came from, and how many samples of it are in
+// this chunk -- kept in call order so a global sample index (position in the concatenated
+// lengths()/times() arrays) can be mapped back to the exact scenario that produced it, for an
+// expanded row's on-demand detail fetch (see app.tsx's requestChartDetail).
+interface ChunkProvenance {
+	blockSeed: number;
+	blockSize: number;
+	count: number;
+}
+
 export class SkillAccumulator {
 	readonly id: string;
 	private lengthChunks: Float32Array[] = [];
 	private timeChunks: Float32Array[] = [];
 	private procCountChunks: Uint16Array[] = [];
 	private procPositionChunks: Float32Array[] = [];
+	private provenance: ChunkProvenance[] = [];
 	private _n = 0;
 	private _sum = 0;
 	private _sumSq = 0;
@@ -135,7 +148,13 @@ export class SkillAccumulator {
 		this.id = id;
 	}
 
-	addBlock(block: BlockLike): void {
+	// `provenance` identifies the block this chunk's samples came from (its scenario seed and
+	// size) -- required, and always supplied by every real caller, so resolveIndex()'s offset
+	// walk can assume the provenance list lines up 1:1 with lengthChunks.
+	addBlock(
+		block: BlockLike,
+		provenance: { blockSeed: number; blockSize: number },
+	): void {
 		const { lengths, procCounts } = block;
 		for (let i = 0; i < lengths.length; ++i) {
 			const v = lengths[i];
@@ -149,7 +168,28 @@ export class SkillAccumulator {
 		this.timeChunks.push(block.times);
 		this.procCountChunks.push(block.procCounts);
 		this.procPositionChunks.push(block.procPositions);
+		this.provenance.push({ ...provenance, count: lengths.length });
 		this._n += lengths.length;
+	}
+
+	// Maps a global sample index (an index into lengths()/times(), i.e. concatenation order) back
+	// to which block produced it and that block's own local index -- the (blockSeed, blockSize,
+	// index) triple runComparisonBlock's `only` parameter needs to re-simulate that one sample.
+	resolveIndex(
+		globalIndex: number,
+	): { blockSeed: number; blockSize: number; index: number } | null {
+		let offset = 0;
+		for (const p of this.provenance) {
+			if (globalIndex < offset + p.count) {
+				return {
+					blockSeed: p.blockSeed,
+					blockSize: p.blockSize,
+					index: globalIndex - offset,
+				};
+			}
+			offset += p.count;
+		}
+		return null;
 	}
 
 	get n(): number {
@@ -375,4 +415,14 @@ export function candidateFromAccumulator(
 		procTotal: acc.procTotal,
 		allZero: acc.allZero,
 	};
+}
+
+// One table row. 'pending' (no accumulator data yet) is a UI-only addition to SkillStatus --
+// every other status corresponds to a real evaluateRound() decision.
+export interface ChartRow {
+	id: string;
+	n: number;
+	statistics: SkillStatistics | null;
+	status: SkillStatus | 'pending';
+	eliminationReason: EliminationReason;
 }

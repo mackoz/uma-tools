@@ -840,6 +840,9 @@ export interface ChartRunTrace {
 	t: [number[], number[]];
 	p: [number[], number[]];
 	v: [number[], number[]];
+	// hp is only here so this shape is a drop-in match for what VelocityLines (app.tsx) reads off
+	// a selected chart row's runData -- Skill Chart mode doesn't otherwise display HP.
+	hp: [number[], number[]];
 	// Per uma, tracked skill id -> activation [startPos, endPos] pairs. Only index 1 is ever
 	// populated -- see the file-level note above.
 	sk: [
@@ -1098,7 +1101,13 @@ export function runComparisonBlock(
 
 		const trace: ChartRunTrace | null =
 			traceMode === 'indices'
-				? { t: [[], []], p: [[], []], v: [[], []], sk: [new Map(), new Map()] }
+				? {
+						t: [[], []],
+						p: [[], []],
+						v: [[], []],
+						hp: [[], []],
+						sk: [new Map(), new Map()],
+					}
 				: null;
 
 		while (!s1Finished || !s2Finished) {
@@ -1129,6 +1138,7 @@ export function runComparisonBlock(
 						s2.currentSpeed +
 							(s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err),
 					);
+					trace.hp[1].push((s2.hp as any).hp);
 				}
 			} else if (!s2Finished) {
 				s2Finished = true;
@@ -1147,6 +1157,7 @@ export function runComparisonBlock(
 						s1.currentSpeed +
 							(s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err),
 					);
+					trace.hp[0].push((s1.hp as any).hp);
 				}
 			} else if (!s1Finished) {
 				s1Finished = true;
