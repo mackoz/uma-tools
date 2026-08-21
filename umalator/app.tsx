@@ -213,7 +213,7 @@ const presets = (
 		? [
 				// ids 19-24: dates are estimated (upstream's own list doesn't reach these yet) - course/conditions
 				// come from JP's original 2022-2023 debut run of each cup (Global's 2nd zodiac lap replays JP's
-				// historical back-catalog, not JP's current rotation - see docs/upstream-data-sync.md)
+				// historical back-catalog, not JP's current rotation)
 				{
 					id: 24,
 					type: EventType.CM,

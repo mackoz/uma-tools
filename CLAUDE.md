@@ -42,7 +42,7 @@ There is no `tsc` step in any build — esbuild transpiles directly, so a build 
 
 `umadle` now builds from a clean install: `accessible-autocomplete` is a declared dependency, and `.npmrc` supplies the legacy-peer setting required for its optional Preact 8 peer against this repo's Preact 10. See `docs/apps.md` for the details.
 
-If game data looks stale (a released uma/skill/course is missing) and there's no `master.mdb` handy, check `docs/upstream-data-sync.md` before assuming a full pipeline run is required — there's a script that ports already-computed data from a local upstream checkout as a stopgap (this fork's own asset extraction is currently broken against the encrypted live client — see `docs/data-pipeline.md`). To poke at a `master.mdb` you do have (confirm a table/column exists before writing a throwaway script against it), use `sqlite3 master.mdb` (bundled on macOS, no install needed) — `.tables`, `.schema <table>`, or plain SQL. No decryption needed for `master.mdb` itself; the encryption `docs/data-pipeline.md` describes is specific to the separate `meta` asset-manifest DB (icon/asset extraction), not the skill/course/uma tables these `.pl` scripts read.
+If game data looks stale (a released uma/skill/course is missing) and there's no `master.mdb` handy, there's a stopgap script, `scripts/sync-upstream-data.mjs`, that ports already-computed data from a local upstream checkout instead of assuming a full pipeline run is required (this fork's own asset extraction is currently broken against the encrypted live client — see `docs/data-pipeline.md`). To poke at a `master.mdb` you do have (confirm a table/column exists before writing a throwaway script against it), use `sqlite3 master.mdb` (bundled on macOS, no install needed) — `.tables`, `.schema <table>`, or plain SQL. No decryption needed for `master.mdb` itself; the encryption `docs/data-pipeline.md` describes is specific to the separate `meta` asset-manifest DB (icon/asset extraction), not the skill/course/uma tables these `.pl` scripts read.
 
 ## Linting and formatting
 
@@ -74,10 +74,10 @@ Icons are **not** duplicated — both datasets reference the same `icons/` tree 
 - `HorseState` (the uma stat/skill editor state) is an Immutable.js `Record`, defined in `components/HorseDefTypes.ts`. Follow the existing `Record`-update patterns (`.set()`, `.update()`) rather than mutating.
 - `uma-skill-tools/` is intentionally engine-only — it must stay independent of Preact/DOM so it can run inside the web worker (`simulator.worker.ts`) and the `ts-node` CLI tools under `uma-skill-tools/tools/`. Don't import Preact components into it.
 - See `docs/architecture.md` for the simulation engine's data flow and known rough edges before modifying `uma-skill-tools/`.
-- **`uma-skill-tools/` is a git submodule**, pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools) (itself a fork of [`alpha123/uma-skill-tools`](https://github.com/alpha123/uma-skill-tools) — `RaceSolver.ts` alone has roughly doubled in size relative to upstream; don't assume upstream semantics, upstream test cases, or upstream numeric output apply here). It used to be vendored in-tree instead; if you're reading history from before that changed back, the file layout is identical either way, only how changes propagate differs now:
+- **`uma-skill-tools/` is a git submodule**, pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools) (itself a fork of [`alpha123/uma-skill-tools`](https://github.com/alpha123/uma-skill-tools); this engine has diverged substantially from upstream — don't assume upstream semantics, upstream test cases, or upstream numeric output apply here). It used to be vendored in-tree instead; if you're reading history from before that changed back, the file layout is identical either way, only how changes propagate differs now:
   - After a fresh clone, run `git submodule update --init` — an unitialized submodule leaves `uma-skill-tools/` looking present in listings but empty on disk, and every build fails on missing imports.
   - **Engine changes happen in the submodule repo first.** Edit inside `uma-skill-tools/`, commit and push *there* (it's its own git repo, with its own remote), then come back here and commit the resulting gitlink bump (`git add uma-skill-tools && git commit`). Editing the checked-out copy here without doing that leaves the fix on disk but unrecorded — the gitlink still points at the old commit, so a fresh clone or `git submodule update` silently reverts it.
-  - One concrete trap carried over from the engine's own `CLAUDE.md`: `Rule30CARng` (`Random.ts:29`) is just an alias for a `prando`-backed PRNG here, even though upstream's class of the same name is a real Rule-30 cellular-automaton generator — see `docs/upstream-comparison.md`.
+  - One concrete trap carried over from the engine's own `CLAUDE.md`: `Rule30CARng` (`Random.ts:29`) is just an alias for a `prando`-backed PRNG here, even though upstream's class of the same name is a real Rule-30 cellular-automaton generator.
 
 ## Where to look next
 
@@ -85,9 +85,4 @@ Icons are **not** duplicated — both datasets reference the same `icons/` tree 
 - **How does a simulation actually run, file by file?** → `docs/architecture.md`
 - **How do I regenerate the game data (new umas, new skills)?** → `docs/data-pipeline.md`
 - **How do I deploy or run this locally?** → `docs/deployment.md`
-- **What did the previous maintainer change and why?** → `docs/fork-changes.md`
-- **How does this fork differ from upstream `alpha123/uma-tools`?** → `docs/upstream-comparison.md`
-- **How does upstream's own engine/app layer work, on its own terms?** → `docs/upstream-architecture.md`
-- **How is the fork's design different from upstream's, structurally (with plain-language explanations)?** → `docs/architecture-comparison.md`
-- **Game data (umas/skills/courses/icons) looks stale — how do I catch it up?** → `docs/upstream-data-sync.md`
 - **How does the statistical Skill Chart evaluate skills (ladder, block sampling, detail-on-demand)?** → `docs/statistical-analysis.md`
