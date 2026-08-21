@@ -73,7 +73,7 @@ End-to-end data flow for one `.build()` call:
 ## How the UI layers on top
 
 - `components/` holds the shared Preact pieces: `HorseDef.tsx`/`HorseDefTypes.ts` (uma stat editor + the `HorseState` Immutable `Record`), `SkillList.tsx`/`SkillPicker.tsx` (skill search/pick UI, including the condition pretty-printer built on `ConditionParser`), `RaceTrack.tsx` (SVG course renderer + skill trigger-region overlay), `Language.tsx` (i18n context), `Tooltip.tsx`.
-- The Umalator apps run simulations off the main thread: `umalator/app.tsx:2047` spawns 4 `Worker('./simulator.worker.js')` instances.
+- The Umalator apps run simulations off the main thread, both in Compare mode and in the statistical Skill Chart (`Mode.Chart`/`Mode.UniquesChart`) — the latter through a small pool module, `umalator/workerPool.ts`, wrapping `Worker('./simulator.worker.js')` instances. See [statistical-analysis.md](statistical-analysis.md) for the chart's full data flow: paired scenario blocks (`umalator/compare.ts`'s `runComparisonBlock`), an adaptive round ladder that eliminates non-competitive candidates early (`umalator/chartLadder.ts`), and detail-on-demand re-simulation for an expanded row rather than retaining full per-tick traces for every candidate up front.
 - `vendor/table-core` and `vendor/preact-table` are a vendored copy of TanStack table-core plus a Preact adapter, used only by `umalator/BasinnChart.tsx`'s results table. Wired in via each `build.mjs`'s `redirectTable` esbuild plugin, which rewrites `@tanstack/*` imports to `vendor/<name>/index.ts`.
 
 See [apps.md](apps.md) for how each sub-app assembles these pieces, and [deployment.md](deployment.md) for how the whole thing gets served.

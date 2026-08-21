@@ -90,3 +90,4 @@ Icons are **not** duplicated — both datasets reference the same `icons/` tree 
 - **How does upstream's own engine/app layer work, on its own terms?** → `docs/upstream-architecture.md`
 - **How is the fork's design different from upstream's, structurally (with plain-language explanations)?** → `docs/architecture-comparison.md`
 - **Game data (umas/skills/courses/icons) looks stale — how do I catch it up?** → `docs/upstream-data-sync.md`
+- **How does the statistical Skill Chart evaluate skills (ladder, block sampling, detail-on-demand)?** → `docs/statistical-analysis.md`
