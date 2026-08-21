@@ -1,11 +1,15 @@
 @font-face {
 	font-family: "Inter";
-	src: local("Inter"), url("/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+	src:
+		local("Inter"),
+		url("/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
 }
 
 @font-face {
 	font-family: "Noto Sans JP";
-	src: local("Noto Sans JP"), url("/uma-tools/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
+	src:
+		local("Noto Sans JP"),
+		url("/uma-tools/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
 }
 
 body {
@@ -132,7 +136,6 @@ body {
 	background: hsl(210 6% 93%);
 	color: hsl(215 20% 30%);
 }
-
 
 #pacemakerIndicator {
 	display: flex;
@@ -309,7 +312,9 @@ body {
 .modeTab.selected {
 	background: #fff;
 	color: hsl(215 20% 15%);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	box-shadow:
+		0 1px 3px rgba(0, 0, 0, 0.08),
+		0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #mainContent {
@@ -391,7 +396,7 @@ body.splitterDragging {
 }
 
 .controlPanelField::before {
-	content: '';
+	content: "";
 	position: absolute;
 	left: 0;
 	top: 50%;
@@ -420,7 +425,9 @@ body.splitterDragging {
 	background: white;
 	color: hsl(215 20% 20%);
 	outline: none;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 	appearance: none;
 	-webkit-appearance: none;
 	cursor: pointer;
@@ -516,7 +523,9 @@ body.splitterDragging {
 	background: white;
 	color: hsl(215 20% 20%);
 	outline: none;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .runBarGroup input[type="number"]:hover {
@@ -556,7 +565,11 @@ body.splitterDragging {
 	border-radius: 6px;
 	cursor: pointer;
 	opacity: 0.45;
-	transition: opacity 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+	transition:
+		opacity 0.12s ease,
+		border-color 0.12s ease,
+		box-shadow 0.12s ease,
+		background-color 0.12s ease;
 }
 .chart-icon-filter-btn:hover:not(:disabled) {
 	background-color: #f2f2f2;
@@ -586,6 +599,36 @@ body.splitterDragging {
 	background-color: #1e1e1e;
 	border-color: #60a5fa;
 	box-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
+}
+
+#chartRunSettings {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 8px 20px 4px;
+	flex-wrap: wrap;
+	font-size: 12px;
+}
+
+.chartRunEstimate {
+	color: var(--muted, #6b7280);
+	font-size: 11px;
+}
+
+#stopChart {
+	color: #c53030;
+	border-color: #c53030;
+}
+
+.expandedStatsTable th {
+	text-align: left;
+	color: var(--muted, #6b7280);
+	font-weight: normal;
+	padding-right: 8px;
+}
+
+.expandedStatsTable td {
+	text-align: right;
 }
 
 #settingsPane {
@@ -679,7 +722,7 @@ body.splitterDragging {
 }
 
 .toggleTrack::after {
-	content: '';
+	content: "";
 	position: absolute;
 	width: 16px;
 	height: 16px;
@@ -688,7 +731,7 @@ body.splitterDragging {
 	top: 2px;
 	left: 2px;
 	transition: transform 0.2s;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .toggleSwitch input:checked + .toggleTrack {
@@ -732,7 +775,9 @@ body.splitterDragging {
 	font-weight: 500;
 	font-family: inherit;
 	color: hsl(215 20% 35%);
-	transition: background 0.15s, border-color 0.15s;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
 }
 
 .settingsCopyBtn:hover {
@@ -964,7 +1009,6 @@ body.splitterDragging {
 	border-right: none;
 }
 
-
 .controlPanel .groundSelect {
 	font-weight: 400;
 	text-align: left;
@@ -1003,7 +1047,6 @@ body.splitterDragging {
 	margin-bottom: 12px;
 }
 
-
 .racetrackControls {
 	display: flex;
 	flex-direction: row;
@@ -1033,7 +1076,7 @@ body.splitterDragging {
 }
 
 .racetrackView .drag-textbox text {
-	filter: none !important;  /* TODO */
+	filter: none !important; /* TODO */
 	font-weight: bold;
 }
 
@@ -1154,24 +1197,23 @@ body.splitterDragging {
 
 #infoTables tbody:last-child {
 	border: none;
-	height: 150px;  /* TODO this is a bit arbitrary */
+	height: 150px; /* TODO this is a bit arbitrary */
 	overflow-x: hidden;
 	overflow-y: auto;
 }
 
 /* cant have normal margins on table elements for some reason */
-#infoTables tbody::before, #infoTables tbody::after {
-	content: '';
+#infoTables tbody::before,
+#infoTables tbody::after {
+	content: "";
 	display: block;
 	height: 5px;
 }
 
-#infoTables caption{
+#infoTables caption {
 	padding-right: 50px;
 	padding-bottom: 5px;
 	font-weight: bold;
-	
-
 }
 
 #infoTables > table tr {
@@ -1301,9 +1343,10 @@ body.splitterDragging {
 .umaTab.selected {
 	background: #fff;
 	color: hsl(215 20% 15%);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	box-shadow:
+		0 1px 3px rgba(0, 0, 0, 0.08),
+		0 1px 2px rgba(0, 0, 0, 0.06);
 }
-
 
 #expandBtn {
 	background: hsl(210 6% 93%);
@@ -1334,7 +1377,6 @@ body.splitterDragging {
 	width: 12px;
 }
 
-
 #umaOverlay {
 	background: white;
 	border: 1px solid rgb(148, 150, 189);
@@ -1342,33 +1384,30 @@ body.splitterDragging {
 	border-radius: 0 12px 12px 0;
 	display: flex;
 	gap: 30px;
-    height: calc(100vh - 18px);
-    /* please work or ill delete that fuckass button */
-    left: auto;
+	height: calc(100vh - 18px);
+	/* please work or ill delete that fuckass button */
+	left: auto;
 	margin-left: 2px;
 	padding: 6px;
-    position: fixed;
+	position: fixed;
 	top: 0;
-    /* Hopefully doesnt make it expand any longer */
-    right: 0;
-    width: 100vw;
+	/* Hopefully doesnt make it expand any longer */
+	right: 0;
+	width: 100vw;
 	overflow-x: auto;
 	overflow-y: auto;
 	z-index: 9999;
-    justify-content: flex-start;
+	justify-content: flex-start;
 }
 
- 
 #umaOverlay > * {
-    flex: 0 0 auto;
+	flex: 0 0 auto;
 }
 
 #closeUmaOverlay {
 	color: rgb(148, 150, 189);
-	cursor: default;
 	font-size: 2em;
 	height: 2em;
-	
 
 	/* Made the close button much more accessible*/
 	position: fixed;
@@ -1398,7 +1437,7 @@ body.splitterDragging {
 #copyUmaButtons > div::after {
 	border-top: 2px solid rgb(121, 64, 22);
 	border-right: 2px solid rgb(121, 64, 22);
-	content: '';
+	content: "";
 	display: block;
 	height: 30px;
 	position: absolute;
@@ -1408,13 +1447,13 @@ body.splitterDragging {
 #copyUmaToRight::after {
 	left: 15px;
 	top: 25px;
-	transform: rotate(45deg) translate(-15px,0);
+	transform: rotate(45deg) translate(-15px, 0);
 }
 
 #copyUmaToLeft::after {
 	bottom: 25px;
 	right: 15px;
-	transform: rotate(-135deg) translate(-15px,0);
+	transform: rotate(-135deg) translate(-15px, 0);
 }
 
 #swapUmas {
@@ -1445,376 +1484,376 @@ body.splitterDragging {
 }
 
 :root {
-  --bg: #ffffff;
-  --fg: #111827;
-  --muted: #374151;
-  --card: #f9fafb;
-  --border: #e5e7eb;
-  --surface: #f2f2f2;
-  --input-bg: #ffffff;
-  --input-border: hsl(210 14% 83%);
-  --input-border-hover: hsl(215 50% 70%);
-  --theme-brown: rgb(121, 64, 22);
-  --theme-brown-light: rgb(224, 214, 204);
-  --theme-brown-bg: rgb(248, 248, 248);
+	--bg: #ffffff;
+	--fg: #111827;
+	--muted: #374151;
+	--card: #f9fafb;
+	--border: #e5e7eb;
+	--surface: #f2f2f2;
+	--input-bg: #ffffff;
+	--input-border: hsl(210 14% 83%);
+	--input-border-hover: hsl(215 50% 70%);
+	--theme-brown: rgb(121, 64, 22);
+	--theme-brown-light: rgb(224, 214, 204);
+	--theme-brown-bg: rgb(248, 248, 248);
 }
 .dark {
-  --bg: #141414;
-  --fg: #e4e4e7;
-  --muted: #a1a1aa;
-  --card: #1c1c1c;
-  --border: #2e2e2e;
-  --surface: #1e1e1e;
-  --input-bg: #191919;
-  --input-border: #363636;
-  --input-border-hover: #555;
-  --theme-brown: #d4a574;
-  --theme-brown-light: #3a3a3a;
-  --theme-brown-bg: #1e1e1e;
+	--bg: #141414;
+	--fg: #e4e4e7;
+	--muted: #a1a1aa;
+	--card: #1c1c1c;
+	--border: #2e2e2e;
+	--surface: #1e1e1e;
+	--input-bg: #191919;
+	--input-border: #363636;
+	--input-border-hover: #555;
+	--theme-brown: #d4a574;
+	--theme-brown-light: #3a3a3a;
+	--theme-brown-bg: #1e1e1e;
 }
 
 /* --- Dark mode: Navbar --- */
 .dark #navBar {
-  background: #181818;
-  border-bottom-color: var(--border);
+	background: #181818;
+	border-bottom-color: var(--border);
 }
 .dark .navTab {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .navTab:hover:not(.selected):not(.disabled) {
-  color: var(--fg);
-  border-bottom-color: #444;
+	color: var(--fg);
+	border-bottom-color: #444;
 }
 .dark .navTab.selected {
-  color: #e4e4e7;
-  border-bottom-color: #e4e4e7;
+	color: #e4e4e7;
+	border-bottom-color: #e4e4e7;
 }
 .dark .navTab.disabled {
-  color: #555;
+	color: #555;
 }
 .dark #themeToggle {
-  border-color: var(--border);
-  color: var(--muted);
+	border-color: var(--border);
+	color: var(--muted);
 }
 .dark #themeToggle:hover {
-  background: #2a2a2a;
-  color: var(--fg);
+	background: #2a2a2a;
+	color: var(--fg);
 }
 
 /* --- Dark mode: Sidebar --- */
 .dark #iconSidebar {
-  background: #181818;
-  border-right-color: var(--border);
+	background: #181818;
+	border-right-color: var(--border);
 }
 .dark .sidebarIcon {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .sidebarIcon:hover {
-  background: #2a2a2a;
-  color: var(--fg);
+	background: #2a2a2a;
+	color: var(--fg);
 }
 .dark .sidebarIcon.active {
-  background: #2a2a2a;
-  color: #e4e4e7;
+	background: #2a2a2a;
+	color: #e4e4e7;
 }
 
 /* --- Dark mode: Control Panel --- */
 .dark .controlPanel {
-  background: var(--surface);
+	background: var(--surface);
 }
 .dark .controlPanelLabel {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .controlPanelField::before {
-  background: var(--border);
+	background: var(--border);
 }
 .dark .controlPanel select,
 .dark .controlPanel input {
-  background-color: var(--input-bg);
-  border-color: var(--input-border);
-  color: var(--fg);
+	background-color: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
 }
 .dark .controlPanel select:hover,
 .dark .controlPanel input:hover {
-  border-color: var(--input-border-hover);
+	border-color: var(--input-border-hover);
 }
 .dark .controlPanel select:focus,
 .dark .controlPanel input:focus {
-  border-color: #888;
-  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.15);
+	border-color: #888;
+	box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.15);
 }
 .dark .controlPanel .groundSelect {
-  background-color: var(--input-bg);
-  border-color: var(--input-border);
-  color: var(--fg);
+	background-color: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
 }
 
 /* --- Dark mode: Run bar --- */
 .dark .runBarGroup label {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .runBarGroup input[type="number"] {
-  background: var(--input-bg);
-  border-color: var(--input-border);
-  color: var(--fg);
+	background: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
 }
 .dark .runBarGroup input[type="number"]:hover {
-  border-color: var(--input-border-hover);
+	border-color: var(--input-border-hover);
 }
 .dark #seedWrapper button {
-  background: var(--surface);
-  border-color: var(--input-border);
-  color: var(--fg);
+	background: var(--surface);
+	border-color: var(--input-border);
+	color: var(--fg);
 }
 .dark #seedWrapper button:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark .racetrackControls label {
-  color: var(--muted);
+	color: var(--muted);
 }
 
 /* --- Dark mode: Mode tabs --- */
 .dark #modeTabs {
-  background: #1e1e1e;
+	background: #1e1e1e;
 }
 .dark .modeTab {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .modeTab:hover:not(.selected) {
-  color: var(--fg);
-  background: #2a2a2a;
+	color: var(--fg);
+	background: #2a2a2a;
 }
 .dark .modeTab.selected {
-  background: #333;
-  color: var(--fg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	background: #333;
+	color: var(--fg);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .dark #chartSplitter {
-  background: var(--border, #2e2e2e);
+	background: var(--border, #2e2e2e);
 }
 .dark #chartSplitter::after {
-  background: #5a5a5a;
+	background: #5a5a5a;
 }
 .dark #chartSplitter:hover {
-  background: #3a3a3a;
+	background: #3a3a3a;
 }
 
 /* --- Dark mode: Uma tab bar --- */
 .dark .umaTabBar {
-  border-bottom-color: var(--border);
+	border-bottom-color: var(--border);
 }
 .dark .umaTabItem {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .umaTabItem:hover:not(.selected) {
-  color: var(--fg);
-  border-bottom-color: #555;
+	color: var(--fg);
+	border-bottom-color: #555;
 }
 .dark .umaTabItem.selected {
-  color: var(--fg);
-  border-bottom-color: var(--fg);
+	color: var(--fg);
+	border-bottom-color: var(--fg);
 }
 .dark .umaTabsGroup {
-  background: #1e1e1e;
+	background: #1e1e1e;
 }
 .dark .umaTab {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark .umaTab:hover:not(.selected) {
-  color: var(--fg);
-  background: #2a2a2a;
+	color: var(--fg);
+	background: #2a2a2a;
 }
 .dark .umaTab.selected {
-  background: #333;
-  color: var(--fg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	background: #333;
+	color: var(--fg);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* --- Dark mode: Expand button --- */
 .dark #expandBtn {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark #expandBtn:hover {
-  background: #363636;
+	background: #363636;
 }
 .dark #expandBtn::after {
-  border-right-color: var(--muted);
-  border-top-color: var(--muted);
+	border-right-color: var(--muted);
+	border-top-color: var(--muted);
 }
 
 /* --- Dark mode: Settings pane --- */
 .dark #settingsPane {
-  background: #141414;
-  border-right-color: var(--border);
+	background: #141414;
+	border-right-color: var(--border);
 }
 .dark #settingsPane h3 {
-  color: hsl(215 10% 55%);
+	color: hsl(215 10% 55%);
 }
 .dark .settingsCard {
-  background: #1e1e1e;
-  border-color: var(--border);
+	background: #1e1e1e;
+	border-color: var(--border);
 }
 .dark .settingsCard h4 {
-  color: hsl(215 10% 50%);
+	color: hsl(215 10% 50%);
 }
 .dark .settingsCard select {
-  background: var(--input-bg);
-  border-color: var(--input-border);
-  color: var(--fg);
+	background: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--fg);
 }
 .dark .settingsToggleRow {
-  color: var(--fg);
+	color: var(--fg);
 }
 .dark .settingsToggleRow + .settingsToggleRow {
-  border-top-color: var(--border);
+	border-top-color: var(--border);
 }
 .dark .toggleTrack {
-  background: #3a3a3a;
+	background: #3a3a3a;
 }
 .dark .toggleSwitch input:checked + .toggleTrack {
-  background: rgb(120, 122, 168);
+	background: rgb(120, 122, 168);
 }
 .dark .settingsSmallBtn {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--fg);
+	background: var(--surface);
+	border-color: var(--border);
+	color: var(--fg);
 }
 .dark .settingsSmallBtn:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark .settingsCopyBtn {
-  background: #1e1e1e;
-  border-color: var(--border);
-  color: var(--fg);
+	background: #1e1e1e;
+	border-color: var(--border);
+	color: var(--fg);
 }
 .dark .settingsCopyBtn:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark .duelingModal {
-  background: #1e1e1e;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	background: #1e1e1e;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .dark .duelingModal h2 {
-  color: var(--fg);
+	color: var(--fg);
 }
 .dark .duelingSliders label {
-  color: var(--fg);
+	color: var(--fg);
 }
 .dark .duelingWarning {
-  background: #2a1a1a;
-  border-color: #4a2020;
+	background: #2a1a1a;
+	border-color: #4a2020;
 }
 .dark .duelingWarning p {
-  color: #f88;
+	color: #f88;
 }
 .dark .duelingActions button {
-  background: rgb(120, 122, 168);
+	background: rgb(120, 122, 168);
 }
 .dark .duelingActions button:hover {
-  background: rgb(140, 142, 188);
+	background: rgb(140, 142, 188);
 }
 .dark #pacemakerIndicator span {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 .dark #pacemakerIndicator button {
-  border-color: var(--border);
-  color: var(--theme-brown);
+	border-color: var(--border);
+	color: var(--theme-brown);
 }
 .dark #pacemakerIndicator button:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark #pacemakerCountControl {
-  border-top-color: var(--border);
+	border-top-color: var(--border);
 }
 .dark #pacemakerCountControl label {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 .dark .pacemaker-combobox-button {
-  background: var(--input-bg);
-  border-color: var(--input-border);
-  color: var(--theme-brown);
+	background: var(--input-bg);
+	border-color: var(--input-border);
+	color: var(--theme-brown);
 }
 .dark .pacemaker-combobox-button:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 .dark .pacemaker-combobox-dropdown {
-  background: #222;
-  border-color: var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+	background: #222;
+	border-color: var(--border);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 .dark .pacemaker-combobox-option {
-  border-bottom-color: var(--border);
+	border-bottom-color: var(--border);
 }
 .dark .pacemaker-combobox-option:hover {
-  background: #2a2a2a;
+	background: #2a2a2a;
 }
 
 /* --- Dark mode: Uma pane --- */
 .dark #umaPane {
-  background: #181818;
-  border-right-color: var(--border);
+	background: #181818;
+	border-right-color: var(--border);
 }
 
 /* --- Dark mode: Overlay (expanded view) --- */
 .dark #umaOverlay {
-  background: var(--bg);
-  border-color: var(--border);
+	background: var(--bg);
+	border-color: var(--border);
 }
 .dark #closeUmaOverlay {
-  color: var(--muted);
+	color: var(--muted);
 }
 .dark #copyUmaButtons > div {
-  background: linear-gradient(#2a2a2a, #222);
-  border-color: var(--border);
+	background: linear-gradient(#2a2a2a, #222);
+	border-color: var(--border);
 }
 .dark #copyUmaButtons > div::after {
-  border-top-color: var(--theme-brown);
-  border-right-color: var(--theme-brown);
+	border-top-color: var(--theme-brown);
+	border-right-color: var(--theme-brown);
 }
 .dark #swapUmas {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 
 /* --- Dark mode: Results pane --- */
 .dark #resultsSummary > tbody td {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--theme-brown);
+	background: var(--surface);
+	border-color: var(--border);
+	color: var(--theme-brown);
 }
 .dark #resultsSummary > tfoot th {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 .dark #resultsHelp {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 .dark #infoTables tbody {
-  border-bottom-color: var(--border);
+	border-bottom-color: var(--border);
 }
 .dark #infoTables > table th {
-  color: var(--theme-brown);
+	color: var(--theme-brown);
 }
 .dark #infoTables caption {
-  color: var(--fg);
+	color: var(--fg);
 }
 
 /* --- Dark mode: Basinn chart popover --- */
 .dark .basinnChartPopover {
-  background: #222;
-  border-color: var(--border);
+	background: #222;
+	border-color: var(--border);
 }
 
 /* --- Dark mode: SVG text stroke --- */
 .dark #rtMouseOverBox > text {
-  stroke: var(--bg);
+	stroke: var(--bg);
 }
 
 /* --- Dark mode: Activation frequency chart --- */
 .dark .activationFrequencyChart svg text {
-  fill: var(--fg);
+	fill: var(--fg);
 }
 .dark .activationFrequencyChart svg .domain,
 .dark .activationFrequencyChart svg .tick line:not(.grid-line) {
-  stroke: var(--theme-brown);
+	stroke: var(--theme-brown);
 }
 
 .runAdditionalSamples {
@@ -1850,7 +1889,10 @@ body.splitterDragging {
 	background: #9ca3af;
 }
 
-body { background: var(--bg); color: var(--fg); }
+body {
+	background: var(--bg);
+	color: var(--fg);
+}
 
 @media (max-width: 768px) {
 	#app {
@@ -2091,7 +2133,9 @@ body { background: var(--bg); color: var(--fg); }
 	font-size: 13px;
 	font-family: inherit;
 	cursor: pointer;
-	transition: background 0.15s, border-color 0.15s;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
 }
 .saveLoadBtnSecondary:hover {
 	background: hsl(210 6% 95%);
