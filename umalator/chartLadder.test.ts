@@ -30,24 +30,30 @@ import {
 	assert.equal(acc.n, 0);
 	assert.equal(acc.allZero, true);
 
-	acc.addBlock({
-		lengths: Float32Array.from([1, 2, 3]),
-		times: Float32Array.from([0.1, 0.2, 0.3]),
-		procCounts: Uint16Array.from([1, 0, 1]),
-		procPositions: Float32Array.from([100, 250]),
-	});
+	acc.addBlock(
+		{
+			lengths: Float32Array.from([1, 2, 3]),
+			times: Float32Array.from([0.1, 0.2, 0.3]),
+			procCounts: Uint16Array.from([1, 0, 1]),
+			procPositions: Float32Array.from([100, 250]),
+		},
+		{ blockSeed: 111, blockSize: 3 },
+	);
 	assert.equal(acc.n, 3);
 	assert.equal(acc.procTotal, 2);
 	assert.equal(acc.allZero, false);
 	let mv = acc.meanVariance();
 	assert.equal(mv.mean, 2);
 
-	acc.addBlock({
-		lengths: Float32Array.from([4, 5]),
-		times: Float32Array.from([0.4, 0.5]),
-		procCounts: Uint16Array.from([1, 1]),
-		procPositions: Float32Array.from([300, 400]),
-	});
+	acc.addBlock(
+		{
+			lengths: Float32Array.from([4, 5]),
+			times: Float32Array.from([0.4, 0.5]),
+			procCounts: Uint16Array.from([1, 1]),
+			procPositions: Float32Array.from([300, 400]),
+		},
+		{ blockSeed: 222, blockSize: 2 },
+	);
 	assert.equal(acc.n, 5);
 	assert.equal(acc.procTotal, 4);
 	mv = acc.meanVariance();
@@ -59,17 +65,45 @@ import {
 	assert.equal(cand.id, 'skillA');
 	assert.equal(cand.n, 5);
 	assert.equal(cand.procTotal, 4);
+
+	// resolveIndex: global index 0..2 belongs to the first block (seed 111, size 3), local index
+	// unchanged; global index 3..4 belongs to the second block (seed 222, size 2), local index
+	// shifted back by the first block's count -- this is what a detail fetch needs to reproduce
+	// one specific sample exactly.
+	assert.deepEqual(acc.resolveIndex(0), {
+		blockSeed: 111,
+		blockSize: 3,
+		index: 0,
+	});
+	assert.deepEqual(acc.resolveIndex(2), {
+		blockSeed: 111,
+		blockSize: 3,
+		index: 2,
+	});
+	assert.deepEqual(acc.resolveIndex(3), {
+		blockSeed: 222,
+		blockSize: 2,
+		index: 0,
+	});
+	assert.deepEqual(acc.resolveIndex(4), {
+		blockSeed: 222,
+		blockSize: 2,
+		index: 1,
+	});
 }
 
 {
 	// A skill that never activates and never differs from baseline is exactly inert.
 	const acc = new SkillAccumulator('dead');
-	acc.addBlock({
-		lengths: Float32Array.from([0, 0, 0, 0]),
-		times: Float32Array.from([0, 0, 0, 0]),
-		procCounts: Uint16Array.from([0, 0, 0, 0]),
-		procPositions: Float32Array.from([]),
-	});
+	acc.addBlock(
+		{
+			lengths: Float32Array.from([0, 0, 0, 0]),
+			times: Float32Array.from([0, 0, 0, 0]),
+			procCounts: Uint16Array.from([0, 0, 0, 0]),
+			procPositions: Float32Array.from([]),
+		},
+		{ blockSeed: 333, blockSize: 4 },
+	);
 	assert.equal(acc.allZero, true);
 	assert.equal(acc.procTotal, 0);
 }
