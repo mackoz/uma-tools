@@ -201,14 +201,17 @@ function runChartDetail(data: {
 
 	// Group picks sharing a (blockSeed, blockSize) into one runComparisonBlock call -- a detail
 	// fetch is at most 4 picks, almost always from the same round's block, so this is normally one
-	// call, not four.
+	// call, not four. A low-variance skill can easily have two or more of its min/max/mean/median
+	// picks land on the exact same sample index (e.g. the closest-to-mean sample often *is* the
+	// median one), so labels is keyed by index but holds every label that resolved to it, not just
+	// the last one -- a plain Map<index, string> would silently drop all but one such label.
 	const groups = new Map<
 		string,
 		{
 			blockSeed: number;
 			blockSize: number;
 			indices: Set<number>;
-			labels: Map<number, string>;
+			labels: Map<number, string[]>;
 		}
 	>();
 	for (const pick of picks) {
@@ -224,7 +227,9 @@ function runChartDetail(data: {
 			groups.set(key, g);
 		}
 		g.indices.add(pick.index);
-		g.labels.set(pick.index, pick.label);
+		const existing = g.labels.get(pick.index);
+		if (existing) existing.push(pick.label);
+		else g.labels.set(pick.index, [pick.label]);
 	}
 
 	const runs: Record<string, ChartRunTrace> = {};
@@ -239,8 +244,10 @@ function runChartDetail(data: {
 			{ ...analysisOptions, traceMode: 'indices', trackedSkillIds: [skillId] },
 		);
 		result.traces?.forEach((trace, idx) => {
-			const label = g.labels.get(idx);
-			if (label) runs[label] = trace;
+			const labels = g.labels.get(idx);
+			labels?.forEach((label) => {
+				runs[label] = trace;
+			});
 		});
 	}
 

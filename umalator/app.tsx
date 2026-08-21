@@ -4211,15 +4211,25 @@ function App(props) {
 	}
 
 	const [selectedSkillId, setSelectedSkillId] = useState('');
+	// Safety net for any future caller of setSelectedSkillId that doesn't also update
+	// selectedSkillIdRef synchronously the way basinnChartSelection does.
 	useEffect(() => {
 		selectedSkillIdRef.current = selectedSkillId;
 	}, [selectedSkillId]);
 
 	function basinnChartSelection(skillId: string) {
+		// selectedSkillIdRef is also updated here, synchronously, not only through the
+		// effect below that mirrors selectedSkillId into it: a detail fetch's worker round trip
+		// (re-simulating 4 scenarios) is fast enough to have the chart-detail response's
+		// selectedSkillIdRef comparison run before Preact has committed the setSelectedSkillId
+		// update and flushed that effect, which silently dropped the response as "for a
+		// different row" even though it was for this one.
 		if (skillId && tableData.has(skillId)) {
+			selectedSkillIdRef.current = skillId;
 			setSelectedSkillId(skillId);
 			requestChartDetail(skillId);
 		} else {
+			selectedSkillIdRef.current = '';
 			setSelectedSkillId('');
 		}
 	}
