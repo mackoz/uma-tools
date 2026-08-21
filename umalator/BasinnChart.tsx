@@ -207,7 +207,10 @@ export function BasinnChart(props) {
 						showUmaIcons={props.showUmaIcons}
 					/>
 				),
-				sortingFn: (a, b, _) =>
+				// This vendored table-core fork renamed the standard TanStack `sortingFn` column-def
+				// property to `sortFn` (see vendor/table-core/features/row-sorting) -- the old name was
+				// silently ignored, falling back to the default sort (by raw id), not skill name.
+				sortFn: (a, b, _) =>
 					skillnames[a.getValue('id')] < skillnames[b.getValue('id')] ? -1 : 1,
 			},
 			{
