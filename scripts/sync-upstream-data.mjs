@@ -1,7 +1,6 @@
 // Catches this fork's committed game data (umas/skills/courses/icons) up to a local
 // checkout of upstream (alpha123/uma-tools), by porting whatever keys upstream has
-// that this fork doesn't. See docs/upstream-data-sync.md for the full writeup —
-// this comment only covers what the flags do.
+// that this fork doesn't.
 //
 // This is a STOPGAP, not a replacement for the real data pipeline (docs/data-pipeline.md).
 // It only ports upstream's already-computed values; it can't reproduce upstream's richer
@@ -15,10 +14,10 @@
 //
 // IMPORTANT: this only ever ADDS keys that don't already exist in the fork's JSON.
 // It never overwrites or deletes an existing key, even if the value differs from
-// upstream's — some of those differences are deliberate fork behavior (see the
-// "Known, deliberately unsynced differences" section in docs/upstream-data-sync.md),
-// others are open questions nobody's investigated yet. Either way, silently overwriting
-// them here would be a worse bug than leaving them alone.
+// upstream's — some of those differences are deliberate fork behavior (a course-data
+// scenario-scaling hack, some independently-diverged skill conditions), others are open
+// questions nobody's investigated yet. Either way, silently overwriting them here would
+// be a worse bug than leaving them alone.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -29,7 +28,7 @@ import {program} from 'commander';
 
 program
 	.requiredOption('--upstream <path>', 'path to a local alpha123/uma-tools checkout')
-	.option('--engine-ref <ref>', 'git ref inside <upstream>/uma-skill-tools to read JP engine data from (upstream\'s own uma-tools checkout pins an old submodule commit — compare against the engine repo\'s own history instead, see docs/upstream-comparison.md)', 'origin/master')
+	.option('--engine-ref <ref>', 'git ref inside <upstream>/uma-skill-tools to read JP engine data from (upstream\'s own uma-tools checkout pins an old submodule commit — compare against the engine repo\'s own history instead)', 'origin/master')
 	.option('--no-dry-run', 'actually write merged JSON and copy new icon files (default: report only)');
 
 program.parse();
@@ -88,10 +87,10 @@ function stripDeep(v, dropKeys) {
 	return v;
 }
 
-// Fields upstream's generator scripts compute that this fork's don't (yet) — see
-// docs/upstream-comparison.md for why. Dropped so a newly-added entry matches the
-// shape of every other entry already in the fork's files, and so the diverged-value
-// report below isn't 100% false positives from schema alone.
+// Fields upstream's generator scripts compute that this fork's don't (yet). Dropped
+// so a newly-added entry matches the shape of every other entry already in the
+// fork's files, and so the diverged-value report below isn't 100% false positives
+// from schema alone.
 const SKILL_META_DROP = new Set(['score']);
 const SKILL_DATA_DROP = new Set(['tags', 'wisdomCheck', 'durationScaling', 'scaling']);
 
@@ -174,8 +173,7 @@ function copyIcon(basename) {
 // icons.json entries are either a bare basename (uma's base icon) or, for outfit ids,
 // an [_01, _02] pair upstream added post-fork (gray-border + normal trained-icon
 // variants). This fork's code only ever renders one trained-icon variant, so new
-// outfit entries are downgraded to _02 only — see docs/upstream-data-sync.md for why
-// adopting both isn't in scope here.
+// outfit entries are downgraded to _02 only (adopting both isn't in scope here).
 function syncIcons(upstreamIcons) {
 	const forkPath = path.join(forkRoot, 'icons.json');
 	const fork = readJSON(forkPath);
@@ -200,7 +198,7 @@ function truncate(arr, n = 20) {
 
 function report(label, added, diverged) {
 	let line = `${label}: +${added.length} new key(s)`;
-	if (diverged.length) line += `, ${diverged.length} shared key(s) diverge in value (left untouched, see docs/upstream-data-sync.md)`;
+	if (diverged.length) line += `, ${diverged.length} shared key(s) diverge in value (left untouched — never overwritten by this script)`;
 	console.log(line);
 	if (added.length) console.log(`  added: ${truncate(added)}`);
 	totalAdded += added.length;
@@ -234,7 +232,7 @@ function main() {
 	if (dryRun) {
 		console.log('Dry run — nothing written. Re-run with --no-dry-run to apply.');
 	} else {
-		console.log('Written. Now rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit — see docs/upstream-data-sync.md.');
+		console.log('Written. Now rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit.');
 	}
 }
 
