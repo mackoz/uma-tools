@@ -34,7 +34,7 @@
 }
 
 .racetrackName {
-	color: rgb(121,64,22);
+	color: rgb(121, 64, 22);
 	font-family: Inter, "Noto Sans JP", sans-serif;
 	font-size: 22px;
 	font-weight: bold;
@@ -94,45 +94,112 @@
 
 /* Elevation profile */
 .dark .elevationFill,
-.dark .hillArea polygon { fill: #8ec482; }
-.dark .grassLine { fill: #6a9a42; }
+.dark .hillArea polygon {
+	fill: #8ec482;
+}
+.dark .grassLine {
+	fill: #6a9a42;
+}
 
 /* Slopes row */
-.dark .slopesBg > rect:first-child { fill: #5e5468; }
-.dark .slopesBg > rect:last-child { fill: #8a6a9a; }
-.dark .slope.uphill > rect:first-child { fill: #d4be92; }
-.dark .slope.uphill > rect:nth-child(2) { fill: #a89058; }
-.dark .slope.downhill > rect:first-child { fill: #82d0c6; }
-.dark .slope.downhill > rect:nth-child(2) { fill: #5aa298; }
+.dark .slopesBg > rect:first-child {
+	fill: #5e5468;
+}
+.dark .slopesBg > rect:last-child {
+	fill: #8a6a9a;
+}
+.dark .slope.uphill > rect:first-child {
+	fill: #d4be92;
+}
+.dark .slope.uphill > rect:nth-child(2) {
+	fill: #a89058;
+}
+.dark .slope.downhill > rect:first-child {
+	fill: #82d0c6;
+}
+.dark .slope.downhill > rect:nth-child(2) {
+	fill: #5aa298;
+}
 
 /* Straights & corners row */
-.dark .sectionsBg:not(.slopesBg) > rect:first-child { fill: #4e4e58; }
-.dark .sectionsBg:not(.slopesBg) > rect:last-child { fill: #7a7a84; }
-.dark .straight > rect:first-child { fill: #88b4d6; }
-.dark .straight > rect:last-child { fill: #5e92c0; }
-.dark .corner > rect:first-child { fill: #dab090; }
-.dark .corner > rect:last-child { fill: #b88450; }
+.dark .sectionsBg:not(.slopesBg) > rect:first-child {
+	fill: #4e4e58;
+}
+.dark .sectionsBg:not(.slopesBg) > rect:last-child {
+	fill: #7a7a84;
+}
+.dark .straight > rect:first-child {
+	fill: #88b4d6;
+}
+.dark .straight > rect:last-child {
+	fill: #5e92c0;
+}
+.dark .corner > rect:first-child {
+	fill: #dab090;
+}
+.dark .corner > rect:last-child {
+	fill: #b88450;
+}
 
 /* Phases row */
-.dark .phase0 > rect:first-child { fill: #5cc4a0; }
-.dark .phase0 > rect:last-child { fill: #3e9478; }
-.dark .phase1 > rect:first-child { fill: #d8d090; }
-.dark .phase1 > rect:last-child { fill: #b0a850; }
-.dark .phase2 > rect:first-child { fill: #cca0b8; }
-.dark .phase2 > rect:last-child { fill: #a06e88; }
-.dark .phase3 > rect:first-child { fill: #c490b0; }
-.dark .phase3 > rect:last-child { fill: #985e80; }
+.dark .phase0 > rect:first-child {
+	fill: #5cc4a0;
+}
+.dark .phase0 > rect:last-child {
+	fill: #3e9478;
+}
+.dark .phase1 > rect:first-child {
+	fill: #d8d090;
+}
+.dark .phase1 > rect:last-child {
+	fill: #b0a850;
+}
+.dark .phase2 > rect:first-child {
+	fill: #cca0b8;
+}
+.dark .phase2 > rect:last-child {
+	fill: #a06e88;
+}
+.dark .phase3 > rect:first-child {
+	fill: #c490b0;
+}
+.dark .phase3 > rect:last-child {
+	fill: #985e80;
+}
 
 /* Ruler */
-.dark .rulerBg { fill: #444a54; }
-.dark .rulerTick { stroke: #98b4c4; }
-.dark .rulerText { fill: #98b4c4; }
-.dark .rulerBar { fill: #98b4c4; }
+.dark .rulerBg {
+	fill: #444a54;
+}
+.dark .rulerTick {
+	stroke: #98b4c4;
+}
+.dark .rulerText {
+	fill: #98b4c4;
+}
+.dark .rulerBar {
+	fill: #98b4c4;
+}
 
 /* Text & markers */
-.dark .sectionText { fill: #fff; stroke: #2a2a2a; }
-.dark .distanceMarker { fill: #fff; stroke: #2a2a2a; }
-.dark .distanceMarkerLine { stroke: #fff; }
-.dark .mouseoverLine { stroke: #fff; }
-.dark .mouseoverText { fill: #fff; stroke: #2a2a2a; }
-.dark .poskeep-label text { stroke: #141414; }
+.dark .sectionText {
+	fill: #fff;
+	stroke: #2a2a2a;
+}
+.dark .distanceMarker {
+	fill: #fff;
+	stroke: #2a2a2a;
+}
+.dark .distanceMarkerLine {
+	stroke: #fff;
+}
+.dark .mouseoverLine {
+	stroke: #fff;
+}
+.dark .mouseoverText {
+	fill: #fff;
+	stroke: #2a2a2a;
+}
+.dark .poskeep-label text {
+	stroke: #141414;
+}
