@@ -18,6 +18,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "test:stats": "node --experimental-strip-types umalator/statisticalAnalysis.test.ts && node --experimental-strip-types umalator/chartLadder.test.ts",
     "prepare": "husky"
   },
   "author": "pecan",
