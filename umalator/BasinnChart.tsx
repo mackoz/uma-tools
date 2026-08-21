@@ -174,12 +174,11 @@ function SkillNameCell(props) {
 	);
 }
 
+// Only supplies the label text and its descriptive tooltip -- the click-to-sort handler lives on
+// the shared .columnHeader div in the <thead> render below, not here, so every column is sortable
+// by construction instead of each column definition needing to remember to wire it up itself.
 function headerLabel(text: string, title: string) {
-	return (c) => (
-		<span title={title} onClick={c.header.column.getToggleSortingHandler()}>
-			{text}
-		</span>
-	);
+	return () => <span title={title}>{text}</span>;
 }
 
 export function BasinnChart(props) {
@@ -200,7 +199,7 @@ export function BasinnChart(props) {
 	const columns = useMemo(
 		() => [
 			{
-				header: () => <span>Skill</span>,
+				header: headerLabel('Skill', 'Sort alphabetically by skill name'),
 				accessorKey: 'id',
 				cell: (info) => (
 					<SkillNameCell
@@ -360,6 +359,11 @@ export function BasinnChart(props) {
 													desc: 'Sort descending',
 													false: 'Clear sort',
 												}[header.column.getNextSortingOrder()]
+											}
+											onClick={
+												header.column.getCanSort()
+													? header.column.getToggleSortingHandler()
+													: undefined
 											}
 										>
 											{flexRender(
