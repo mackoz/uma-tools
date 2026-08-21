@@ -2,7 +2,7 @@
 
 A browser-based race simulator and toolset for **Uma Musume: Pretty Derby**. The headline app, Umalator, runs Monte Carlo race simulations comparing two umas (stats + skills) on a chosen course and reports the resulting length (バ身/basinn) gain — plus a skill-activation chart, an HP/spurt chart, and course-comparison tooling.
 
-This is a fork of [`alpha123/uma-tools`](https://github.com/alpha123/uma-tools) with several simulation-accuracy fixes and features layered on top.
+This is a fork of [`alpha123/uma-tools`](https://github.com/alpha123/uma-tools) — the original Umalator, and the original source of this codebase — with several simulation-accuracy fixes and features layered on top.
 
 Everything runs client-side: no backend, no build-time API calls, no server-rendered anything. It's a set of static Preact apps bundled with esbuild.
 
