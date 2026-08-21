@@ -5,7 +5,7 @@
 
 ## Context
 
-The engine's builder gates its HP model on a mode string: `RaceSolverBuilder.ts` selects `GameHpPolicy` only for `mode === 'compare'` and the no-op policy (infinite stamina, guaranteed full spurt) otherwise — a split inherited from upstream's original HP implementation (upstream commit `e89d819`). Chart runs never passed a mode, so **by omission** every chart simulation ran with no stamina model: every uma full-spurted, and HP-only recovery skills were meaningless as candidates — they had to be excluded from the chart's candidate list outright.
+The engine's builder gates its HP model on a mode string: `RaceSolverBuilder.ts` selects `GameHpPolicy` only for `mode === 'compare'` and the no-op policy (infinite stamina, guaranteed full spurt) otherwise — a split inherited from alpha123's original HP implementation (alpha123 engine commit `e89d819`). Chart runs never passed a mode, so **by omission** every chart simulation ran with no stamina model: every uma full-spurted, and HP-only recovery skills were meaningless as candidates — they had to be excluded from the chart's candidate list outright.
 
 Nothing in the history suggests the no-op chart was a considered modeling stance; it was a default nobody had revisited.
 

@@ -27,7 +27,7 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0003](0003-engine-as-git-submodule.md) | The engine is a git submodule, not vendored code | Accepted |
 | [0004](0004-ci-is-the-only-build-path.md) | Bundles are not committed; CI is the only build path | Accepted |
 | [0005](0005-no-bulk-reformat.md) | Format only touched files; never bulk-reformat | Accepted |
-| [0006](0006-add-only-upstream-data-sync.md) | Upstream data sync is add-only, format-preserving, and loud | Accepted |
+| [0006](0006-add-only-upstream-data-sync.md) | alpha123 data sync is add-only, format-preserving, and loud | Accepted |
 | [0007](0007-statistical-skill-chart-method.md) | The Skill Chart ranks by paired comparisons with adaptive, CI-based elimination | Accepted |
 | [0008](0008-worker-cancellation-by-terminate.md) | Chart cancellation terminates and respawns workers | Accepted |
 | [0009](0009-chart-runs-use-real-hp-policy.md) | Chart runs request `mode: 'compare'` for a real HP policy | Accepted |

@@ -1,4 +1,4 @@
-# ADR-0006: Upstream data sync is add-only, format-preserving, and loud
+# ADR-0006: alpha123 data sync is add-only, format-preserving, and loud
 
 **Status:** Accepted
 **Date:** 2026-08-20 (`scripts/sync-upstream-data.mjs`; exercised by PR #12)
@@ -9,20 +9,20 @@ Game data (umas, skills, courses, icons) is normally regenerated from the game c
 
 ## Decision
 
-`scripts/sync-upstream-data.mjs` ports data from a local upstream checkout under strict rules, stated in the script's own header:
+`scripts/sync-upstream-data.mjs` ports data from a local `alpha123/uma-tools` checkout under strict rules, stated in the script's own header:
 
 - **Add-only** — "this only ever ADDS keys that don't already exist in the fork's JSON"; it never overwrites a value this fork already has.
 - **Format-preserving** — output diffs stay minimal and reviewable against the committed JSON.
-- **Explicitly a stopgap** — "a STOPGAP, not a replacement for the real data pipeline"; it can't reproduce upstream's richer per-outfit schema (deliberate DROP sets) and can't extract icons upstream hasn't extracted.
+- **Explicitly a stopgap** — "a STOPGAP, not a replacement for the real data pipeline"; it can't reproduce alpha123's richer per-outfit schema (deliberate DROP sets) and can't extract icons upstream hasn't extracted.
 - **Dry-run by default**, with divergence reported rather than silently resolved.
 
 ## Options considered
 
-- **Wholesale file copy from upstream.** Rejected: silently adopts upstream's schema and any values this fork has deliberately corrected, with an unreviewable diff.
+- **Wholesale file copy from the alpha123 checkout.** Rejected: silently adopts alpha123's schema and any values this fork has deliberately corrected, with an unreviewable diff.
 - **Wait for the first-hand pipeline to be fixed.** Rejected as the only path: it blocks tracking released content on a repair with no timeline; the stopgap keeps live data current without giving up on the pipeline (the fix remains the goal).
 
 ## Consequences
 
 - Live-content freshness no longer depends on the broken extraction path; the fork's own corrections can't be clobbered by a sync.
-- Fields the script deliberately drops (upstream's extended schema) stay absent until the real pipeline runs — a recorded limitation, not an accident.
-- The add-only rule means a value upstream *fixed* won't propagate if this fork already has the key — divergence reporting exists precisely so those cases surface for manual review instead of being silently taken or silently ignored.
+- Fields the script deliberately drops (alpha123's extended schema) stay absent until the real pipeline runs — a recorded limitation, not an accident.
+- The add-only rule means a value alpha123 *fixed* won't propagate if this fork already has the key — divergence reporting exists precisely so those cases surface for manual review instead of being silently taken or silently ignored.

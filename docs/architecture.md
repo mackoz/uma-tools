@@ -4,9 +4,9 @@ This page explains how a race simulation actually runs, file by file, and lists 
 
 ## The engine lives in `uma-skill-tools/`
 
-It is a **git submodule**, pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools) — a real fork of [`alpha123/uma-skill-tools`](https://github.com/alpha123/uma-skill-tools), the same relationship upstream's own `uma-tools` has with its engine. It wasn't always: it spent time vendored in-tree (flattened out of a submodule in commit `7a4949a`), which is also why this repo's own history didn't track which upstream/fork commit the engine came from — that's fixed now that it's a submodule again. `git submodule update --init` after a fresh clone; `uma-skill-tools/`'s own `package.json`/`tsconfig.json` are for its CLI tools, not consumed by this repo's build — the parent repo's esbuild config compiles the `.ts` files directly as part of each app's bundle.
+It is a **git submodule**, pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools) — a real fork of [`alpha123/uma-skill-tools`](https://github.com/alpha123/uma-skill-tools), the same relationship `alpha123/uma-tools` has with its engine. It wasn't always: it spent time vendored in-tree (flattened out of a submodule in commit `7a4949a`), which is also why this repo's own history didn't track which engine commit the code came from — that's fixed now that it's a submodule again. `git submodule update --init` after a fresh clone; `uma-skill-tools/`'s own `package.json`/`tsconfig.json` are for its CLI tools, not consumed by this repo's build — the parent repo's esbuild config compiles the `.ts` files directly as part of each app's bundle.
 
-`mackoz/uma-skill-tools` is a **heavily modified fork**, not a snapshot — it adds multi-uma field simulation, a 5-state position-keep machine, lane movement, and compete/lead competition on top of upstream `alpha123/uma-skill-tools`.
+`mackoz/uma-skill-tools` is a **heavily modified fork**, not a snapshot — it adds multi-uma field simulation, a 5-state position-keep machine, lane movement, and compete/lead competition on top of `alpha123/uma-skill-tools`.
 
 ### Dependency graph (leaves → root)
 
