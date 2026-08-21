@@ -879,7 +879,7 @@ export function runComparisonBlock(
 	racedef: RaceParameters,
 	uma1: HorseState,
 	uma2: HorseState,
-	pacer: HorseState,
+	pacer: HorseState | null,
 	options: any,
 ): ComparisonBlockOutput {
 	const traceMode: TraceMode = options.traceMode || 'none';
