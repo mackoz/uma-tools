@@ -177,7 +177,7 @@ This page reflects:
 - **Upstream `uma-tools`:** `cdb7ead`, 2026-08-18
 - **Upstream `uma-skill-tools`, reference A (as pinned):** `6ba5ca0`, 2025-07-31
 - **Upstream `uma-skill-tools`, reference B (engine repo's `origin/master`):** `8b3f5e2`, 2026-03-17
-- **This fork:** `99f220c`, 2026-08-20 (`master`)
+- **This fork source snapshot:** `99f220c`, 2026-08-20 (immediately before this documentation refresh)
 
 To refresh:
 

@@ -187,6 +187,6 @@ This comparison reflects:
 - **Upstream `uma-tools`:** `cdb7ead`, 2026-08-18 ("update game data (global)")
 - **Upstream `uma-skill-tools` (engine repo, `origin/master`):** `8b3f5e2`, 2026-03-17
 - **Upstream `uma-skill-tools` (as pinned by upstream's `uma-tools`):** `6ba5ca0`, 2025-07-31
-- **This fork:** `99f220c`, 2026-08-20
+- **This fork source snapshot:** `99f220c`, 2026-08-20 (immediately before this documentation refresh)
 
-Re-run the commands above against newer commits if you need a current answer. The external upstream refs are unchanged from the original research; fork counts, line references, build/test status, and game-data tables were refreshed on 2026-08-20 against `99f220c`.
+Re-run the commands above against newer commits if you need a current answer. The external upstream refs are unchanged from the original research; fork counts, line references, build/test status, and game-data tables were refreshed on 2026-08-20 against the `99f220c` source snapshot immediately preceding this documentation-only update.
