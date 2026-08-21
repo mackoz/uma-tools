@@ -9,18 +9,18 @@ This is a point-in-time comparison, not a live diff — see [Snapshot](#snapshot
 | | Upstream (`alpha123/uma-tools`) | This fork |
 |---|---|---|
 | Fork point | `292309c` ("rebuild"), 2025-10-09 | same |
-| Commits since fork point | **351** | 209 |
-| HEAD at snapshot time | `cdb7ead`, 2026-08-18 | `7e6a584`, 2026-08-19 |
+| Commits since fork point | **351** | 254 |
+| HEAD at snapshot time | `cdb7ead`, 2026-08-18 | `99f220c`, 2026-08-20 |
 | JP umas / skills / courses | 141 / 2097 / 121* | 141 / **2097** / **139*** |
 | Global umas / skills / courses | 64 / 692 / 119 | **65** / 692 / 119 |
-| Race solver (`RaceSolver.ts`) | 670–762 lines (see [three reference points](#the-comparison-has-three-reference-points-not-two)) | **1508 lines** |
+| Race solver (`RaceSolver.ts`) | 670–762 lines (see [three reference points](#the-comparison-has-three-reference-points-not-two)) | **1532 lines** |
 | Docs / CI | none | this `docs/` tree, GitHub Actions deploy |
 
 **Since this table was first written, this fork ran the [upstream-data-sync.md](upstream-data-sync.md) script** (2026-08-19), which closed nearly the entire game-data gap — JP umas and Global courses are now at parity with upstream, and JP skill_meta is now *exactly* equal (both 2097). What's left: Global has 1 more uma than upstream (65 vs 64 — the sync also picks up new umas upstream hasn't extracted icons for yet in some cases, see the sync doc's limitations), and JP courses now *exceed* upstream's pinned-submodule count (139 vs 121) — see the footnote below, this isn't a fork lead, it's upstream's own engine data having grown past its pin too.
 
 *JP course count needs the [A/B distinction](upstream-architecture.md#four-reference-points-not-three): upstream's pinned engine submodule (**A**, `6ba5ca0`) has 121 JP courses, matching the table above, but the engine repo's own `origin/master` (**B**, `8b3f5e2`) already has 138 — 17 more, added after the pin. `sync-upstream-data.mjs` defaults to comparing against B, not A (see [upstream-data-sync.md](upstream-data-sync.md#setup)), which is why this fork's JP course count (139) tracks B rather than the 121 in this table — it's one *above* even B, not investigated further, flagging in case it's worth checking whether that's a real extra course or a sync-script artifact.
 
-Upstream is ahead on commit count, game data, and general UI polish. This fork is ahead on race-solver depth (multi-uma simulation, lane movement, position-keep states, compete/lead competition). Several features both changelogs describe as their own turn out to be **independent implementations of the same fix**, not something one side has and the other lacks — see [Where both converged independently](#where-both-converged-independently).
+Upstream is ahead on commit count and general UI polish; the committed game-data keys are now mostly at parity after this fork's sync. This fork is ahead on race-solver depth (multi-uma simulation, lane movement, position-keep states, compete/lead competition). Several features both changelogs describe as their own turn out to be **independent implementations of the same fix**, not something one side has and the other lacks — see [Where both converged independently](#where-both-converged-independently).
 
 ## The comparison has three reference points, not two
 
@@ -30,7 +30,7 @@ This is the single most important thing to get right when reading (or extending)
 |---|---|---|
 | **A. Upstream app, as pinned** | Upstream's `uma-tools` repo still treats `uma-skill-tools/` as a **git submodule**, pinned at commit `6ba5ca0`, dated **2025-07-31** — i.e. *before* the fork point. | 670 lines |
 | **B. Upstream engine repo, HEAD** | `alpha123/uma-skill-tools`'s own `origin/master`, **51 commits past the pin**, last touched 2026-03-17 (`8b3f5e2`). | 762 lines |
-| **C. This fork** | Vendored in-tree from 2025-10-12 (`7a4949a` flattened the submodule) until this doc's update on 2026-08-19, when it went back to being a submodule — now pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools), a fork of A/B's `alpha123/uma-skill-tools` carrying the kachi-lineage import (see `plans/engine-comparison/forks.md`). Line counts below still describe this fork's engine code, unaffected by which mechanism currently tracks it. | **1508 lines** |
+| **C. This fork** | Vendored in-tree from 2025-10-12 (`7a4949a` flattened the submodule) until 2026-08-19, when it went back to being a submodule — now pointing at [`mackoz/uma-skill-tools`](https://github.com/mackoz/uma-skill-tools), a fork of A/B's `alpha123/uma-skill-tools` carrying the kachi-lineage import (see `plans/engine-comparison/forks.md`). Line counts below describe the currently pinned fork engine. | **1532 lines** |
 
 Upstream's own `uma-tools` checkout points at a **year-stale** engine pin — corroborated by upstream's own app code calling `buildSkillData` with 9 arguments against the pinned engine's 8-parameter signature (a mismatch that would only make sense if the app had moved past what's pinned).
 
@@ -48,23 +48,23 @@ The README used to describe a strictly linear chain: `alpha123 → IHATEJEKUTO/V
 
 So VFalator is a **source that got merged in**, not a link in a linear ancestry chain. "alpha123 → kachi-dev (absorbing VFalator's diff) → this fork" is the accurate shape.
 
-Commit authorship since the fork point: fork — Kachi 133, IHATEJEKUTO 41, Jecht 26 (same email address as IHATEJEKUTO), plus a handful of drive-by PRs. Upstream — almost entirely alpha123 (588 of 603 total commits).
+Commit authorship since the fork point: fork — Kachi 133, mackoz 49, IHATEJEKUTO 41, Jecht 26 (same email address as IHATEJEKUTO), plus a handful of drive-by PRs. Upstream — almost entirely alpha123 (349 of the 351 post-fork commits under the current author identity).
 
 ## What the fork added
 
 ### Engine (`uma-skill-tools/`)
 
-The headline number is `RaceSolver.ts` going from 670 (pinned) / 762 (upstream engine HEAD) to **1508 lines**. What that growth actually is, checked against reference point B (not just A):
+The headline number is `RaceSolver.ts` going from 670 (pinned) / 762 (upstream engine HEAD) to **1532 lines**. What that growth actually is, checked against reference point B (not just A):
 
-- **Multi-uma field.** Upstream models one uma plus a single dumb pacer (`pacer: RaceSolver | null`, stepped inline). The fork replaces this with `umas: RaceSolver[]` and `initUmas()`, plus `getPacer()` (`RaceSolver.ts:782-827`), which **re-elects the pacemaker every frame** — furthest-forward Oonige, else Nige, else a flagged override, else a "lucky pace" promotion that mutates another uma's `posKeepStrategy`. Stepping moved out of the solver into `umalator/compare.ts:248-268`. Nearly everything else below is downstream of this change.
-- **Position keep: a 5-state machine.** Upstream (both A and B) has pace-down only. The fork adds `PositionKeepState {None,PaceUp,PaceDown,SpeedUp,Overtake}`, `applyPositionKeepStates()` (`RaceSolver.ts:852-999`), wit-gated entry rolls with retry cooldowns, and a `PosKeepMode` selector (`None`/`Approximate`/`Virtual`) surfaced in the UI.
-- **Lane movement — entirely new.** `applyLaneMovement()` (`RaceSolver.ts:723-773`), two new skill types (`LaneMovementSpeed=28`, `ChangeLane=35`), and seven new `CourseData` fields (`laneMax`, `courseWidth`, `horseLane`, `laneChangeAcceleration`, ...). Zero occurrences of "lane" in upstream's engine at either reference point. (Note: `laneMax` already existed in upstream's `course_data.json`, byte-identical between trees — upstream simply never typed or used it.)
-- **Compete fight and lead competition — entirely new.** `updateCompeteFight()` / `updateLeadCompetition()` (`RaceSolver.ts:1035-1127`), guts-scaled speed/accel bonuses, modelling the late-race duel and early-Nige-pileup mechanics.
-- **Two Markov-chain condition files, fork-only:** `ApproximateConditions.ts` (69 lines — generic tick-driven two-state chains) and `SpecialConditions.ts` (59 lines — concrete blocked-side/overtake rate tables). Model *ongoing* race situations probabilistically, distinct from the static pre-race condition reduction in `ActivationConditions.ts`.
+- **Multi-uma field.** Upstream models one uma plus a single dumb pacer (`pacer: RaceSolver | null`, stepped inline). The fork replaces this with `umas: RaceSolver[]` and `initUmas()`, plus `getPacer()` (`RaceSolver.ts:792`), which **re-elects the pacemaker every frame** — furthest-forward Oonige, else Nige, else a flagged override, else a "lucky pace" promotion that mutates another uma's `posKeepStrategy`. Stepping moved out of the solver into `umalator/compare.ts`. Nearly everything else below is downstream of this change.
+- **Position keep: a 5-state machine.** Upstream (both A and B) has pace-down only. The fork adds `PositionKeepState {None,PaceUp,PaceDown,SpeedUp,Overtake}`, `applyPositionKeepStates()` (`RaceSolver.ts:862`), wit-gated entry rolls with retry cooldowns, and a `PosKeepMode` selector (`None`/`Approximate`/`Virtual`) surfaced in the UI.
+- **Lane movement — entirely new.** `applyLaneMovement()` (`RaceSolver.ts:733`), two new skill types (`LaneMovementSpeed=28`, `ChangeLane=35`), and seven new `CourseData` fields (`laneMax`, `courseWidth`, `horseLane`, `laneChangeAcceleration`, ...). Zero occurrences of "lane" in upstream's engine at either reference point. (Note: `laneMax` already existed in upstream's `course_data.json`, byte-identical between trees — upstream simply never typed or used it.)
+- **Compete fight and lead competition — entirely new.** `updateCompeteFight()` / `updateLeadCompetition()` (`RaceSolver.ts:1047`/`:1106`), guts-scaled speed/accel bonuses, modelling the late-race duel and early-Nige-pileup mechanics.
+- **Two Markov-chain condition files, fork-only:** `ApproximateConditions.ts` (69 lines — generic tick-driven two-state chains) and `SpecialConditions.ts` (60 lines — concrete blocked-side/overtake rate tables). Model *ongoing* race situations probabilistically, distinct from the static pre-race condition reduction in `ActivationConditions.ts`.
 - **Integration rewritten.** Upstream uses velocity-Verlet with a half-step, routed through `getMaxSpeed()`. The fork uses forward Euler with a directional clamp and deletes `getMaxSpeed()` entirely. Frame ordering also flipped: upstream displaces the uma then updates state; the fork updates state then displaces.
 - **`Random.ts` replaced wholesale.** Upstream implements a genuine Rule-30 cellular-automaton PRNG (113 lines, with PractRand-quality commentary). The fork wraps the `prando` npm package in 29 lines and keeps the name: `export const Rule30CARng = SeededRng` (`Random.ts:29`). This is a real trap for anyone reading call sites — `Rule30CARng` reads like the CA generator but isn't. Concretely: the two-argument form `new Rule30CARng(lo, hi)` silently drops its second argument, `.hi`/`.lo` no longer exist, and **no fork simulation result is numerically comparable to any upstream result**, even with the same nominal seed.
 
-`SpurtCalculator.ts` (331 lines, ported from `umasim`) is also fork-only but has **zero importers** anywhere in the repo — see [architecture.md](architecture.md#known-issues).
+`SpurtCalculator.ts` (330 lines, ported from `umasim`) is also fork-only but has **zero importers** anywhere in the repo — see [architecture.md](architecture.md#known-issues).
 
 ### UI / app
 
@@ -72,7 +72,7 @@ The headline number is `RaceSolver.ts` going from 670 (pinned) / 762 (upstream e
 - **Gemini OCR** (`umalator/GeminiOCR.ts`, 206 lines + `components/OCRModal.tsx`) — reads stats/skills off a screenshot via the Gemini API, using a key the user supplies. This is a genuinely different design choice from upstream's local OCR, not a gap on either side — see [Divergent by design](#divergent-by-design).
 - Roster import/decode (`rosterDecoder.ts`, 304 lines), local build save/load (`storage.ts`, 187 lines), a roster browser tab (`components/UmasTab.tsx`, 747 lines), an extracted results panel (`components/ResultsPane.tsx`, 485 lines).
 - Theming/dark mode, a mobile layout (`useMobile()` + a bottom-sheet dialog pattern), a duel-configuration panel with five per-strategy sliders, a sync-RNG toggle, and `forcedSkillPositions` (drag a skill's activation marker directly on the track).
-- Net effect on the shared app source: `umalator/app.tsx` grew from a 794-line common ancestor to 1224 lines upstream and **3170 lines** in this fork.
+- Net effect on the shared app source: `umalator/app.tsx` grew from a 794-line common ancestor to 1224 lines upstream and **3249 lines** in this fork.
 - Pipeline: `umalator-global/make_global_course_data.pl` plus 110 `courseeventparams/` JSON files — fork-only, not present upstream.
 
 ## Where both converged independently
@@ -86,7 +86,7 @@ This is the part worth reading closely if you're relying on this fork's own chan
 | "Wit variance: Skill Proc Chance" | "implement wisdom checks for skill activation" (2025-12-07), refined 2025-12-10 / 2026-02-09 / 2026-02-24 | Both have it; upstream additionally fixed debuff-wisdom attribution to the debuffer rather than the debuffed uma. |
 | "Fixed non-full spurts (delayed by 60m)" | "fix delayed spurts starting 60m late" (upstream engine, 2025-12-05) | Same underlying fix, different code shape (`+ 60` on the candidate vs the fork's `- spurtDistance - 60`). |
 | "Fixed section modifier applying beyond late-race" | "fix last spurt speed not overriding per-section wisdom variance modifier" (upstream engine, 2026-03-12) | Same fix. |
-| "Removed HP consumption from skill/uma chart" | — no upstream equivalent | **Genuinely fork-only.** Mechanism: `RaceSolverBuilder.build()` selects `GameHpPolicy` only when `_mode === 'compare'`, else `NoopHpPolicy` (`RaceSolverBuilder.ts:864`). Upstream always uses `GameHpPolicy`. Worth knowing: this also means any fork simulation run in a non-compare mode has **infinite stamina**, not just the skill chart specifically. |
+| "Removed HP consumption from skill/uma chart" | — no upstream equivalent | **Genuinely fork-only.** Mechanism: `RaceSolverBuilder.build()` selects `GameHpPolicy` only when `_mode === 'compare'`, else `NoopHpPolicy` (`RaceSolverBuilder.ts:863`). Upstream always uses `GameHpPolicy`. Worth knowing: this also means any fork simulation run in a non-compare mode has **infinite stamina**, not just the skill chart specifically. |
 
 **Naming trap:** upstream calls this mechanic **kakari**; the fork calls it **rushed**. Grepping the fork's term against upstream's source returns nothing and looks like "upstream doesn't have this" — it does, under the other name.
 
@@ -96,7 +96,7 @@ This is the part worth reading closely if you're relying on this fork's own chan
 
 - **`sorter/`** — a whole additional app, absent from the fork. An interactive uma-ranking tool (~593 lines of hand-written source + ~48MB of character stand images). `sort.ts` implements a bitset-DAG merge-insertion sort designed to minimize the number of comparisons a human has to make, tracking a transitive-closure bit matrix as a `Uint32Array`.
 - **`optics.ts`** (226 lines) — a lens library plus a Preact fine-grained-subscription state store (`useLens`/`useGetter`/`useSetter`). Upstream migrated its **entire UI** to this (9 importers: `app.tsx`, `HorseDef.tsx`, `SkillList.tsx`, `HorseOcr.tsx`, `HorseSaveMngr.tsx`, `BasinnChart.tsx`, `StaCalc.tsx`, `build-planner/app.tsx`, `skill-visualizer/app.tsx`). This fork never adopted it and stayed on plain `useState`/`useReducer` plus Immutable.js `Record` — this is the deepest architectural split in the UI layer between the two trees.
-- **`buildtools.mjs`** (126 lines) — a shared esbuild harness exporting `buildOrServe()`. All six of upstream's `build.mjs` files use it, each reduced to roughly 20 declarative lines, with a shared in-memory `--serve` dev server. This fork still carries three separately copy-pasted `build.mjs` files (up to 176 lines each) and has **no `build.mjs` at all** for `build-planner/` or `skill-visualizer/` — those two apps upstream modernized off the legacy `.bat` scripts; this fork did not.
+- **`buildtools.mjs`** (126 lines) — a shared esbuild harness exporting `buildOrServe()`. All six of upstream's `build.mjs` files use it, each reduced to roughly 20 declarative lines, with a shared in-memory `--serve` dev server. This fork now has seven standalone `build.mjs` files and no shared helper; only `build-planner/` remains on the legacy `.bat` path. The two Global builds still duplicate the substantial development-server implementation.
 - **`UmaUI.css`** — shared in-game-styled button/panel primitives, 3 importers upstream, absent here.
 
 ### Features
@@ -120,15 +120,15 @@ Verified directly against both trees' committed JSON:
 
 | | Upstream | Fork |
 |---|---|---|
-| JP umas | **141** | 130 |
-| JP skills | **2097** | 1861 |
-| Global skills | **692** | 652 |
-| Global courses | **119** | 107 |
-| Global umas | 64 | 64 |
+| JP umas | 141 | 141 |
+| JP skills (`skill_meta.json`) | 2097 | 2097 |
+| Global skills | 692 | 692 |
+| Global courses | 119 | 119 |
+| Global umas | 64 | **65** |
 
-The fork's data is a **strict subset** of upstream's on every key checked — no uma, skill, or course id exists only in the fork's JSON. Upstream's schema is also structurally richer: each outfit record carries `{aptitudes: [10 values], awakenings, epithet, rarity, strategy}`, where this fork stores a bare epithet string and drops the rest.
+After the 2026-08-19 sync, the comparable root/Global key sets are at parity except that this fork retains one additional Global uma. Upstream's schema is still structurally richer: each outfit record carries `{aptitudes: [10 values], awakenings, epithet, rarity, strategy}`, where this fork stores a bare epithet string and drops the rest.
 
-(One place the fork's *numbers* look higher — `uma-skill-tools/data/{skill_data,skillnames}.json`, ~1861/2474 fork vs ~1716/2284 in upstream's checkout — is an artifact of upstream's stale submodule pin, not better fork data. Upstream's live root `skill_meta.json` above is ahead either way.)
+The fork's engine data also looks higher at its current pin — `uma-skill-tools/data/{skill_data,skillnames}.json` is 1963/2608 here versus 1716/2284 in upstream's checked-out pin. That primarily reflects upstream's stale submodule pin, not a general fork lead; the upstream engine repo's live `origin/master` is the appropriate comparison point for engine data. Likewise, this fork has 139 JP courses versus 121 at upstream's pin and 138 at the engine repo's public HEAD; the single extra course remains unexplained.
 
 These counts are a snapshot and will drift out of date immediately — see [upstream-data-sync.md](upstream-data-sync.md) for a script that reports (and can close) the current gap, rather than trying to keep exact numbers in sync across two docs.
 
@@ -148,7 +148,7 @@ Recorded here as findings; none of these are fixed as part of this doc pass.
 - **`buildSkillData` call-site arity mismatches**, all fork-only: `skill-visualizer/app.tsx:96` and `skill-visualizer-global/app.tsx:96` pass 7 arguments to an 8-parameter function, so `true` lands in the `perspective` parameter; `build-planner/app.tsx:53` still uses a 5-argument signature from an earlier version of the function.
 - **`skill-visualizer/app.tsx` and `skill-visualizer-global/app.tsx` have drifted from each other within this fork** — a direct consequence of the fork duplicating a file upstream keeps as one compiled-twice source (see above). The `-global` copy uses an array-returning `buildSkillData` result; the plain copy still treats it as a single object.
 - **`build-planner/`'s source is a 75-line 2023-era stub** (course/skill hardcoded, no language selector), while upstream's is 380 lines with a `glpk.js`-based linear-programming skill optimizer and support-card search. This fork's `build-planner/index.html` loads `bundle.2.js` because there's no `build.mjs` capable of producing a proper minified `bundle.js` — see [apps.md](apps.md#build-planner) for the existing note on this; this doc adds the "why" upstream doesn't have the same issue.
-- **Flagged as unverified, not confirmed** — worth checking before relying on them: the `minSpeed` floor at `RaceSolver.ts:694` tests the *previous* frame's `currentSpeed` rather than the newly computed speed; `modifiers.oneFrameAccel` is still written and zeroed each frame but no longer read anywhere in the velocity update; `posKeepCooldown`, `speedUpProbability`, and `forceInSpeed` are all assigned but never read anywhere (`speedUpProbability` in particular is threaded all the way from `RaceSolverBuilder.pacerSpeedUpRate()` through the constructor and then dropped, which suggests an unfinished feature rather than dead cruft).
+- **Flagged as unverified, not confirmed** — worth checking before relying on them: the `minSpeed` floor at `RaceSolver.ts:704` tests the *previous* frame's `currentSpeed` rather than the newly computed speed; `modifiers.oneFrameAccel` is still written and zeroed each frame but no longer read anywhere in the velocity update; `posKeepCooldown`, `speedUpProbability`, and `forceInSpeed` are all assigned but never read anywhere (`speedUpProbability` in particular is threaded all the way from `RaceSolverBuilder.pacerSpeedUpRate()` through the constructor and then dropped, which suggests an unfinished feature rather than dead cruft).
 
 ## Corrections to other docs in this repo
 
@@ -187,6 +187,6 @@ This comparison reflects:
 - **Upstream `uma-tools`:** `cdb7ead`, 2026-08-18 ("update game data (global)")
 - **Upstream `uma-skill-tools` (engine repo, `origin/master`):** `8b3f5e2`, 2026-03-17
 - **Upstream `uma-skill-tools` (as pinned by upstream's `uma-tools`):** `6ba5ca0`, 2025-07-31
-- **This fork:** `7e6a584`, 2026-08-19
+- **This fork:** `99f220c`, 2026-08-20
 
-Re-run the commands above against newer commits if you need a current answer. Note the "At a glance" game-data counts were refreshed on 2026-08-19 after [upstream-data-sync.md](upstream-data-sync.md) closed most of the gap; everything else in this page (lineage, engine-feature diffs, converged-independently list) reflects the commits above and hasn't been re-verified since.
+Re-run the commands above against newer commits if you need a current answer. The external upstream refs are unchanged from the original research; fork counts, line references, build/test status, and game-data tables were refreshed on 2026-08-20 against `99f220c`.

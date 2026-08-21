@@ -36,15 +36,13 @@ For each file it reports two numbers:
 - **New keys** — present upstream, absent in this fork. These get added.
 - **Shared keys that diverge in value** — present in both, but not equal after stripping the schema differences described below. **These are never touched.** See [Known, deliberately-unsynced differences](#known-deliberately-unsynced-differences) — some are real, upstream is not automatically "more correct."
 
-After a real run: rebuild the three apps with a `build.mjs` (data changes don't take effect until rebuilt and committed — same rule as any other data-pipeline run, see `CLAUDE.md`):
+After a real run, build all maintained apps locally to verify that both datasets still bundle cleanly:
 
 ```sh
-cd umalator && node build.mjs
-cd ../umalator-global && node build.mjs
-cd ../skill-visualizer-global && node build.mjs
+npm run build
 ```
 
-Then commit the data files, the new icon PNGs, and the rebuilt bundles together.
+The resulting bundles are gitignored and must not be committed. Commit parent-repo data and any new icon PNGs normally. Changes under `uma-skill-tools/data/` belong to the submodule repository: commit and push them there first, then commit the resulting `uma-skill-tools` gitlink bump in this parent repo. Until that two-repository workflow is completed, a fresh clone will not receive the JP engine-data changes.
 
 ## What it does and doesn't touch
 

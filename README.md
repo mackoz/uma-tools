@@ -17,9 +17,9 @@ node build.mjs --serve
 
 Then open `http://localhost:8000/uma-tools/umalator-global/`.
 
-> **Note:** the dev server serves static assets (icons, fonts) from the *parent* of your checkout directory, so this only resolves cleanly if your local clone is named `uma-tools`. See [docs/deployment.md](docs/deployment.md#local-dev-gotcha) if you hit missing icons.
+> **Note:** the dev server serves static assets (icons, fonts) from the *parent* of your checkout directory, so this only resolves cleanly if your local clone is named `uma-tools`. See [docs/deployment.md](docs/deployment.md#local-dev-gotcha-the-server-root-is-your-checkouts-parent-directory) if you hit missing icons.
 
-Bundles aren't committed to git — GitHub Actions rebuilds every app on every push and Pages serves that CI output directly (see [docs/deployment.md](docs/deployment.md)), so `https://mackoz.github.io/uma-tools/` is always current with zero effort on your end. To try it locally instead of just visiting that URL, `npm install && npm run build` builds every app once (no `--serve`, no live reload — just run it again after editing source).
+Bundles for the seven maintained build targets aren't committed to git — GitHub Actions rebuilds them on every push and Pages serves that CI output directly (see [docs/deployment.md](docs/deployment.md)). `build-planner` is the exception: its source does not currently compile, so its stale bundle remains committed and is not rebuilt by CI. To try the maintained apps locally, `npm install && npm run build` builds all seven once (no `--serve`, no live reload — just run it again after editing source).
 
 ## What's in here
 
@@ -49,7 +49,7 @@ Bundles aren't committed to git — GitHub Actions rebuilds every app on every p
 - **[docs/upstream-architecture.md](docs/upstream-architecture.md)** — how upstream's own engine and app layer work, end to end, on their own terms (not a diff — see [architecture.md](docs/architecture.md) for this fork's equivalent). Plain-language version: [docs/upstream-architecture-simple.md](docs/upstream-architecture-simple.md).
 - **[docs/architecture-comparison.md](docs/architecture-comparison.md)** — fork vs. upstream, structure and design only (not features or game data): engine tick order, state management, build system, each with a plain-language ELI5.
 - **[docs/upstream-data-sync.md](docs/upstream-data-sync.md)** — catching this fork's committed game data (umas/skills/courses/icons) up to upstream from a local checkout, since this fork's own data pipeline currently can't run against a live game client.
-- **[CLAUDE.md](CLAUDE.md)** — working conventions for AI-assisted edits in this repo (generated-file guardrails, JP/Global split, build commands).
+- **[CLAUDE.md](CLAUDE.md)** — repository working conventions (generated-file guardrails, JP/Global split, build commands).
 
 ## Lineage
 

@@ -204,7 +204,7 @@ The codebase is honest about its own weak points, in comments left by the origin
 - A mechanic that lets a skill trigger separately on multiple corners currently only ever fires on the earliest one, even when it's theoretically supposed to be able to fire on more than one — full support for that hasn't been built yet.
 - The project's own documentation openly lists a known inaccuracy: skills combining a "time elapsed" condition with a probability-based condition tend to activate too early, more often than they should.
 
-Two more issues are worth flagging specifically because **they're true in this fork as well**, meaning they're inherited problems rather than something either side introduced on its own: a vendored autocomplete component sits completely unused in both projects, and one of the smaller apps (the Wordle-style guessing game) can't actually be built from a clean install on either side, because of a missing dependency that was never added to the project's package list.
+One inherited issue remains true in both projects: a vendored autocomplete component sits completely unused. Upstream's Wordle-style guessing app also cannot be built from a clean install because a dependency is missing there; this fork has since added that dependency and now builds the app successfully.
 
 **ELI5:** the original author left honest notes in the code about known weak spots and half-finished ideas, rather than pretending everything is airtight — several of those same weak spots turn out to exist in this fork too, since this fork started from upstream's code in the first place.
 

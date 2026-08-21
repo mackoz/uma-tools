@@ -1,8 +1,8 @@
 # Data pipeline
 
-All uma stats, skill effects, skill names, and course geometry are committed JSON, regenerated from the live game client by a set of Perl scripts. This page is the runbook for regenerating them — e.g. when new umas or skills are added to the game.
+Uma stats, skill effects, skill names, and course geometry are committed JSON, mostly regenerated from the live game client by a set of Perl scripts. This page is the runbook for regenerating them — e.g. when new umas or skills are added to the game. Track-name JSON is the exception: it is hand-maintained because no generator exists.
 
-**None of the committed JSON should be hand-edited.** Edit the generating `.pl` script (or the hardcoded tables inside it) and regenerate instead — see the guardrail in `CLAUDE.md`.
+**Generated JSON should not be hand-edited.** Edit the generating `.pl` script (or the hardcoded tables inside it) and regenerate instead — see the guardrail in `CLAUDE.md`. The hand-maintained `tracknames.json` files are the explicit exception.
 
 ## Inputs, from the installed game client
 
@@ -75,7 +75,7 @@ Run it with the **Global** client's `master.mdb` (either the default path or `up
 | Skill names | `make_skillnames.pl` → `[ja, en]` | `make_global_skillnames.pl` → `[en]` (one-element array, since it queries the Global client's `text_data` which is already English) | Consumers index `[0]`/`[1]` by language; Global falls back to `[0]`. |
 | Skill meta | `make_skill_meta.pl` resolves the upgrade-chain `groupId` via two extra `LEFT JOIN`s | `make_global_skill_meta.pl` uses `s.group_id` directly | Global doesn't have the skill-upgrade system, so no chain to resolve. |
 | Umas | `make_uma_info.pl` — extracts icons from `master.mdb`+`meta` DB, prompts for missing English names | `make_global_uma_info.pl` — **no icon extraction at all** (reuses JP-extracted icons), and filters candidate umas by whether their unique skill exists in `skill_meta.json` ("global for some reason has data for umas not implemented yet") | Global build ends up with roughly half the roster of JP. |
-| Courses | `make_course_data.pl` | `make_global_course_data.pl` (identical logic, separate CWD) | Global is missing ~14 overseas-track courses. |
+| Courses | `make_course_data.pl` | `make_global_course_data.pl` (identical logic, separate CWD) | The committed Global dataset has 119 courses versus JP's 139; Global lacks several overseas and later-added courses. |
 
 There is also `umalator-global/convert_old_course_data.pl` — a **one-off migration script**, not part of the routine pipeline, for converting a legacy nested course-data format. It references a hardcoded sibling path (`../../skilltool/data/course_data.json`) that doesn't exist in this repo, so it isn't runnable as-is; leave it alone unless you're specifically doing a data-format migration.
 

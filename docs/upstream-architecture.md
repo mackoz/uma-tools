@@ -259,7 +259,7 @@ Same shape as this fork's (`.pl` scripts over `master.mdb` via `DBI`/`DBD::SQLit
 | `ActivationSamplePolicy.ts:211` | `AllCornerRandomPolicy` places up to 4 triggers, then discards all but the earliest — no multi-trigger/cooldown support yet. |
 | README (Caveats) | Documented known bug: skills combining `accumulatetime` with a probability-distribution condition "activate too early a lot of the time." |
 
-Two more, notable because **they're also true in this fork**, meaning they predate the split rather than being fork-introduced regressions: `components/autocomplete.jsx` is dead code in both trees, and `umadle` can't build from a clean `npm install` in either (missing `accessible-autocomplete` dependency).
+One inherited issue remains true in both trees: `components/autocomplete.jsx` is dead code. Upstream's `umadle` also cannot build from a clean `npm install` because `accessible-autocomplete` is missing there; this fork has since added that dependency and the required legacy-peer configuration, so the build failure is now upstream-only.
 
 ## Snapshot
 
