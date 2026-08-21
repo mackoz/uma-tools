@@ -794,3 +794,408 @@ export function runComparison(
 		firstUmaStats: firstUmaStatsSummary,
 	};
 }
+
+// --- Block-oriented comparison, used by the statistical Skill Chart ---
+//
+// runComparison() above computes one candidate's full nsamples-sample comparison in one shot,
+// retaining a complete per-tick trace for 4 selected runs plus every skill's activation position
+// across every sample -- data the Chart never uses for most rows, since only whichever row the
+// user has expanded actually needs a trace, and the two activation-position charts only need
+// (position, lengthGain) pairs, not full traces.
+//
+// runComparisonBlock() instead simulates one *block* of scenarios -- identified by (seed, size),
+// not by an arbitrary offset -- and returns compact typed arrays plus, optionally, full traces for
+// only the specific sample indices asked for. Chart rounds request bulk blocks with traceMode
+// 'none'; an expanded row's velocity chart requests exactly the samples it wants to display
+// (min/max/mean/median) with traceMode 'indices' and `only` set to just those indices.
+//
+// A block's scenario i is always the SAME race regardless of how many other indices were
+// requested alongside it or whether earlier or later blocks were ever run -- this is what lets a
+// detail fetch reproduce one specific sample from an already-completed chart round without
+// re-running the whole block. It relies on the block seed alone determining every derived RNG
+// stream (skill triggers, wisdom checks, pacer triggers -- see uma-skill-tools' stable sampling
+// and per-skill seed derivation), and on always constructing all `size` solver pairs and pacers in
+// order (which is comparatively cheap) even when only stepping and recording a subset of them
+// (which is where nearly all the cost is).
+//
+// Convention specific to this function: the tracked skill(s) are assumed equipped as Self only on
+// uma2 (the "candidate" side), matching how the chart always calls this with uma1 = the
+// unmodified baseline build and uma2 = baseline-plus-candidate-skill. Activation tracking is
+// therefore only wired on the "compare" builder.
+
+export type TraceMode = 'none' | 'indices';
+
+export interface ScenarioBlockSpec {
+	seed: number;
+	size: number;
+	// Sample indices to actually simulate and, when traceMode is 'indices', trace. Simulating
+	// every index in [0, size) but only *stepping* these keeps every requested index's race
+	// identical to what a full un-trimmed block would have produced at that index. Omit to
+	// simulate (and, if traceMode is 'indices', trace) every index in the block.
+	only?: ReadonlySet<number>;
+}
+
+export interface ChartRunTrace {
+	// Per uma (0 = baseline/uma1, 1 = candidate/uma2), one entry per simulated tick.
+	t: [number[], number[]];
+	p: [number[], number[]];
+	v: [number[], number[]];
+	// Per uma, tracked skill id -> activation [startPos, endPos] pairs. Only index 1 is ever
+	// populated -- see the file-level note above.
+	sk: [
+		Map<string, Array<[number, number]>>,
+		Map<string, Array<[number, number]>>,
+	];
+}
+
+export interface ComparisonBlockOutput {
+	// All four arrays are indexed by sample index within the block (0..size-1). For indices
+	// skipped via `only`, the corresponding slots are left at their typed-array zero default --
+	// callers that pass `only` are expected to read `traces`, not these arrays.
+	lengths: Float32Array;
+	times: Float32Array;
+	procCounts: Uint16Array;
+	// Flattened proc positions across every simulated sample, in sample order; sample i's own
+	// slice is procPositions[sum(procCounts[0..i-1]) .. +procCounts[i]).
+	procPositions: Float32Array;
+	traces?: Map<number, ChartRunTrace>;
+}
+
+function interpolateTickPair(
+	prevT: number,
+	prevP: number,
+	curT: number,
+	curP: number,
+	distance: number,
+): number {
+	if (curP === prevP) return curT;
+	const fraction = (distance - prevP) / (curP - prevP);
+	return prevT + Math.max(0, Math.min(1, fraction)) * (curT - prevT);
+}
+
+export function runComparisonBlock(
+	block: ScenarioBlockSpec,
+	course: CourseData,
+	racedef: RaceParameters,
+	uma1: HorseState,
+	uma2: HorseState,
+	pacer: HorseState,
+	options: any,
+): ComparisonBlockOutput {
+	const traceMode: TraceMode = options.traceMode || 'none';
+	const trackedSkillIds = new Set<string>(options.trackedSkillIds || []);
+	const nsamples = block.size;
+
+	const standard = new RaceSolverBuilder(nsamples)
+		.seed(block.seed)
+		.course(course)
+		.ground(racedef.groundCondition)
+		.weather(racedef.weather)
+		.season(racedef.season)
+		.time(racedef.time)
+		.posKeepMode(options.posKeepMode)
+		.mode(options.mode);
+	if (racedef.orderRange != null) {
+		standard
+			.order(racedef.orderRange[0], racedef.orderRange[1])
+			.numUmas(racedef.numUmas);
+	}
+	const compare = standard.fork();
+
+	if (options.mode === 'compare' && !options.syncRng) {
+		standard.desync();
+	}
+
+	const uma1_ = uma1.update('skills', (sk) => Array.from(sk.values())).toJS();
+	const uma2_ = uma2.update('skills', (sk) => Array.from(sk.values())).toJS();
+	standard.horse(uma1_);
+	compare.horse(uma2_);
+
+	if (options.skillWisdomCheck === false) {
+		standard.skillWisdomCheck(false);
+		compare.skillWisdomCheck(false);
+	}
+	if (options.rushedKakari === false) {
+		standard.rushedKakari(false);
+		compare.rushedKakari(false);
+	}
+	if (options.competeFight !== undefined) {
+		standard.competeFight(options.competeFight);
+		compare.competeFight(options.competeFight);
+	}
+	if (options.duelingRates) {
+		standard.duelingRates(options.duelingRates);
+		compare.duelingRates(options.duelingRates);
+	}
+	if (options.leadCompetition !== undefined) {
+		standard.leadCompetition(options.leadCompetition);
+		compare.leadCompetition(options.leadCompetition);
+	}
+	if (options.laneMovement !== undefined) {
+		standard.laneMovement(options.laneMovement);
+		compare.laneMovement(options.laneMovement);
+	}
+
+	// Same ordering rule as runComparison(), for the same reason: skills common to both umas must
+	// be added in the same relative order regardless of what else either uma has equipped, or
+	// their trigger RNG streams desync between baseline and candidate.
+	const common = uma1.skills
+		.keySeq()
+		.toSet()
+		.intersect(uma2.skills.keySeq().toSet())
+		.toArray()
+		.sort((a, b) => +a - +b);
+	const commonIdx = (id) => {
+		const i = common.indexOf(skillmeta[id].groupId);
+		return i > -1 ? i : common.length;
+	};
+	const sort = (a, b) => commonIdx(a) - commonIdx(b) || +a - +b;
+
+	const uma1Horse = uma1.toJS();
+	const uma1BaseStats = buildBaseStats(uma1Horse, uma1Horse.mood);
+	const uma1AdjustedStats = buildAdjustedStats(
+		uma1BaseStats,
+		course,
+		racedef.groundCondition,
+	);
+	const uma1Wisdom = uma1AdjustedStats.rawWisdom;
+
+	const uma2Horse = uma2.toJS();
+	const uma2BaseStats = buildBaseStats(uma2Horse, uma2Horse.mood);
+	const uma2AdjustedStats = buildAdjustedStats(
+		uma2BaseStats,
+		course,
+		racedef.groundCondition,
+	);
+	const uma2Wisdom = uma2AdjustedStats.rawWisdom;
+
+	uma1_.skills.sort(sort).forEach((id) => {
+		const forcedPos = uma1.forcedSkillPositions.get(id);
+		if (forcedPos != null) {
+			standard.addSkillAtPosition(id, forcedPos, Perspective.Self);
+		} else {
+			standard.addSkill(id, Perspective.Self);
+		}
+	});
+	uma2_.skills.sort(sort).forEach((id) => {
+		const forcedPos = uma2.forcedSkillPositions.get(id);
+		if (forcedPos != null) {
+			compare.addSkillAtPosition(id, forcedPos, Perspective.Self);
+		} else {
+			compare.addSkill(id, Perspective.Self);
+		}
+	});
+	uma1_.skills.forEach((id) => {
+		const forcedPos = uma1.forcedSkillPositions.get(id);
+		if (forcedPos != null) {
+			compare.addSkillAtPosition(id, forcedPos, Perspective.Other, uma1Wisdom);
+		} else {
+			compare.addSkill(id, Perspective.Other, undefined, uma1Wisdom);
+		}
+	});
+	uma2_.skills.forEach((id) => {
+		const forcedPos = uma2.forcedSkillPositions.get(id);
+		if (forcedPos != null) {
+			standard.addSkillAtPosition(id, forcedPos, Perspective.Other, uma2Wisdom);
+		} else {
+			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
+		}
+	});
+	if (!CC_GLOBAL) {
+		standard.withAsiwotameru().withStaminaSyoubu();
+		compare.withAsiwotameru().withStaminaSyoubu();
+	}
+
+	let pacerHorse = null;
+	if (options.posKeepMode === PosKeepMode.Approximate) {
+		pacerHorse = standard.useDefaultPacer(true);
+	} else if (options.posKeepMode === PosKeepMode.Virtual) {
+		if (pacer) {
+			const pacer_ = pacer.update('skills', (sk) => Array.from(sk.values()));
+			pacerHorse = standard.pacer(pacer_);
+		} else {
+			pacerHorse = standard.useDefaultPacer();
+		}
+	}
+
+	let scenarioSkillPos = new Map<string, Array<[number, number]>>();
+	function trackedActivate(s: any, id: any, persp: any) {
+		if (persp === Perspective.Self && trackedSkillIds.has(id)) {
+			if (!scenarioSkillPos.has(id)) scenarioSkillPos.set(id, []);
+			scenarioSkillPos.get(id)!.push([s.pos, -1]);
+		}
+	}
+	function trackedDeactivate(s: any, id: any, persp: any) {
+		if (persp === Perspective.Self && trackedSkillIds.has(id)) {
+			const ar = scenarioSkillPos.get(id);
+			if (ar) {
+				const r = ar.find((x) => x[1] === -1);
+				if (r != null) r[1] = Math.min(s.pos, course.distance);
+			}
+		}
+	}
+	compare.onSkillActivate(trackedActivate);
+	compare.onSkillDeactivate(trackedDeactivate);
+
+	const a = standard.build();
+	const b = compare.build();
+
+	// See RaceSolverBuilder.prepPacerTriggers: samples each pacemaker slot's trigger table once,
+	// up front, instead of resampling it every scenario.
+	standard.prepPacerTriggers(options.pacemakerCount, block.seed);
+	const basePacerRng = new Rule30CARng(block.seed + 1);
+
+	const lengths = new Float32Array(nsamples);
+	const times = new Float32Array(nsamples);
+	const procCounts = new Uint16Array(nsamples);
+	const procPositionsList: number[] = [];
+	const traces: Map<number, ChartRunTrace> | undefined =
+		traceMode === 'indices' ? new Map() : undefined;
+
+	for (let i = 0; i < nsamples; ++i) {
+		const pacers = [];
+		for (let j = 0; j < options.pacemakerCount; ++j) {
+			const pacerRng = new Rule30CARng(basePacerRng.int32());
+			pacers.push(
+				pacerHorse != null
+					? standard.buildPacer(pacerHorse, i, j, pacerRng)
+					: null,
+			);
+		}
+		const pacer_: RaceSolver | null = pacers.length > 0 ? pacers[0] : null;
+
+		// Always build both solvers for every index, even a skipped one -- build() advances a
+		// shared sequential RNG stream one draw per call, so skipping the call here (instead of
+		// just skipping the expensive step loop below) would desync every later index's race
+		// from what a full block would have produced.
+		const s1 = a.next(false).value as RaceSolver;
+		const s2 = b.next(false).value as RaceSolver;
+
+		if (block.only !== undefined && !block.only.has(i)) {
+			continue;
+		}
+
+		scenarioSkillPos = new Map();
+
+		s1.initUmas([s2, ...pacers]);
+		s2.initUmas([s1, ...pacers]);
+		pacers.forEach((p) => {
+			p?.initUmas([s1, s2, ...pacers.filter((p2) => p2 !== p)]);
+		});
+
+		let s1Finished = false;
+		let s2Finished = false;
+		let p0 = 0,
+			p1 = 0,
+			t0 = 0,
+			t1 = 0,
+			prevP0 = 0,
+			prevP1 = 0,
+			prevT0 = 0,
+			prevT1 = 0;
+		let posDiffCaptured = false;
+		let posDifference = 0;
+
+		const trace: ChartRunTrace | null =
+			traceMode === 'indices'
+				? { t: [[], []], p: [[], []], v: [[], []], sk: [new Map(), new Map()] }
+				: null;
+
+		while (!s1Finished || !s2Finished) {
+			let currentPacer = null;
+			if (pacer_) {
+				currentPacer = pacer_.getPacer();
+				pacer_.umas.forEach((u) => {
+					u.updatePacer(currentPacer);
+				});
+			}
+
+			for (let j = 0; j < options.pacemakerCount; j++) {
+				const p = j < pacers.length ? pacers[j] : null;
+				if (!p || p.pos >= course.distance) continue;
+				p.step(1 / 15);
+			}
+
+			if (s2.pos < course.distance) {
+				s2.step(1 / 15);
+				prevP1 = p1;
+				prevT1 = t1;
+				p1 = s2.pos;
+				t1 = s2.accumulatetime.t;
+				if (trace) {
+					trace.t[1].push(t1);
+					trace.p[1].push(p1);
+					trace.v[1].push(
+						s2.currentSpeed +
+							(s2.modifiers.currentSpeed.acc + s2.modifiers.currentSpeed.err),
+					);
+				}
+			} else if (!s2Finished) {
+				s2Finished = true;
+			}
+
+			if (s1.pos < course.distance) {
+				s1.step(1 / 15);
+				prevP0 = p0;
+				prevT0 = t0;
+				p0 = s1.pos;
+				t0 = s1.accumulatetime.t;
+				if (trace) {
+					trace.t[0].push(t0);
+					trace.p[0].push(p0);
+					trace.v[0].push(
+						s1.currentSpeed +
+							(s1.modifiers.currentSpeed.acc + s1.modifiers.currentSpeed.err),
+					);
+				}
+			} else if (!s1Finished) {
+				s1Finished = true;
+			}
+
+			// Snapshot once, after both umas have been advanced for this tick: whichever uma
+			// crosses the line first (fewer total ticks stepped) contributes its own final
+			// position, and the other contributes whatever position it had reached at that same
+			// tick -- matching runComparison()'s equal-array-length convention exactly, including
+			// the case where both cross on the same tick.
+			if (
+				!posDiffCaptured &&
+				(p1 >= course.distance || p0 >= course.distance)
+			) {
+				posDifference = p1 - p0;
+				posDiffCaptured = true;
+			}
+
+			s2.updatefirstUmaInLateRace();
+		}
+
+		s2.cleanup();
+		s1.cleanup();
+
+		lengths[i] = posDifference / 2.5;
+		times[i] =
+			interpolateTickPair(prevT0, prevP0, t0, p0, course.distance) -
+			interpolateTickPair(prevT1, prevP1, t1, p1, course.distance);
+
+		let procCount = 0;
+		scenarioSkillPos.forEach((activations) => {
+			activations.forEach(([pos]) => {
+				procCount++;
+				procPositionsList.push(pos);
+			});
+		});
+		procCounts[i] = procCount;
+
+		if (trace) {
+			trace.sk[1] = new Map(scenarioSkillPos);
+			traces!.set(i, trace);
+		}
+	}
+
+	return {
+		lengths,
+		times,
+		procCounts,
+		procPositions: Float32Array.from(procPositionsList),
+		traces,
+	};
+}
