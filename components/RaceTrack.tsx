@@ -578,26 +578,14 @@ export function RaceTrack(props) {
 				</svg>
 				{course.straights.map((s, i) => (
 					<svg
-						class="straight"
+						class={`straight ${i % 2 == 0 ? 'straight-a' : 'straight-b'}`}
 						x={`${(s.start / course.distance) * 100}%`}
 						y="46%"
 						width={`${((s.end - s.start) / course.distance) * 100}%`}
 						height="18%"
 					>
-						<rect
-							x="0"
-							y="0"
-							height="90%"
-							width="100%"
-							fill={i % 2 == 0 ? 'rgb(209,235,255)' : 'rgb(185,224,255)'}
-						/>
-						<rect
-							x="0"
-							y="90%"
-							height="10%"
-							width="100%"
-							fill={i % 2 == 0 ? 'rgb(23,154,255)' : 'rgb(9,146,254)'}
-						/>
+						<rect x="0" y="0" height="90%" width="100%" />
+						<rect x="0" y="90%" height="10%" width="100%" />
 						<SectionText
 							id="straight"
 							w={((s.end - s.start) / course.distance) * 100}
@@ -606,26 +594,14 @@ export function RaceTrack(props) {
 				))}
 				{course.corners.map((c, i) => (
 					<svg
-						class="corner"
+						class={`corner ${i % 2 == 0 ? 'corner-a' : 'corner-b'}`}
 						x={`${(c.start / course.distance) * 100}%`}
 						y="46%"
 						width={`${(c.length / course.distance) * 100}%`}
 						height="18%"
 					>
-						<rect
-							x="0"
-							y="0"
-							height="90%"
-							width="100%"
-							fill={i % 2 == 0 ? 'rgb(255,216,185)' : 'rgb(254,228,209)'}
-						/>
-						<rect
-							x="0"
-							y="90%"
-							height="10%"
-							width="100%"
-							fill={i % 2 == 0 ? 'rgb(254,117,9)' : 'rgb(250,121,27)'}
-						/>
+						<rect x="0" y="0" height="90%" width="100%" />
+						<rect x="0" y="90%" height="10%" width="100%" />
 						<SectionText
 							id="corner"
 							w={c.length / course.distance}

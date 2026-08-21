@@ -87,6 +87,37 @@
 	filter: drop-shadow(0.5px 0.5px 1px rgba(0, 0, 0, 0.3)) opacity(1) !important;
 }
 
+/* Straights & corners row -- two colors per section type, alternating by index, so two of the same
+   type sitting back-to-back (very common for corners, since a course often has no straight between
+   them) still read as separate bands instead of one solid, boundary-less block. These need their
+   own classes rather than relying on `:nth-child`/`:nth-of-type`, since a straight/corner's own
+   alternation index (i % 2 in RaceTrack.tsx) doesn't line up with its position among *all* the
+   straight+corner <svg> siblings in the DOM. */
+.straight-a > rect:first-child {
+	fill: rgb(209, 235, 255);
+}
+.straight-a > rect:last-child {
+	fill: rgb(23, 154, 255);
+}
+.straight-b > rect:first-child {
+	fill: rgb(165, 200, 230);
+}
+.straight-b > rect:last-child {
+	fill: rgb(10, 90, 170);
+}
+.corner-a > rect:first-child {
+	fill: rgb(255, 214, 170);
+}
+.corner-a > rect:last-child {
+	fill: rgb(255, 140, 40);
+}
+.corner-b > rect:first-child {
+	fill: rgb(216, 150, 96);
+}
+.corner-b > rect:last-child {
+	fill: rgb(180, 96, 32);
+}
+
 /* --- Dark mode --- */
 .dark .racetrackName {
 	color: #fff;
@@ -128,17 +159,29 @@
 .dark .sectionsBg:not(.slopesBg) > rect:last-child {
 	fill: #7a7a84;
 }
-.dark .straight > rect:first-child {
+.dark .straight-a > rect:first-child {
 	fill: #88b4d6;
 }
-.dark .straight > rect:last-child {
+.dark .straight-a > rect:last-child {
 	fill: #5e92c0;
 }
-.dark .corner > rect:first-child {
+.dark .straight-b > rect:first-child {
+	fill: #4a6f92;
+}
+.dark .straight-b > rect:last-child {
+	fill: #2e4a68;
+}
+.dark .corner-a > rect:first-child {
 	fill: #dab090;
 }
-.dark .corner > rect:last-child {
+.dark .corner-a > rect:last-child {
 	fill: #b88450;
+}
+.dark .corner-b > rect:first-child {
+	fill: #8a5a34;
+}
+.dark .corner-b > rect:last-child {
+	fill: #6a3f1c;
 }
 
 /* Phases row */
