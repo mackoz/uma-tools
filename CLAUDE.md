@@ -1,4 +1,4 @@
-# CLAUDE.md
+# Working in uma-tools
 
 Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby race simulator (Preact + TypeScript + esbuild, no framework, no server). Full docs are in `docs/` — this file only covers what a future edit is likely to get wrong.
 
@@ -6,7 +6,7 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 1. **Never hand-edit generated files.** These are all build output or data-pipeline output, not hand-written source:
    - `*/bundle.js`, `*/bundle.css`, `*/bundle.2.js`, `*/simulator.worker.js` — esbuild output. Edit the `.tsx`/`.ts` source and rebuild instead.
-   - `umas.json`, `skill_meta.json`, `icons.json`, and the `umalator-global/` equivalents — Perl-generated from the game's `master.mdb`. Edit the generating `.pl` script (see `docs/data-pipeline.md`) and regenerate, don't patch the JSON directly. `uma-skill-tools/data/{skill_data,skillnames,course_data,tracknames}.json` are the same story but live in the `uma-skill-tools` submodule (see the submodule section below) — the generating `.pl` scripts are there too, and a fix means committing and pushing in that repo, not editing the checked-out copy here.
+   - `umas.json`, `skill_meta.json`, `icons.json`, and the `umalator-global/` equivalents — Perl-generated from the game's `master.mdb`. Edit the generating `.pl` script (see `docs/data-pipeline.md`) and regenerate, don't patch the JSON directly. `uma-skill-tools/data/{skill_data,skillnames,course_data}.json` are the same story but live in the `uma-skill-tools` submodule (see the submodule section below) — the generating `.pl` scripts are there too, and a fix means committing and pushing in that repo, not editing the checked-out copy here. `tracknames.json` is the exception: it is hand-maintained because no generator exists.
 
 2. **Bundles are *not* committed to git — CI is the only build path.** `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages`, `rougelike`, and `umadle` all have a `build.mjs` and are gitignored (see `.gitignore`); `deploy.yml` rebuilds all seven on every push to `master`, and GitHub Pages is configured (`build_type: workflow`) to serve exactly that CI-built artifact — there is no separate "legacy" branch-source deploy racing it anymore. This means you do **not** need to rebuild-and-commit before pushing, but you should still build locally (see commands below) to catch a broken build before it reaches CI. `build-planner` is the one exception: its `bundle.js`/`bundle.2.js` stay committed because its source doesn't currently compile (see `docs/apps.md#build-planner`) — don't add it to CI without fixing that first.
 
@@ -36,11 +36,11 @@ cd umadle && node build.mjs
 npm run build                                # all of the above in one shot
 ```
 
-`build.mjs` is authoritative for every app that has one. The legacy `build.bat` files (all apps have one; some — `build-planner`, `skill-visualizer`, `umadle`, `rougelike`, `courseimages` — have *only* a `.bat`) are Windows-oriented esbuild-then-unassert-then-minify scripts; the ones that also have a `.mjs` predate it and don't emit `simulator.worker.js`, so don't treat them as sufficient for `umalator`/`umalator-global`/`skill-visualizer-global`.
+`build.mjs` is authoritative for every app that has one. Several apps still carry legacy Windows-oriented `build.bat` scripts, but `build-planner` is now the only app with no `build.mjs`. The old scripts predate the current build setup; in particular, `umalator/build.bat` does not emit `simulator.worker.js`, so it is not a substitute for `umalator/build.mjs`.
 
-There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any script. As of 2026-08-20 this reports **~1200 pre-existing errors**, dominated (~60%) by implicit-`any` (`TS7006`/`TS7053`/etc.) concentrated in a handful of large files (`umalator/app.tsx`, `compare.ts`, `SkillList.tsx`, `HorseDef.tsx`) — a known, tracked backlog, not something a normal change is expected to fix incidentally. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models.
+There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any build script. As of 2026-08-20 this reports **1,084 pre-existing errors** (roughly 1,100), dominated by implicit-`any` errors and concentrated in a handful of large files (`umalator/app.tsx`, `compare.ts`, `SkillList.tsx`, `HorseDef.tsx`) — a known, tracked backlog, not something a normal change is expected to fix incidentally. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models.
 
-`umadle` cannot be rebuilt from a clean `npm install` — it imports `accessible-autocomplete`, which isn't in `package.json`. Don't "fix" this by editing its bundle by hand; either add the dependency properly or leave it alone (see `docs/apps.md`).
+`umadle` now builds from a clean install: `accessible-autocomplete` is a declared dependency, and `.npmrc` supplies the legacy-peer setting required for its optional Preact 8 peer against this repo's Preact 10. See `docs/apps.md` for the details.
 
 If game data looks stale (a released uma/skill/course is missing) and there's no `master.mdb` handy, check `docs/upstream-data-sync.md` before assuming a full pipeline run is required — there's a script that ports already-computed data from a local upstream checkout as a stopgap (this fork's own asset extraction is currently broken against the encrypted live client — see `docs/data-pipeline.md`). To poke at a `master.mdb` you do have (confirm a table/column exists before writing a throwaway script against it), use `sqlite3 master.mdb` (bundled on macOS, no install needed) — `.tables`, `.schema <table>`, or plain SQL. No decryption needed for `master.mdb` itself; the encryption `docs/data-pipeline.md` describes is specific to the separate `meta` asset-manifest DB (icon/asset extraction), not the skill/course/uma tables these `.pl` scripts read.
 
@@ -61,9 +61,9 @@ Two parallel datasets, both derived from the same generator logic run against di
 | | JP | Global |
 |---|---|---|
 | Location | repo root (`umas.json`, `skill_meta.json`, `icons.json`) + `uma-skill-tools/data/` | `umalator-global/` |
-| Roster | ~130 umas | ~64 umas (Global lags JP releases) |
+| Roster | 141 umas | 65 umas (Global lags JP releases) |
 | Skill names | `["ja", "en"]` tuples | `["en"]` single-element |
-| Courses | 121 | 107 (missing overseas tracks) |
+| Courses | 139 | 119 (Global still lacks some JP courses) |
 
 Icons are **not** duplicated — both datasets reference the same `icons/` tree via the same `icons.json`. When adding data by hand for a quick test, don't cross-wire JP data into a Global-built app or vice versa; the shapes differ (see the skillnames array-length difference above) and code branches on `CC_GLOBAL`, not on which JSON happens to be loaded.
 

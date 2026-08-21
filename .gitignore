@@ -1,5 +1,9 @@
 node_modules/
 
+# Local alias to CLAUDE.md for tools that discover AGENTS.md. The symlink is
+# intentionally checkout-local; CLAUDE.md is the tracked source of truth.
+AGENTS.md
+
 # Local-only planning notes (backlog ideas, not part of the shipped repo).
 # No trailing slash: plans/ is a symlink to a sibling repo (../uma-tools-plans) on this
 # machine, and a trailing-slash pattern only matches real directories, not symlinks.
@@ -14,7 +18,7 @@ master.mdb
 # workflow) — see docs/deployment.md. Do NOT add a blanket */bundle.js here:
 # build-planner's source doesn't compile against the current uma-skill-tools
 # layout (see docs/apps.md), so its stale bundle.js/bundle.2.js stay committed
-# on purpose, same for the other apps that are still .bat-only.
+# on purpose. It is the only remaining app without a build.mjs.
 /umalator/bundle.js
 /umalator/bundle.css
 /umalator/simulator.worker.js

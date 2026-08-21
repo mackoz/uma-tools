@@ -49,7 +49,7 @@ End-to-end data flow for one `.build()` call:
 3. **Sampling.** `samplePolicy.sample(regions, nsamples, skillRng)` (`RaceSolverBuilder.ts:840`) turns each skill's region list into one concrete ~10m trigger `Region` per sample — this is *why* `nsamples` exists: skill trigger points are randomized per the game's own activation model, so you run many samples and look at the distribution.
 4. **Adjusted stats**, deliberately computed *after* sampling (comment at `RaceSolverBuilder.ts:846`) — course speed modifier, ground modifiers, strategy proficiency on wisdom. Some conditions (e.g. `base_power`) intentionally read pre-adjustment stats.
 5. **Per-sample solver construction.** `PendingSkill[]` are built by zipping each skill's `SkillData` with its sampled trigger. HP tracking is `GameHpPolicy` when `mode === 'compare'`, otherwise `NoopHpPolicy` (`RaceSolverBuilder.ts:863`) — the skill/uma chart intentionally ignores stamina; see [fork-changes.md](fork-changes.md).
-6. **Integration.** The caller steps the yielded `RaceSolver` at `dt = 1/15s` until `pos >= course.distance`. `RaceSolver.step()` (`RaceSolver.ts:648`) runs, in order: `updateHills` → `updatePhase` → `updateRushedState` → `processSkillActivations` → `applyPositionKeepStates` → `updateCompeteFight`/`updateLeadCompetition` → `updateLastSpurtState` → `updateTargetSpeed` → `applyForces` → `applyLaneMovement` → integrate velocity/position → `hp.tick()`.
+6. **Integration.** The caller steps the yielded `RaceSolver` at `dt = 1/15s` until `pos >= course.distance`. `RaceSolver.step()` (`RaceSolver.ts:658`) runs, in order: `updateHills` → `updatePhase` → `updateRushedState` → `processSkillActivations` → `applyPositionKeepStates` → `updateCompeteFight`/`updateLeadCompetition` → `updateLastSpurtState` → `updateTargetSpeed` → `applyForces` → `applyLaneMovement` → integrate velocity/position → `hp.tick()`.
 7. **Output.** Final `accumulatetime.t` at `pos == distance`, plus `onSkillActivate`/`onSkillDeactivate` callbacks and various activation logs. Comparing two solvers' `pos` at the same `t`, divided by 2.5m, gives the バ身 (basinn/length) gain — the number Umalator's whole UI exists to compute.
 
 **Canonical caller**: `umalator/compare.ts:170` — `let a = standard.build(), b = compare.build();` then both are stepped together and diffed. Other callers: `umalator/BasinnChart.tsx`, `build-planner/app.tsx`, `skill-visualizer/app.tsx`, `skill-visualizer-global/app.tsx`, `uma-skill-tools/tools/{gain,speedguts,basinnhyou}.ts`, `uma-skill-tools/test/arb/Race.ts`.
@@ -58,7 +58,7 @@ End-to-end data flow for one `.build()` call:
 
 | File | Role |
 |---|---|
-| `RaceSolver.ts` (~1500 lines) | The physics loop. `RaceState`, `SkillType`, `SkillEffect`, `PendingSkill`. Owns ~10 independently-seeded sub-RNGs (`syncRng`, `gorosiRng`, `rushedRng`, `downhillRng[]`, `wisdomRollRng`, `posKeepRng`, `laneMovementRng`, `specialConditionRng`, `competeFightRng`) so toggling one subsystem doesn't desync the others across a paired comparison run. |
+| `RaceSolver.ts` (1532 lines) | The physics loop. `RaceState`, `SkillType`, `SkillEffect`, `PendingSkill`. Owns ~10 independently-seeded sub-RNGs (`syncRng`, `gorosiRng`, `rushedRng`, `downhillRng[]`, `wisdomRollRng`, `posKeepRng`, `laneMovementRng`, `specialConditionRng`, `competeFightRng`) so toggling one subsystem doesn't desync the others across a paired comparison run. |
 | `RaceSolverBuilder.ts` | Entry point — see above. |
 | `ConditionParser.ts` | The Pratt parser for the skill-condition DSL. Generic over condition/operator tables (`getParser<ConditionT, OperatorT>`), reused by `tools/skillgrep.ts` and `tools/ToolCLI.ts`. |
 | `ActivationConditions.ts` | The `Conditions` table (117 named conditions: `phase`, `corner`, `accumulatetime`, `hp_per`, `is_lastspurt`, order/blocked/overtake conditions modelled as Erlang randoms, etc.) plus the `And`/`Or`/comparison operator classes. |
@@ -73,7 +73,7 @@ End-to-end data flow for one `.build()` call:
 ## How the UI layers on top
 
 - `components/` holds the shared Preact pieces: `HorseDef.tsx`/`HorseDefTypes.ts` (uma stat editor + the `HorseState` Immutable `Record`), `SkillList.tsx`/`SkillPicker.tsx` (skill search/pick UI, including the condition pretty-printer built on `ConditionParser`), `RaceTrack.tsx` (SVG course renderer + skill trigger-region overlay), `Language.tsx` (i18n context), `Tooltip.tsx`.
-- The Umalator apps run simulations off the main thread: `umalator/app.tsx:1990` spawns 4 `Worker('./simulator.worker.js')` instances.
+- The Umalator apps run simulations off the main thread: `umalator/app.tsx:2047` spawns 4 `Worker('./simulator.worker.js')` instances.
 - `vendor/table-core` and `vendor/preact-table` are a vendored copy of TanStack table-core plus a Preact adapter, used only by `umalator/BasinnChart.tsx`'s results table. Wired in via each `build.mjs`'s `redirectTable` esbuild plugin, which rewrites `@tanstack/*` imports to `vendor/<name>/index.ts`.
 
 See [apps.md](apps.md) for how each sub-app assembles these pieces, and [deployment.md](deployment.md) for how the whole thing gets served.
@@ -82,7 +82,7 @@ See [apps.md](apps.md) for how each sub-app assembles these pieces, and [deploym
 
 Worth knowing before touching this code — none of these are fixed in this docs pass, they're recorded so they don't get rediscovered from scratch:
 
-- **Dead `EnhancedHpPolicy` imports.** `uma-skill-tools/RaceSolverBuilder.ts:11` and `umalator/compare.ts:5` both `import { EnhancedHpPolicy } from './EnhancedHpPolicy'` — that file was deleted in commit `90356c1` ("Cleanup + add sync RNG checkbox") and the symbol is never used elsewhere in either file. Harmless in practice (esbuild elides unused imports and the committed bundles build fine), but should be deleted as cleanup.
+- **Dead `EnhancedHpPolicy` imports.** `uma-skill-tools/RaceSolverBuilder.ts:11` and `umalator/compare.ts:5` both import `EnhancedHpPolicy` from a file deleted in commit `90356c1` ("Cleanup + add sync RNG checkbox"); the symbol is never used. Harmless in the browser builds because esbuild elides the unused imports, but it contributes to the standalone TypeScript/CLI failures and should be deleted as cleanup.
 - **`SpurtCalculator.ts` is orphaned** — collateral from the same `EnhancedHpPolicy` removal (see table above).
 - **`Rule30CARng` is a misnomer** (`Random.ts:29`) for a prando-backed PRNG.
 - **`OrOperator` (`ActivationConditions.ts:140-151`) has a documented FIXME**: the `@` (or) operator doesn't correctly propagate dynamic conditions per-region when both static *and* dynamic conditions differ between its two branches. Currently safe only because no shipped skill hits that combination — this is the same underlying limitation behind the "Restless on Kyoto 3000m" case in [fork-changes.md](fork-changes.md).
