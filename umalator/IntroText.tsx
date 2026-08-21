@@ -166,6 +166,19 @@ export function IntroText(props) {
 								pacer skill trigger points are now sampled once per race slot
 								instead of being regenerated on every single scenario.
 							</li>
+							<li>
+								Fixed the Skill Chart's "Skill" column header being unclickable
+								(it was the only column that couldn't be used to sort
+								alphabetically) and having its text clipped off at the left edge
+								of the table.
+							</li>
+							<li>
+								Added a <strong>Hide Inherited Uniques</strong> toggle next to
+								the Skill Chart's icon filters, to exclude a character's
+								inherited unique skills (e.g. "Warning Shot! (inherited)") from
+								the candidate pool — a character's own (non-inherited) unique
+								skills were already excluded from the Skill Chart automatically.
+							</li>
 						</ul>
 					</details>
 					<details class="release">

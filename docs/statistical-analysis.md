@@ -294,7 +294,13 @@ two controls fighting over the same flags.
    candidate, and compares that build against the unchanged baseline; already-owned skills in other
    groups stay active in both runs.
 2. Use the skill-icon filters above the run settings to narrow the candidate pool before running, if
-   only certain categories matter — filtering reduces total work.
+   only certain categories matter — filtering reduces total work. The **Hide Inherited Uniques**
+   toggle next to them excludes the ~250 `9xxxxx` inherited-unique skills (e.g. "Warning Shot!
+   (inherited)") from the candidate pool. A character's own (non-inherited) unique skills never
+   enter the candidate pool in the first place — the Skill Chart's candidate list only includes
+   general skills (`rarity < 3`), and uniques are rarity 4/5 — so this toggle is the only "hide
+   uniques" control that does anything. Both filters can be changed after a run without re-running —
+   matching rows hide immediately, with the chart marked dirty until you press Run again.
 3. Pick **Model** (Controlled or Full race) and **Preset** (Quick / Balanced / Thorough) in the run-
    settings row above the table — these are reachable before a run has happened, unlike an earlier
    implementation where they lived inside the results pane and only rendered once `tableData.size >

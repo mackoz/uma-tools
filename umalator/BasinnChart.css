@@ -53,13 +53,11 @@
 
 .basinnChart .columnHeader {
 	border-bottom: 2px solid rgb(181, 174, 187);
-	margin-left: -18px;
-	padding-right: 30px;
+	cursor: pointer;
 	width: 100%;
 }
 
 .basinnChart .columnHeader span {
-	cursor: pointer;
 	position: relative;
 }
 

@@ -3146,6 +3146,22 @@ function App(props) {
 		Set<string>
 	>(new Set());
 
+	// Hides the ~250 9xxxxx inherited-unique skills from the Chart-mode candidate pool -- real
+	// (rarity 4/5) uniques never enter the pool at all (isGeneralSkill already excludes them), so
+	// this is the only "unique" filter that actually does anything. A dedicated localStorage key,
+	// matching skill-analysis-mode/-preset and chartIconFilter's own convention: a candidate-pool
+	// work-scoping knob, not part of the race definition, so it doesn't ride in the umalator-settings
+	// share-link blob.
+	const [hideInheritedUniques, setHideInheritedUniques] = useState<boolean>(
+		() => localStorage.getItem('chartHideUniques') === 'true',
+	);
+
+	useEffect(() => {
+		localStorage.setItem('chartHideUniques', String(hideInheritedUniques));
+	}, [hideInheritedUniques]);
+	const [lastRunHideInheritedUniques, setLastRunHideInheritedUniques] =
+		useState(false);
+
 	function toggleChartIconType(iconType: string) {
 		setActiveChartIconTypes((prev) => {
 			if (prev.has(iconType) && prev.size === 1) return prev;
@@ -4165,6 +4181,10 @@ function App(props) {
 
 		skills = skills.filter((id) => !isPurpleSkill(id));
 
+		if (mode === Mode.Chart && hideInheritedUniques) {
+			skills = skills.filter((id) => !id.startsWith('9'));
+		}
+
 		if (
 			mode === Mode.Chart &&
 			activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
@@ -4176,6 +4196,7 @@ function App(props) {
 			);
 		}
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
+		setLastRunHideInheritedUniques(hideInheritedUniques);
 
 		const preset = CHART_LADDERS[analysisPreset];
 		const jobId = ++jobIdRef.current;
@@ -4847,10 +4868,14 @@ function App(props) {
 			CHART_ICON_TYPE_FILTERS.some(
 				(t) => activeChartIconTypes.has(t) && !lastRunChartIconTypes.has(t),
 			);
+		const hideUniquesDirty =
+			mode == Mode.Chart &&
+			hideInheritedUniques !== lastRunHideInheritedUniques;
 		const dirty =
 			!uma1.equals(lastRunChartUma) ||
 			courseId !== lastRunChartCourseId ||
-			iconTypesDirty;
+			iconTypesDirty ||
+			hideUniquesDirty;
 		const hiddenByIconFilter =
 			mode == Mode.Chart &&
 			activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
@@ -4864,6 +4889,12 @@ function App(props) {
 						),
 					)
 				: new Set<string>();
+		const hiddenByUniqueFilter =
+			mode == Mode.Chart && hideInheritedUniques
+				? new Set(
+						Array.from(tableData.keys()).filter((id) => id.startsWith('9')),
+					)
+				: new Set<string>();
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
@@ -4873,7 +4904,11 @@ function App(props) {
 							dirty={dirty}
 							hidden={
 								mode == Mode.Chart
-									? new Set([...uma1.skills, ...hiddenByIconFilter])
+									? new Set([
+											...uma1.skills,
+											...hiddenByIconFilter,
+											...hiddenByUniqueFilter,
+										])
 									: new Set()
 							}
 							onSelectionChange={basinnChartSelection}
@@ -5629,6 +5664,21 @@ function App(props) {
 											disabled={isSimulationRunning}
 										/>
 									))}
+									<div
+										class="settingsToggleRow"
+										style={{ marginLeft: '12px', padding: '0' }}
+									>
+										<span>Hide Inherited Uniques</span>
+										<label class="toggleSwitch">
+											<input
+												type="checkbox"
+												checked={hideInheritedUniques}
+												onClick={() => setHideInheritedUniques((v) => !v)}
+												disabled={isSimulationRunning}
+											/>
+											<span class="toggleTrack"></span>
+										</label>
+									</div>
 								</div>
 							)}
 							{(mode == Mode.Chart || mode == Mode.UniquesChart) &&
