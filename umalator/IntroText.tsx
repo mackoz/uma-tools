@@ -65,6 +65,12 @@ export function IntroText(props) {
 								used it" effect, like Twin Turbo's unique) hang the simulation
 								indefinitely instead of running, with no error shown.
 							</li>
+							<li>
+								Fixed the text you type into the uma search box (and the outfit
+								name shown above it) being invisible in light mode -- it was
+								hard-coded to white text, which only worked on the old dark
+								banner background that box used to sit on.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
