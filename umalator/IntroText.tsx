@@ -106,6 +106,82 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
+						<summary>2026-08-21</summary>
+						<ul>
+							<li>
+								Rewrote the statistical Skill Chart's sampling engine. It ran up
+								to 25x more simulation than it needed to (every candidate skill
+								got a fixed, large sample count with no early elimination),
+								which made Thorough take upwards of 15-30 minutes; it now uses
+								an adaptive round ladder — a small first pass across every
+								candidate, then progressively larger passes on only the skills
+								that still look competitive — so a full Thorough run typically
+								finishes in a couple of minutes, and the table now fills in
+								progressively round by round instead of staying blank until the
+								very end.
+							</li>
+							<li>
+								Added a working <strong>Stop</strong> button next to Run for the
+								Skill Chart — it now actually halts the workers within a couple
+								of seconds and keeps whatever partial results were already
+								computed, instead of quietly burning CPU in the background after
+								you'd moved on.
+							</li>
+							<li>
+								Skill Wit Check (previously Compare-mode only) now also applies
+								to the Skill Chart, and is exposed as a toggle in the Chart-mode
+								Settings pane — default on, matching Compare. With it on,
+								Expected gain reflects this uma's actual wisdom-check proc
+								chance instead of assuming every check succeeds, and the chart's
+								Proc column shows the real rate driving that number.
+							</li>
+							<li>
+								The Skill Chart's Controlled model now calculates real HP,
+								spurt, and recovery behavior (previously it used a no-op HP
+								model that assumed unlimited stamina), so HP-only recovery
+								skills are no longer excluded from the candidate list and can be
+								ranked like any other skill.
+							</li>
+							<li>
+								Reworked the Skill Chart's results table down to six columns
+								(Skill, Gain with its confidence interval, Typical P10-P90,
+								Helps, Proc, n) that actually fit instead of clipping; the
+								numbers that used to crowd the table — time saved, SP cost,
+								Wilson intervals, and so on — moved into the row's expanded
+								detail. Rows that were screened out early or never activated
+								still show their sample count and a result, instead of a blank
+								line.
+							</li>
+							<li>
+								Moved the Skill Chart's Model and Preset selectors out from
+								inside the results area (where they were unreachable until a run
+								had already finished with whatever defaults happened to be set)
+								to the run-settings row above it, alongside an estimated-runtime
+								hint for the current preset.
+							</li>
+							<li>
+								Fixed the O(n²) resampling of pacemaker skill triggers in the
+								simulation engine (affects Full-race Skill Chart runs and
+								Compare mode with a virtual pacemaker at high sample counts) —
+								pacer skill trigger points are now sampled once per race slot
+								instead of being regenerated on every single scenario.
+							</li>
+							<li>
+								Fixed the Skill Chart's "Skill" column header being unclickable
+								(it was the only column that couldn't be used to sort
+								alphabetically) and having its text clipped off at the left edge
+								of the table.
+							</li>
+							<li>
+								Added a <strong>Hide Inherited Uniques</strong> toggle next to
+								the Skill Chart's icon filters, to exclude a character's
+								inherited unique skills (e.g. "Warning Shot! (inherited)") from
+								the candidate pool — a character's own (non-inherited) unique
+								skills were already excluded from the Skill Chart automatically.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-20</summary>
 						<ul>
 							<li>

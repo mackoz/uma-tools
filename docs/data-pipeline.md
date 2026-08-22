@@ -81,13 +81,13 @@ There is also `umalator-global/convert_old_course_data.pl` — a **one-off migra
 
 ## Known bugs in the pipeline scripts
 
-- **`use Encoding` should be `use Encode`** in both `make_uma_info.pl:14` and `uma-skill-tools/tools/make_skillnames.pl:11` — there is no `Encoding` module, so both scripts die at compile time as currently written. (Global's `make_global_skillnames.pl` correctly uses `Encode`.) **This bug is inherited, not fork-authored**: it was introduced in a commit this fork shares with upstream, and upstream separately fixed it in `a1c3562` (2026-02-23) — four months after this fork split off. See [upstream-comparison.md](upstream-comparison.md#what-upstream-added-that-this-fork-doesnt-have) for the provenance.
+- **`use Encoding` should be `use Encode`** in both `make_uma_info.pl:14` and `uma-skill-tools/tools/make_skillnames.pl:11` — there is no `Encoding` module, so both scripts die at compile time as currently written. (Global's `make_global_skillnames.pl` correctly uses `Encode`.)
 - **Malformed path** in `make_uma_info.pl:29`: `my $meta = $root . "./meta";` produces something like `.../Umamusume./meta` — the missing path separator needs fixing before this script can locate the asset-manifest DB.
 
 If you're actually running this pipeline, fix those two lines first.
 
 ## This fork's asset extraction is broken against the current game client
 
-The game's `meta` asset-manifest DB is encrypted in current game clients (chacha20 on the SQLite file itself, plus a per-asset XOR keystream applied past byte offset 256). Upstream added `AssetExtractor.pm` (2026-02-23) to defeat this — it isn't present in this fork's `extract_resource.pl`, which still assumes an unencrypted `meta` DB and merely writes an undecrypted `.key` sidecar. **Icon/asset extraction (the flow above) will not work against a current client's data until this fork picks up the equivalent decryption logic.** Regenerating JSON from an already-decrypted/legacy dataset is unaffected. See [upstream-comparison.md](upstream-comparison.md#data-pipeline) for what upstream's `AssetExtractor.pm` does.
+The game's `meta` asset-manifest DB is encrypted in current game clients (chacha20 on the SQLite file itself, plus a per-asset XOR keystream applied past byte offset 256) — this fork's `extract_resource.pl` still assumes an unencrypted `meta` DB and merely writes an undecrypted `.key` sidecar. **Icon/asset extraction (the flow above) will not work against a current client's data until this fork adds decryption logic for both layers.** Regenerating JSON from an already-decrypted/legacy dataset is unaffected.
 
-**Until that's fixed, if game data just looks stale (missing umas/skills/courses) rather than needing this whole pipeline run, see [upstream-data-sync.md](upstream-data-sync.md)** — a script that ports already-computed data from a local upstream checkout instead of extracting from a live client. It's a stopgap for exactly this gap, not a replacement for the pipeline above.
+**Until that's fixed, if game data just looks stale (missing umas/skills/courses) rather than needing this whole pipeline run, see `scripts/sync-upstream-data.mjs`** — it ports already-computed data from a local checkout of `alpha123/uma-tools` instead of extracting from a live client. It's a stopgap for exactly this gap, not a replacement for the pipeline above.

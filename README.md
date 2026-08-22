@@ -2,7 +2,7 @@
 
 A browser-based race simulator and toolset for **Uma Musume: Pretty Derby**. The headline app, Umalator, runs Monte Carlo race simulations comparing two umas (stats + skills) on a chosen course and reports the resulting length (バ身/basinn) gain — plus a skill-activation chart, an HP/spurt chart, and course-comparison tooling.
 
-This is a fork of [`alpha123/uma-tools`](https://github.com/alpha123/uma-tools) — see [Lineage](#lineage) — with several simulation-accuracy fixes and features layered on top. See [docs/fork-changes.md](docs/fork-changes.md) for the reasoning behind those changes, and [docs/upstream-comparison.md](docs/upstream-comparison.md) for how this fork and upstream have diverged since (upstream is still active and ahead on several fronts, including game data).
+This is a fork of [`alpha123/uma-tools`](https://github.com/alpha123/uma-tools) — the original Umalator, and the original source of this codebase — with several simulation-accuracy fixes and features layered on top.
 
 Everything runs client-side: no backend, no build-time API calls, no server-rendered anything. It's a set of static Preact apps bundled with esbuild.
 
@@ -44,16 +44,9 @@ Bundles for the seven maintained build targets aren't committed to git — GitHu
 - **[docs/apps.md](docs/apps.md)** — what each sub-app does, how to build it, and its gotchas.
 - **[docs/data-pipeline.md](docs/data-pipeline.md)** — regenerating uma/skill/course data from the game client.
 - **[docs/deployment.md](docs/deployment.md)** — GitHub Pages deployment, the `/uma-tools/` base-path constraint, local dev.
-- **[docs/fork-changes.md](docs/fork-changes.md)** — this fork's simulation-accuracy changes and known unfixed bugs, preserved from the original fork notes.
-- **[docs/upstream-comparison.md](docs/upstream-comparison.md)** — how this fork and upstream `alpha123/uma-tools` have diverged since the split: what each side added, and what turned out to be independent fixes for the same bug.
-- **[docs/upstream-architecture.md](docs/upstream-architecture.md)** — how upstream's own engine and app layer work, end to end, on their own terms (not a diff — see [architecture.md](docs/architecture.md) for this fork's equivalent). Plain-language version: [docs/upstream-architecture-simple.md](docs/upstream-architecture-simple.md).
-- **[docs/architecture-comparison.md](docs/architecture-comparison.md)** — fork vs. upstream, structure and design only (not features or game data): engine tick order, state management, build system, each with a plain-language ELI5.
-- **[docs/upstream-data-sync.md](docs/upstream-data-sync.md)** — catching this fork's committed game data (umas/skills/courses/icons) up to upstream from a local checkout, since this fork's own data pipeline currently can't run against a live game client.
+- **[docs/statistical-analysis.md](docs/statistical-analysis.md)** — how the statistical Skill Chart evaluates skills (paired sampling, adaptive ladder, confidence intervals).
+- **[docs/adr/](docs/adr/README.md)** — decision records: why things are built the way they are, including rejected alternatives. The engine keeps its own set in `uma-skill-tools/docs/adr/`.
 - **[CLAUDE.md](CLAUDE.md)** — repository working conventions (generated-file guardrails, JP/Global split, build commands).
-
-## Lineage
-
-`alpha123/uma-tools` was forked directly by kachi-dev on 2025-10-09, whose first commit squashed in changes from [`IHATEJEKUTO/VFalator-Umalator-Fork-Yeah`](https://github.com/IHATEJEKUTO/VFalator-Umalator-Fork-Yeah) (a separate, earlier fork of alpha123) rather than descending from it — VFalator is a source that got merged in, not an ancestor in a linear chain. IHATEJEKUTO went on to commit directly into kachi-dev's repo from 2025-10-13 onward. `kachi-dev/uma-tools` → this fork. See [docs/upstream-comparison.md](docs/upstream-comparison.md#lineage-accurately) for the commit-level evidence.
 
 ## License
 

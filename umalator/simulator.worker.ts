@@ -1,212 +1,315 @@
-import { fromJS } from 'immutable';
+import { fromJS, Map as ImmMap } from 'immutable';
 
+// tsconfig has no "webworker" lib, so TS resolves postMessage against Window's
+// (message, targetOrigin?, transfer?) overload instead of a worker global scope's
+// (message, transfer?) -- this is the single, documented cast point for that gap.
+const post: (message: any, transfer?: Transferable[]) => void =
+	postMessage as any;
+
+import { HorseState } from '../components/HorseDefTypes';
+import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
+import {
+	type ChartRunTrace,
+	type ComparisonBlockOutput,
+	runComparison,
+	runComparisonBlock,
+} from './compare';
 
-import { Map as ImmMap } from 'immutable';
-import { HorseState } from '../components/HorseDefTypes';
-import { runComparison } from './compare';
-import skillmeta from '../skill_meta.json';
-
-function mergeSkillMaps(map1, map2) {
-	const obj1 = map1 instanceof Map ? Object.fromEntries(map1) : (map1 || {});
-	const obj2 = map2 instanceof Map ? Object.fromEntries(map2) : (map2 || {});
-	const merged = { ...obj1 };
-	Object.entries(obj2).forEach(([skillId, values]: [string, any]) => {
-		merged[skillId] = [...(merged[skillId] || []), ...(values || [])];
-	});
-	return merged;
+function buildHorseState(raw: any): HorseState {
+	return new HorseState(raw)
+		.set('skills', fromJS(raw.skills))
+		.set('forcedSkillPositions', ImmMap(raw.forcedSkillPositions || {}));
 }
 
-function mergeResults(results1, results2) {
-	console.assert(results1.id == results2.id, `mergeResults: ${results1.id} != ${results2.id}`);
-	const n1 = results1.results.length, n2 = results2.results.length;
-	const combinedResults = results1.results.concat(results2.results).sort((a,b) => a - b);
-	const combinedMean = (results1.mean * n1 + results2.mean * n2) / (n1 + n2);
-	const mid = Math.floor(combinedResults.length / 2);
-	const newMedian = combinedResults.length % 2 == 0 ? (combinedResults[mid-1] + combinedResults[mid]) / 2 : combinedResults[mid];
-	
-	const allruns1 = results1.runData?.allruns || {};
-	const allruns2 = results2.runData?.allruns || {};
-	const {skBasinn: skBasinn1, sk: sk1, totalRuns: totalRuns1, ...rest1} = allruns1;
-	const {skBasinn: skBasinn2, sk: sk2, totalRuns: totalRuns2, ...rest2} = allruns2;
-	
-	const mergedAllRuns: any = {
-		...rest1,
-		...rest2,
-		totalRuns: (totalRuns1 || 0) + (totalRuns2 || 0)
-	};
-	
-	if (skBasinn1 && skBasinn2) {
-		mergedAllRuns.skBasinn = [
-			mergeSkillMaps(skBasinn1[0] || {}, skBasinn2[0] || {}),
-			mergeSkillMaps(skBasinn1[1] || {}, skBasinn2[1] || {})
-		];
-	} else if (skBasinn1 || skBasinn2) {
-		mergedAllRuns.skBasinn = skBasinn1 || skBasinn2;
+// Replaces whatever's already equipped in `id`'s skill group (if any) with `id` itself -- the
+// same "swap the candidate into its group, leave everything else the uma already owns alone"
+// rule the chart has always used.
+function buildCandidateSkills(uma: HorseState, id: string): HorseState {
+	const groupId = (skillmeta as any)[id]?.groupId;
+	let skillsToUse = uma.skills;
+	if (groupId) {
+		skillsToUse = skillsToUse.filter(
+			(existingId: string) =>
+				(skillmeta as any)[existingId]?.groupId !== groupId,
+		);
 	}
-	
-	if (sk1 && sk2) {
-		mergedAllRuns.sk = [
-			mergeSkillMaps(sk1[0] || {}, sk2[0] || {}),
-			mergeSkillMaps(sk1[1] || {}, sk2[1] || {})
-		];
-	} else if (sk1 || sk2) {
-		mergedAllRuns.sk = sk1 || sk2;
-	}
-	
-	return {
-		id: results1.id,
-		results: combinedResults,
-		min: Math.min(results1.min, results2.min),
-		max: Math.max(results1.max, results2.max),
-		mean: combinedMean,
-		median: newMedian,
-		runData: {
-			...(n2 > n1 ? results2.runData : results1.runData),
-			allruns: mergedAllRuns,
-			minrun: results1.min < results2.min ? results1.runData.minrun : results2.runData.minrun,
-			maxrun: results1.max > results2.max ? results1.runData.maxrun : results2.runData.maxrun,
-		}
-	};
+	return uma.set('skills', skillsToUse.set(groupId, id as any));
 }
 
-function mergeResultSets(data1, data2) {
-	data2.forEach((r,id) => {
-		data1.set(id, mergeResults(data1.get(id), r));
-	});
+// --- Skill Chart: adaptive-round batches ---
+//
+// One 'chart-batch' request covers a slice of one round's candidate skill list, all sharing the
+// same (blockSeed, blockSize) -- see chartLadder.ts for why a round's scenarios are a disjoint,
+// reproducible block rather than an arbitrary continuation of the previous round's. Results
+// stream back in small chunks (chart-batch-chunk) as they're computed, rather than one message at
+// the end, so the table can populate progressively during a round instead of sitting empty for
+// however long the whole batch takes.
+
+const CHUNK_ROWS = 32;
+const CHUNK_MS = 200;
+
+interface ChartBatchRow {
+	id: string;
+	lengths: Float32Array;
+	times: Float32Array;
+	procCounts: Uint16Array;
+	procPositions: Float32Array;
 }
 
-function run1Round(nsamples: number, skills: string[], course: CourseData, racedef: RaceParameters, uma: HorseState, pacer, options) {
-	const data = new Map();
-	skills.forEach(id => {
-		const newSkillGroupId = skillmeta[id]?.groupId;
-		let skillsToUse = uma.skills;
-		
-		if (newSkillGroupId) {
-			skillsToUse = skillsToUse.filter((existingSkillId: string) => {
-				const existingGroupId = skillmeta[existingSkillId]?.groupId;
-				return existingGroupId !== newSkillGroupId;
-			});
-		}
-		
-		const withSkill = uma.set('skills', skillsToUse.set(skillmeta[id].groupId, id));
-		const {results, runData} = runComparison(nsamples, course, racedef, uma, withSkill, pacer, options);
-		const mid = Math.floor(results.length / 2);
-		const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
-		const mean = results.reduce((a,b) => a+b, 0) / results.length;
-		data.set(id, {
-			id, results, runData,
-			min: results[0],
-			max: results[results.length-1],
-			mean,
-			median
-		});
-	});
-	return data;
-}
+function runChartBatch(data: {
+	jobId: number;
+	round: number;
+	batchId: number;
+	blockSeed: number;
+	blockSize: number;
+	skillIds: string[];
+	course: CourseData;
+	racedef: RaceParameters;
+	uma: any;
+	pacer: any;
+	analysisOptions: any;
+}) {
+	const {
+		jobId,
+		round,
+		batchId,
+		blockSeed,
+		blockSize,
+		skillIds,
+		course,
+		racedef,
+		uma,
+		pacer,
+		analysisOptions,
+	} = data;
 
-function runChart({skills, course, racedef, uma, pacer, options}) {
+	const uma_ = buildHorseState(uma);
+	const pacer_ = pacer ? buildHorseState(pacer) : null;
 	const startTime = performance.now();
-	const totalSkills = skills.length;
 
-	const uma_ = new HorseState(uma)
-		.set('skills', fromJS(uma.skills))
-		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
-	const pacer_ = pacer ? new HorseState(pacer)
-		.set('skills', fromJS(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
-	postMessage({type: 'chart-progress', round: 1, total: 3});
-	let results = run1Round(25, skills, course, racedef, uma_, pacer_, options);
-	postMessage({type: 'chart', results});
-	console.log(`[chart r1] ${skills.length} skills x25 — ${(performance.now() - startTime).toFixed(0)}ms`);
+	let pending: ChartBatchRow[] = [];
+	let lastFlush = startTime;
 
-	skills = skills.filter(id => results.get(id).max > 0.1);
-	postMessage({type: 'chart-progress', round: 2, total: 3});
-	let update = run1Round(50, skills, course, racedef, uma_, pacer_, options);
-	mergeResultSets(results, update);
-	postMessage({type: 'chart', results});
-	console.log(`[chart r2] ${skills.length} skills x50 — ${(performance.now() - startTime).toFixed(0)}ms`);
+	const flush = () => {
+		if (pending.length === 0) return;
+		const transfer: Transferable[] = [];
+		for (const row of pending) {
+			transfer.push(
+				row.lengths.buffer,
+				row.times.buffer,
+				row.procCounts.buffer,
+				row.procPositions.buffer,
+			);
+		}
+		post(
+			{ type: 'chart-batch-chunk', jobId, round, batchId, rows: pending },
+			transfer,
+		);
+		pending = [];
+		lastFlush = performance.now();
+	};
 
-	skills = skills.filter(id => Math.abs(results.get(id).max - results.get(id).min) > 0.1);
-	postMessage({type: 'chart-progress', round: 3, total: 3});
-	update = run1Round(125, skills, course, racedef, uma_, pacer_, options);
-	mergeResultSets(results, update);
-	postMessage({type: 'chart', results});
+	for (const id of skillIds) {
+		try {
+			const withSkill = buildCandidateSkills(uma_, id);
+			const result: ComparisonBlockOutput = runComparisonBlock(
+				{ seed: blockSeed, size: blockSize },
+				course,
+				racedef,
+				uma_,
+				withSkill,
+				pacer_,
+				{ ...analysisOptions, traceMode: 'none', trackedSkillIds: [id] },
+			);
+			pending.push({
+				id,
+				lengths: result.lengths,
+				times: result.times,
+				procCounts: result.procCounts,
+				procPositions: result.procPositions,
+			});
+		} catch (e) {
+			post({
+				type: 'chart-error',
+				jobId,
+				skillId: id,
+				message: e instanceof Error ? e.message : String(e),
+			});
+			continue;
+		}
 
-	const elapsed = performance.now() - startTime;
-	console.log(`[chart r3] ${skills.length} skills x125 — ${elapsed.toFixed(0)}ms total (${totalSkills} skills in)`);
-
-	postMessage({type: 'chart-complete'});
-}
-
-function runCompare({nsamples, course, racedef, uma1, uma2, pacer, options}) {
-	const uma1_ = new HorseState(uma1)
-		.set('skills', fromJS(uma1.skills))
-		.set('forcedSkillPositions', ImmMap(uma1.forcedSkillPositions || {}));
-	const uma2_ = new HorseState(uma2)
-		.set('skills', fromJS(uma2.skills))
-		.set('forcedSkillPositions', ImmMap(uma2.forcedSkillPositions || {}));
-	const pacer_ = pacer ? new HorseState(pacer)
-		.set('skills', fromJS(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
-	const compareOptions = {...options, mode: 'compare'};
-	let results;
-	for (let n = Math.min(20, nsamples), mul = 6; n < nsamples; n = Math.min(n * mul, nsamples), mul = Math.max(mul - 1, 2)) {
-		results = runComparison(n, course, racedef, uma1_, uma2_, pacer_, compareOptions);
-		postMessage({type: 'compare', results});
+		const now = performance.now();
+		if (pending.length >= CHUNK_ROWS || now - lastFlush >= CHUNK_MS) {
+			flush();
+		}
 	}
-	results = runComparison(nsamples, course, racedef, uma1_, uma2_, pacer_, compareOptions);
-	postMessage({type: 'compare', results});
-	postMessage({type: 'compare-complete'});
+	flush();
+
+	post({
+		type: 'chart-batch-done',
+		jobId,
+		round,
+		batchId,
+		elapsedMs: performance.now() - startTime,
+		scenariosRun: skillIds.length * blockSize,
+	});
 }
 
-function runAdditionalSamples({skillId, nsamples, course, racedef, uma, pacer, options}) {
-	const uma_ = new HorseState(uma)
-		.set('skills', SkillSet(uma.skills))
-		.set('forcedSkillPositions', ImmMap(uma.forcedSkillPositions || {}));
-	const pacer_ = pacer ? new HorseState(pacer)
-		.set('skills', SkillSet(pacer.skills || []))
-		.set('forcedSkillPositions', ImmMap(pacer.forcedSkillPositions || {})) : null;
-	
-	const newSkillGroupId = skillmeta(skillId)?.groupId;
-	let skillsToUse = uma_.skills;
-	
-	if (newSkillGroupId) {
-		skillsToUse = skillsToUse.filter((existingSkillId: string) => {
-			const existingGroupId = skillmeta(existingSkillId)?.groupId;
-			return existingGroupId !== newSkillGroupId;
+// --- Skill Chart: on-demand detail fetch for an expanded row ---
+//
+// The main thread already knows, from the accumulated lengths it's received via chart-batch-chunk,
+// exactly which sample indices are the min/max/closest-to-mean/median for a given skill, and which
+// (blockSeed, blockSize) block each came from. Re-simulating just those few indices (deterministic,
+// same seed) is cheaper and simpler than retaining or streaming full per-tick traces for every row
+// up front -- see compare.ts's runComparisonBlock() and its `only` parameter.
+
+interface DetailPick {
+	label: string;
+	blockSeed: number;
+	blockSize: number;
+	index: number;
+}
+
+function runChartDetail(data: {
+	jobId: number;
+	requestId: number;
+	skillId: string;
+	picks: DetailPick[];
+	course: CourseData;
+	racedef: RaceParameters;
+	uma: any;
+	pacer: any;
+	analysisOptions: any;
+}) {
+	const {
+		jobId,
+		requestId,
+		skillId,
+		picks,
+		course,
+		racedef,
+		uma,
+		pacer,
+		analysisOptions,
+	} = data;
+
+	const uma_ = buildHorseState(uma);
+	const pacer_ = pacer ? buildHorseState(pacer) : null;
+	const withSkill = buildCandidateSkills(uma_, skillId);
+
+	// Group picks sharing a (blockSeed, blockSize) into one runComparisonBlock call -- a detail
+	// fetch is at most 4 picks, almost always from the same round's block, so this is normally one
+	// call, not four. A low-variance skill can easily have two or more of its min/max/mean/median
+	// picks land on the exact same sample index (e.g. the closest-to-mean sample often *is* the
+	// median one), so labels is keyed by index but holds every label that resolved to it, not just
+	// the last one -- a plain Map<index, string> would silently drop all but one such label.
+	const groups = new Map<
+		string,
+		{
+			blockSeed: number;
+			blockSize: number;
+			indices: Set<number>;
+			labels: Map<number, string[]>;
+		}
+	>();
+	for (const pick of picks) {
+		const key = `${pick.blockSeed}:${pick.blockSize}`;
+		let g = groups.get(key);
+		if (!g) {
+			g = {
+				blockSeed: pick.blockSeed,
+				blockSize: pick.blockSize,
+				indices: new Set(),
+				labels: new Map(),
+			};
+			groups.set(key, g);
+		}
+		g.indices.add(pick.index);
+		const existing = g.labels.get(pick.index);
+		if (existing) existing.push(pick.label);
+		else g.labels.set(pick.index, [pick.label]);
+	}
+
+	const runs: Record<string, ChartRunTrace> = {};
+	for (const g of groups.values()) {
+		const result = runComparisonBlock(
+			{ seed: g.blockSeed, size: g.blockSize, only: g.indices },
+			course,
+			racedef,
+			uma_,
+			withSkill,
+			pacer_,
+			{ ...analysisOptions, traceMode: 'indices', trackedSkillIds: [skillId] },
+		);
+		result.traces?.forEach((trace, idx) => {
+			const labels = g.labels.get(idx);
+			labels?.forEach((label) => {
+				runs[label] = trace;
+			});
 		});
 	}
-	
-	const withSkill = uma_.set('skills', skillsToUse.add(skillId));
-	const {results, runData} = runComparison(nsamples, course, racedef, uma_, withSkill, pacer_, options);
-	const mid = Math.floor(results.length / 2);
-	const median = results.length % 2 == 0 ? (results[mid-1] + results[mid]) / 2 : results[mid];
-	const mean = results.reduce((a,b) => a+b, 0) / results.length;
-	const newResult = {
-		id: skillId,
-		results,
-		runData,
-		min: results[0],
-		max: results[results.length-1],
-		mean,
-		median
-	};
-	postMessage({type: 'additional-samples', skillId, result: newResult});
+
+	post({ type: 'chart-detail', jobId, requestId, skillId, runs });
 }
 
-self.addEventListener('message', function (e) {
-	const {msg, data} = e.data;
+// --- Compare mode: unchanged from before this rewrite ---
+
+function runCompare({
+	nsamples,
+	course,
+	racedef,
+	uma1,
+	uma2,
+	pacer,
+	options,
+}: any) {
+	const uma1_ = buildHorseState(uma1);
+	const uma2_ = buildHorseState(uma2);
+	const pacer_ = pacer ? buildHorseState(pacer) : null;
+	const compareOptions = { ...options, mode: 'compare' };
+	let results: any;
+	for (
+		let n = Math.min(20, nsamples), mul = 6;
+		n < nsamples;
+		n = Math.min(n * mul, nsamples), mul = Math.max(mul - 1, 2)
+	) {
+		results = runComparison(
+			n,
+			course,
+			racedef,
+			uma1_,
+			uma2_,
+			pacer_,
+			compareOptions,
+		);
+		post({ type: 'compare', results });
+	}
+	results = runComparison(
+		nsamples,
+		course,
+		racedef,
+		uma1_,
+		uma2_,
+		pacer_,
+		compareOptions,
+	);
+	post({ type: 'compare', results });
+	post({ type: 'compare-complete' });
+}
+
+self.addEventListener('message', (e: MessageEvent) => {
+	const { msg, data } = e.data;
 	switch (msg) {
-		case 'chart':
-			runChart(data);
+		case 'chart-batch':
+			runChartBatch(data);
+			break;
+		case 'chart-detail':
+			runChartDetail(data);
 			break;
 		case 'compare':
 			runCompare(data);
-			break;
-		case 'additional-samples':
-			runAdditionalSamples(data);
 			break;
 	}
 });
