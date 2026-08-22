@@ -14,8 +14,6 @@ Other app-specific images follow the same convention; use `rg '/uma-tools/'` bef
 
 This means **the site only works correctly when served under a URL path that literally is `/uma-tools/`**. This repo happens to live at `github.com/mackoz/uma-tools`, so GitHub Pages project-site hosting (`https://mackoz.github.io/uma-tools/`) is an exact match — that's the deployment target this doc covers.
 
-(This constraint is **inherited from upstream**, not something this fork introduced — the same `/uma-tools/` prefix appears 77 times in `alpha123/uma-tools`'s own source, for the same reason: its repo is also named `uma-tools`.)
-
 Hosts that serve at the domain root (Cloudflare Pages, Netlify, Vercel, a plain nginx vhost) will 404 every icon and font unless the repo is staged under a `uma-tools/` subfolder of whatever they serve, or the source is changed to make the prefix configurable and rebuilt. Out of scope for this doc — GitHub Pages is the supported path.
 
 ## GitHub Pages

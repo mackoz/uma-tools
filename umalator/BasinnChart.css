@@ -1,6 +1,6 @@
 .basinnChartWrapper {
 	/*border: 2px solid rgb(224,214,204);*/
-	border: 2px solid rgb(181,174,187);
+	border: 2px solid rgb(181, 174, 187);
 	border-radius: 6px;
 	flex: 1;
 	min-height: 0;
@@ -26,29 +26,43 @@
 }
 
 .basinnChart th {
-	background: linear-gradient(#fff,#e4e0e9);
+	background: linear-gradient(#fff, #e4e0e9);
 	text-align: left;
-	width: 15%;
 }
 
-.basinnChart th:first-child {
-	text-align: center;
-	width: 40%;
+/* Six columns: Skill / Gain (95% CI) / Typical P10-P90 / Helps / Proc / n -- widths sum to 100%,
+   sized roughly by how much each column's content actually needs. */
+.basinnChart th:nth-child(1) {
+	width: 28%;
+}
+.basinnChart th:nth-child(2) {
+	width: 24%;
+}
+.basinnChart th:nth-child(3) {
+	width: 18%;
+}
+.basinnChart th:nth-child(4) {
+	width: 12%;
+}
+.basinnChart th:nth-child(5) {
+	width: 12%;
+}
+.basinnChart th:nth-child(6) {
+	width: 6%;
 }
 
 .basinnChart .columnHeader {
 	border-bottom: 2px solid rgb(181, 174, 187);
-	margin-left: -18px;
-	padding-right: 30px;
+	cursor: pointer;
 	width: 100%;
 }
 
 .basinnChart .columnHeader span {
-	cursor: pointer;
 	position: relative;
 }
 
-.basinnChartSortedAsc span::after, .basinnChartSortedDesc span::after {
+.basinnChartSortedAsc span::after,
+.basinnChartSortedDesc span::after {
 	border-bottom: 2px solid #794016;
 	border-right: 2px solid #794016;
 	content: "";
@@ -70,6 +84,13 @@
 
 .basinnChart tr.expanded {
 	background: rgb(121, 216, 35);
+}
+
+/* Screened/inert/pending rows: still show real numbers (however many samples they got), just
+   visually receded so the still-competitive rows read as the point of the table. */
+.basinnChart tr.basinnChartMuted {
+	color: rgb(148, 150, 189);
+	font-weight: normal;
 }
 
 .basinnChart tr.expanded-content-row {
@@ -169,6 +190,9 @@
 }
 .dark .basinnChart tr.expanded {
 	background: #3d6e1e;
+}
+.dark .basinnChart tr.basinnChartMuted {
+	color: var(--muted, #8a8a8a);
 }
 .dark .basinnChart tr.expanded-content-row {
 	background: var(--surface, #1e1e1e);
