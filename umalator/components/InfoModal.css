@@ -1,0 +1,106 @@
+.infoModalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.infoModal {
+	position: relative;
+	background: var(--bg, #fff);
+	color: var(--fg, #111827);
+	border-radius: 10px;
+	padding: 24px;
+	max-width: 640px;
+	width: 90%;
+	max-height: 85vh;
+	overflow-y: auto;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.infoModal h2 {
+	margin: 0 0 12px 0;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.infoModalClose {
+	position: absolute;
+	top: 16px;
+	right: 16px;
+	background: transparent;
+	border: none;
+	color: var(--muted, #374151);
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 4px;
+}
+
+.infoModalClose:hover {
+	color: var(--fg, #111827);
+}
+
+.infoModalIntro,
+.infoModalOutro {
+	color: var(--muted, #374151);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.infoModalList {
+	list-style: none;
+	margin: 0.5em 0;
+	padding: 0;
+}
+
+.infoModalList > li {
+	border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.infoModalList > li:last-child {
+	border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.infoModalList details > summary {
+	cursor: pointer;
+	padding: 0.6em 0.2em;
+	font-size: 13px;
+	font-weight: 600;
+	list-style: none;
+}
+
+.infoModalList details > summary::-webkit-details-marker {
+	display: none;
+}
+
+.infoModalList details > summary:hover {
+	background: var(--surface, #f2f2f2);
+}
+
+.infoModalList details > summary::before {
+	content: "▸ ";
+	display: inline-block;
+	opacity: 0.55;
+}
+
+.infoModalList details[open] > summary::before {
+	content: "▾ ";
+}
+
+.infoModalList details > p {
+	color: var(--muted, #374151);
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0 0 0.75em 0.2em;
+}
+
+.infoModalList details > p:last-child {
+	margin-bottom: 0.9em;
+}
