@@ -53,7 +53,10 @@
 	border-radius: 5px;
 	color: hsl(215 10% 50%);
 	cursor: pointer;
-	transition: background 0.15s, border-color 0.15s, color 0.15s;
+	transition:
+		background 0.15s,
+		border-color 0.15s,
+		color 0.15s;
 	font-size: 0;
 }
 
@@ -108,7 +111,7 @@
 }
 
 .umaEpithet > span {
-	color: white;
+	color: var(--fg, #111827);
 	font-size: 1.4em;
 	font-weight: bold;
 	margin: 0 auto;
@@ -124,7 +127,7 @@
 	background: none;
 	border: none;
 	box-sizing: border-box;
-	color: white;
+	color: var(--fg, #111827);
 	font-size: 1.4em;
 	font-weight: bold;
 	text-align: center;
@@ -159,8 +162,10 @@
 	background: rgb(242, 242, 242);
 }
 
-.umaSuggestion.selected, .umaSuggestion:hover {
+.umaSuggestion.selected,
+.umaSuggestion:hover {
 	background: rgb(0, 120, 215);
+	color: #fff;
 }
 
 .umaSuggestion > img {
@@ -178,10 +183,12 @@
 /* ── Reset buttons ───────────────────────────────────────────── */
 
 .resetUmaButton {
-	background: linear-gradient(rgb(168, 227, 5), rgb(97, 174, 22)) padding-box, linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
+	background:
+		linear-gradient(rgb(168, 227, 5), rgb(97, 174, 22)) padding-box,
+		linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
 	border: 2px solid transparent;
 	border-radius: 20px;
-	box-shadow: 0px 2px 0 rgb(180,178,192);
+	box-shadow: 0px 2px 0 rgb(180, 178, 192);
 	box-sizing: border-box;
 	color: white;
 	cursor: pointer;
@@ -192,8 +199,10 @@
 }
 
 .resetUmaButton:hover {
-	background: linear-gradient(rgb(178, 237, 15), rgb(107, 184, 32)) padding-box, linear-gradient(rgb(183, 229, 70), rgb(95, 153, 34)) border-box;
-	box-shadow: 0px 3px 0 rgb(180,178,192);
+	background:
+		linear-gradient(rgb(178, 237, 15), rgb(107, 184, 32)) padding-box,
+		linear-gradient(rgb(183, 229, 70), rgb(95, 153, 34)) border-box;
+	box-shadow: 0px 3px 0 rgb(180, 178, 192);
 	transform: translateY(-1px);
 }
 
@@ -367,7 +376,7 @@
 }
 
 .horseAptitudeSelect::after {
-	content: '▾';
+	content: "▾";
 	font-size: 8px;
 	color: var(--muted, #9ca3af);
 	line-height: 1;
@@ -382,7 +391,7 @@
 	background: var(--bg, white);
 	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 	list-style: none;
 	padding: 4px 0;
 	position: absolute;
@@ -419,7 +428,7 @@
 .dark .horseAptitudeSelect > ul {
 	background: #222;
 	border-color: var(--border);
-	box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .dark .horseAptitudeSelect li:hover {
@@ -449,7 +458,7 @@
 }
 
 .horseMoodSelect::after {
-	content: '▾';
+	content: "▾";
 	font-size: 8px;
 	color: var(--muted, #9ca3af);
 	line-height: 1;
@@ -472,7 +481,7 @@
 	background: var(--bg, white);
 	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 	list-style: none;
 	margin: 0;
 	padding: 4px 0;
@@ -510,7 +519,7 @@
 .dark .horseMoodSelect > ul {
 	background: #222;
 	border-color: var(--border);
-	box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .dark .horseMoodSelect > ul > li:hover {
@@ -641,7 +650,6 @@
 	color: var(--fg, #111827);
 	font-size: 13px;
 	font-weight: 500;
-	text-stroke: none;
 	-webkit-text-stroke: 0;
 	text-shadow: none;
 	white-space: nowrap;
@@ -691,7 +699,10 @@
 	font-weight: 500;
 	cursor: pointer;
 	flex-shrink: 0;
-	transition: border-color 0.15s, color 0.15s, background 0.15s;
+	transition:
+		border-color 0.15s,
+		color 0.15s,
+		background 0.15s;
 }
 
 .horseAddSkillBtn:hover {
@@ -879,14 +890,6 @@
 	border-color: var(--border, #2e2e2e);
 }
 
-.dark .umaEpithet > span {
-	color: white;
-}
-
-.dark .umaSelectInput {
-	color: white;
-}
-
 .dark .umaSuggestions {
 	border-color: var(--border, #2e2e2e);
 }
@@ -987,4 +990,3 @@
 .dark .skillProcDataContent {
 	color: var(--fg, #e4e4e7);
 }
-

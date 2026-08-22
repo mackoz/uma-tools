@@ -1,14 +1,17 @@
-import * as esbuild from 'esbuild';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as http from 'node:http';
+import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { program, Option } from 'commander';
+import { Option, program } from 'commander';
+import * as esbuild from 'esbuild';
 
 program
 	.option('--debug')
-	.addOption(new Option('--serve [port]', 'run development server on [port]').preset(8000).implies({debug: true}));
+	.addOption(
+		new Option('--serve [port]', 'run development server on [port]')
+			.preset(8000)
+			.implies({ debug: true }),
+	);
 
 program.parse();
 const options = program.opts();
@@ -22,49 +25,56 @@ const root = path.join(dirname, '..', '..');
 const redirectData = {
 	name: 'redirectData',
 	setup(build) {
-		build.onResolve({filter: /^\.\.?(?:\/uma-skill-tools)?\/data\//}, args => ({
-			path: path.join(dirname, args.path.split('/data/')[1])
+		build.onResolve(
+			{ filter: /^\.\.?(?:\/uma-skill-tools)?\/data\// },
+			(args) => ({
+				path: path.join(dirname, args.path.split('/data/')[1]),
+			}),
+		);
+		build.onResolve({ filter: /skill_meta.json$/ }, (args) => ({
+			path: path.join(dirname, 'skill_meta.json'),
 		}));
-		build.onResolve({filter: /skill_meta.json$/}, args => ({
-			path: path.join(dirname, 'skill_meta.json')
+		build.onResolve({ filter: /umas.json$/ }, (args) => ({
+			path: path.join(dirname, 'umas.json'),
 		}));
-		build.onResolve({filter: /umas.json$/}, args => ({
-			path: path.join(dirname, 'umas.json')
+		build.onResolve({ filter: /unreleased.json$/ }, (args) => ({
+			path: path.join(dirname, 'unreleased.json'),
 		}));
-	}
+	},
 };
 
 const mockAssertFn = debug ? 'console.assert' : 'function(){}';
 const mockAssert = {
 	name: 'mockAssert',
 	setup(build) {
-		build.onResolve({filter: /^node:assert$/}, args => ({
-			path: args.path, namespace: 'mockAssert-ns'
+		build.onResolve({ filter: /^node:assert$/ }, (args) => ({
+			path: args.path,
+			namespace: 'mockAssert-ns',
 		}));
-		build.onLoad({filter: /.*/, namespace: 'mockAssert-ns'}, () => ({
-			contents: 'module.exports={strict:'+mockAssertFn+'};',
-			loader: 'js'
+		build.onLoad({ filter: /.*/, namespace: 'mockAssert-ns' }, () => ({
+			contents: 'module.exports={strict:' + mockAssertFn + '};',
+			loader: 'js',
 		}));
-	}
+	},
 };
 
 const redirectTable = {
 	name: 'redirectTable',
 	setup(build) {
-		build.onResolve({filter: /^@tanstack\//}, args => ({
-			path: path.join(dirname, '..', 'vendor', args.path.slice(10), 'index.ts')
+		build.onResolve({ filter: /^@tanstack\// }, (args) => ({
+			path: path.join(dirname, '..', 'vendor', args.path.slice(10), 'index.ts'),
 		}));
-	}
+	},
 };
 
 const seedrandomPlugin = {
 	name: 'seedrandomPlugin',
 	setup(build) {
-		build.onResolve({filter: /^seedrandom$/}, args => ({
+		build.onResolve({ filter: /^seedrandom$/ }, (args) => ({
 			path: args.path,
-			namespace: 'seedrandom-ns'
+			namespace: 'seedrandom-ns',
 		}));
-		build.onLoad({filter: /.*/, namespace: 'seedrandom-ns'}, () => ({
+		build.onLoad({ filter: /.*/, namespace: 'seedrandom-ns' }, () => ({
 			contents: `
 // Simple seedrandom implementation for browser
 export default function seedrandom(seed) {
@@ -91,20 +101,23 @@ export default function seedrandom(seed) {
 	return next;
 }
 			`,
-			loader: 'js'
+			loader: 'js',
 		}));
-	}
+	},
 };
 
 const buildOptions = {
-	entryPoints: [{in: '../umalator/app.tsx', out: 'bundle'}, '../umalator/simulator.worker.ts'],
+	entryPoints: [
+		{ in: '../umalator/app.tsx', out: 'bundle' },
+		'../umalator/simulator.worker.ts',
+	],
 	bundle: true,
 	minify: !debug,
 	outdir: '.',
 	write: !serve,
-	define: {CC_DEBUG: debug.toString(), CC_GLOBAL: 'true'},
+	define: { CC_DEBUG: debug.toString(), CC_GLOBAL: 'true' },
 	external: ['*.ttf'],
-	plugins: [redirectData, mockAssert, redirectTable, seedrandomPlugin]
+	plugins: [redirectData, mockAssert, redirectTable, seedrandomPlugin],
 };
 
 const MIME_TYPES = {
@@ -117,54 +130,75 @@ const MIME_TYPES = {
 	'.ico': 'image/x-icon',
 	'.otf': 'font/otf',
 	'.ttf': 'font/ttf',
-	'.woff': 'font/woff'
+	'.woff': 'font/woff',
 };
 
 const ARTIFACTS = ['bundle.js', 'bundle.css', 'simulator.worker.js'];
 
 function runServer(ctx, port) {
-	const requestCount = new Map(ARTIFACTS.map(f => [f, 0]));
+	const requestCount = new Map(ARTIFACTS.map((f) => [f, 0]));
 	let buildCount = 0;
 	let output = null;
 	// client makes two requests for simulator.worker.js, avoid rebuilding on the second one
 	let workerState = 0;
-	http.createServer(async (req, res) => {
-		const url = req.url.endsWith('/') ? req.url + 'index.html' : req.url;
-		const filename = path.basename(url);
-		if (ARTIFACTS.indexOf(filename) > -1) {
-			const requestN = requestCount.get(filename) + (filename == 'simulator.worker.js' ? (workerState = +!workerState) : 1);
-			requestCount.set(filename, requestN);
-			if (requestN != buildCount) {
-				buildCount += 1;
-				console.log(`rebuilding ... => ${buildCount}`);
-				// NOTE: i feel like we should call ctx.cancel() here in case the previous build is running,
-				// but doing so causes the rebuild to not pick up new changes for some reason? slightly confused,
-				// perhaps using the API wrong
-				//await ctx.cancel();
-				output = new Promise(async resolve => {
-					const result = await ctx.rebuild();
-					resolve(new Map(result.outputFiles.map(o => [path.basename(o.path), o.contents])));
-				});
-			}
-			console.log(`GET ${req.url} 200 OK => ${requestN}`);
-			const artifact = (await output).get(filename);
-			res.writeHead(200, {
-				'Content-type': MIME_TYPES[path.extname(filename)],
-				'Content-length': artifact.length
-			}).end(artifact);
-		} else {
-			const fp = path.join(root, url);
-			const exists = await fs.promises.access(fp).then(() => true, () => false);
-			if (exists) {
-				console.log(`GET ${req.url} 200 OK`);
-				res.writeHead(200, {'Content-type': MIME_TYPES[path.extname(filename)] || 'application/octet-stream'});
-				fs.createReadStream(fp).pipe(res);
+	http
+		.createServer(async (req, res) => {
+			const url = req.url.endsWith('/') ? req.url + 'index.html' : req.url;
+			const filename = path.basename(url);
+			if (ARTIFACTS.indexOf(filename) > -1) {
+				const requestN =
+					requestCount.get(filename) +
+					(filename == 'simulator.worker.js'
+						? (workerState = +!workerState)
+						: 1);
+				requestCount.set(filename, requestN);
+				if (requestN != buildCount) {
+					buildCount += 1;
+					console.log(`rebuilding ... => ${buildCount}`);
+					// NOTE: i feel like we should call ctx.cancel() here in case the previous build is running,
+					// but doing so causes the rebuild to not pick up new changes for some reason? slightly confused,
+					// perhaps using the API wrong
+					//await ctx.cancel();
+					output = new Promise(async (resolve) => {
+						const result = await ctx.rebuild();
+						resolve(
+							new Map(
+								result.outputFiles.map((o) => [
+									path.basename(o.path),
+									o.contents,
+								]),
+							),
+						);
+					});
+				}
+				console.log(`GET ${req.url} 200 OK => ${requestN}`);
+				const artifact = (await output).get(filename);
+				res
+					.writeHead(200, {
+						'Content-type': MIME_TYPES[path.extname(filename)],
+						'Content-length': artifact.length,
+					})
+					.end(artifact);
 			} else {
-				console.log(`GET ${req.url} 404 Not Found`)
-				res.writeHead(404).end();
+				const fp = path.join(root, url);
+				const exists = await fs.promises.access(fp).then(
+					() => true,
+					() => false,
+				);
+				if (exists) {
+					console.log(`GET ${req.url} 200 OK`);
+					res.writeHead(200, {
+						'Content-type':
+							MIME_TYPES[path.extname(filename)] || 'application/octet-stream',
+					});
+					fs.createReadStream(fp).pipe(res);
+				} else {
+					console.log(`GET ${req.url} 404 Not Found`);
+					res.writeHead(404).end();
+				}
 			}
-		}
-	}).listen(port);
+		})
+		.listen(port);
 }
 
 if (serve) {

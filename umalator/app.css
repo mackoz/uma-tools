@@ -44,6 +44,11 @@ body {
 	width: 48px;
 	background: var(--bg, #fff);
 	border-right: 1px solid hsl(210 10% 85%);
+	/* Above InfoModal's full-viewport backdrop (z-index: 1000) so sidebar navigation stays
+	   clickable while a panel (Limitations/Bugs) is open -- otherwise the backdrop silently
+	   swallows the click and just closes the current panel instead of switching. */
+	position: relative;
+	z-index: 1001;
 }
 
 .sidebarIcon {
@@ -1933,7 +1938,9 @@ body {
 		gap: 0;
 		background: var(--bg, #fff);
 		border-top: 1px solid hsl(210 10% 85%);
-		z-index: 100;
+		/* Above InfoModal's full-viewport backdrop (z-index: 1000), same reasoning as
+		   #iconSidebar -- otherwise this bar is unreachable while a panel is open. */
+		z-index: 1001;
 	}
 	.mobileBottomBarBtn {
 		flex: 1;

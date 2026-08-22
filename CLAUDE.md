@@ -61,11 +61,13 @@ Two parallel datasets, both derived from the same generator logic run against di
 | | JP | Global |
 |---|---|---|
 | Location | repo root (`umas.json`, `skill_meta.json`, `icons.json`) + `uma-skill-tools/data/` | `umalator-global/` |
-| Roster | 141 umas | 65 umas (Global lags JP releases) |
+| Roster | 141 umas | 76 umas (Global lags JP releases) |
 | Skill names | `["ja", "en"]` tuples | `["en"]` single-element |
 | Courses | 139 | 119 (Global still lacks some JP courses) |
 
 Icons are **not** duplicated — both datasets reference the same `icons/` tree via the same `icons.json`. When adding data by hand for a quick test, don't cross-wire JP data into a Global-built app or vice versa; the shapes differ (see the skillnames array-length difference above) and code branches on `CC_GLOBAL`, not on which JSON happens to be loaded.
+
+Of that 76, 11 umas (plus 11 alt outfits on already-counted umas) are **not actually released on Global yet** — datamined from the Global client's own staged text and ported from JP mechanics via `scripts/add-staged-global-umas.mjs`, gated behind the "Show Unreleased Umas" toggle in umalator's Settings pane (default off; see `umalator-global/unreleased.json`, and the root `unreleased.json` which is always empty for the JP build). See that script's own comments and `scripts/data/global-release-order.json` for how the JP-implementation-date cutoff works and how to extend it to a later batch.
 
 ## Code conventions
 

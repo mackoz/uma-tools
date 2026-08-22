@@ -9,103 +9,65 @@ export function INTRO(props) {
 export function IntroText(props) {
 	return (
 		<div id="introtext">
-			<details>
-				<summary>Caveats</summary>
-				The simulator is fairly complete and implements nearly all relevant game
-				mechanics, with the following exceptions:
-				<ul>
-					<li>
-						<details>
-							<summary>
-								Spot Struggle ignores LaneGap activation condition and is based
-								solely on the distance between umas.
-							</summary>
-							<p>
-								Due to the difficulty of accurately simulating lane movement,
-								Spot Struggle is activated when two or more Front Runner umas
-								are within 3.75m of one another (5m for Runaway).
-							</p>
-							<p>
-								We do simulate lane movement, however, this is simply an
-								approximation for the purpose of determining the effectiveness
-								of lane movement skills post 1st-anniversary.
-							</p>
-						</details>
-					</li>
-
-					<li>
-						<details>
-							<summary>
-								Early-race lane movement is simulated approximately as this
-								mechanic is dependent on other umas in the race.
-							</summary>
-							<p>
-								Specifically, your lane movement largely depends on overtake
-								targets and blocking.
-							</p>
-							<p>
-								We have used logic from the mee1080 race simulator to
-								approximate lane movement for the purposes of observing the
-								effect of certain lane movement skills, however, it is not
-								accurate enough to use for mechanics like Spot Struggle and
-								Dueling.
-							</p>
-						</details>
-					</li>
-
-					<li>
-						<details>
-							<summary>
-								Pseudo-random skills based on the location of other umas use a
-								best-effort estimation for the distribution of their activation
-								locations which may not be perfectly reflective of in-game
-								behavior in all circumstances
-							</summary>
-							<p>
-								Skills that have conditions that require you to be blocked, are
-								based on other umas in your proximity, etc, are modeled
-								according to statistical distributions intended to simulate
-								their in-game behavior but may not be perfectly accurate. It
-								should always find the correct minimum and maximum but the
-								reported mean and median should sometimes be taken with a grain
-								of salt. For example skills with blocked conditions are
-								generally better in races with more umas and worse with fewer.
-								Use your better judgement.
-							</p>
-							<p>
-								Skills with conditions with <code>_random</code> in the name
-								(e.g. <code>phase_random</code>, <code>corner_random</code>,{' '}
-								<code>straight_random</code>) are implemented identically to the
-								in-game logic and will have more accurate mean/median values, as
-								are skills based purely on the course geometry with no blocked
-								front/side/surrounded conditions.
-							</p>
-						</details>
-					</li>
-
-					<li>
-						<details>
-							<summary>Skill cooldowns are not implemented</summary>
-							Skills only ever activate once even if they have a cooldown like
-							Professor of Curvature or Beeline Burst.
-						</details>
-					</li>
-					<li>
-						<details>
-							<summary>
-								Unique skill scaling with levels is not implemented
-							</summary>
-							Unique skills are always simulated as a base level 3★ unique.
-						</details>
-					</li>
-				</ul>
-				By and large it should be highly accurate. It has been battle-tested on
-				the JP server for several years.
-			</details>
 			<details open={true}>
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
+						<summary>2026-08-22</summary>
+						<ul>
+							<li>
+								Added a <strong>Limitations</strong> panel (the warning-triangle
+								icon in the left sidebar, under Settings) listing the
+								simulator's known modeling approximations and gaps — position/
+								placement-dependent skills, lane movement, pseudo-random skills,
+								skill cooldowns, level scaling, and what the Skill Chart's
+								default "Controlled" model turns off. This replaces the old
+								"Caveats" section that used to sit above the Compare-mode
+								results pane and vanished for good the moment you ran a
+								simulation; two of its claims were also corrected in the move
+								(lane movement is not simulated at all in the Skill Chart, and
+								unique skills are simulated at level 1's unscaled base value,
+								not "level 3★").
+							</li>
+							<li>
+								Added a <strong>Known bugs</strong> panel (the bug icon right
+								below Limitations) listing currently-open bugs that give a wrong
+								result rather than an intentional approximation — a Rushed uma
+								recovering early far less often than it should, skill activation
+								conditions that can crash the simulation, activation-timing and
+								corner-condition edge cases on a handful of named skills, a
+								recovery counter that also counts draining debuffs, and a few
+								small interface bugs. Also fixed the Limitations/Known-bugs
+								panels silently swallowing a click on any other sidebar or
+								mobile-bar button while one of them was open (it just closed the
+								open panel instead of switching) — a pre-existing issue in the
+								Limitations panel above that only became obvious once there were
+								two panels to switch between.
+							</li>
+							<li>
+								<strong>Global only:</strong> added 22 umas/outfits that aren't
+								released on Global yet -- 11 new characters (Aston Machan,
+								Yamanin Zephyr, Nakayama Festa, Wonder Acute, Zenno Rob Roy,
+								Daitaku Helios, Shinko Windy, Mr. C.B., Twin Turbo, Daiichi
+								Ruby, Symboli Kris S) and 11 new alt costumes on umas Global
+								already has (including Mejiro Ardan's Ballroom outfit, Neige
+								Émeraude). Datamined from the Global client's own staged text
+								and ported from JP's already-implemented mechanics for these
+								umas, using JP's original release order as the cutoff (through
+								2023-03-29). They're off by default -- enable{' '}
+								<strong>Show Unreleased Umas</strong> in Settings to plan around
+								them (e.g. for an upcoming Champion's Meeting or an inherited
+								unique) before they're actually playable.
+							</li>
+							<li>
+								Fixed a bug in the simulation engine that made certain skills
+								(anything with a two-stage "activates again once you've already
+								used it" effect, like Twin Turbo's unique) hang the simulation
+								indefinitely instead of running, with no error shown.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-21</summary>
 						<ul>
 							<li>
