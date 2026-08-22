@@ -2,6 +2,7 @@ import { computePosition, flip } from '@floating-ui/dom';
 import * as d3 from 'd3';
 import { Map as ImmMap, Set as ImmSet, Record } from 'immutable';
 import {
+	Bug,
 	Camera,
 	Clipboard,
 	Copy,
@@ -80,7 +81,7 @@ import type { ChartRunTrace } from './compare';
 import { InfoModal } from './components/InfoModal';
 import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
-import { LIMITATIONS } from './components/simNotes';
+import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
@@ -3235,9 +3236,9 @@ function App(props) {
 	const [competeFight, setCompeteFight] = useState(false);
 	const [leadCompetition, setLeadCompetition] = useState(true);
 	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
-	// A nullable union rather than a boolean so a future "Bugs" panel is a one-line
-	// addition (`| 'bugs'`) instead of a second parallel state variable.
-	const [overlayPanel, setOverlayPanel] = useState<null | 'limitations'>(null);
+	const [overlayPanel, setOverlayPanel] = useState<
+		null | 'limitations' | 'bugs'
+	>(null);
 	const [duelingRates, setDuelingRates] = useState({
 		runaway: 10,
 		frontRunner: 20,
@@ -5348,6 +5349,15 @@ function App(props) {
 								>
 									<TriangleAlert size={20} />
 								</button>
+								<button
+									class={`sidebarIcon ${overlayPanel === 'bugs' ? 'active' : ''}`}
+									onClick={() =>
+										setOverlayPanel(overlayPanel === 'bugs' ? null : 'bugs')
+									}
+									title="Known bugs"
+								>
+									<Bug size={20} />
+								</button>
 							</div>
 						)}
 						<div id="mainContent">
@@ -5786,6 +5796,17 @@ function App(props) {
 										<TriangleAlert size={20} />
 										<span>Limits</span>
 									</button>
+									<button
+										type="button"
+										class={`mobileBottomBarBtn ${overlayPanel === 'bugs' ? 'active' : ''}`}
+										onClick={() =>
+											setOverlayPanel(overlayPanel === 'bugs' ? null : 'bugs')
+										}
+										title="Known bugs"
+									>
+										<Bug size={20} />
+										<span>Bugs</span>
+									</button>
 								</div>
 								{(mobileDialogOpen === 'uma' ||
 									mobileDialogOpen === 'settings') && (
@@ -5830,6 +5851,14 @@ function App(props) {
 								intro="The simulator implements nearly all relevant game mechanics, with the following known approximations and gaps:"
 								entries={LIMITATIONS}
 								outro="By and large it should be highly accurate -- it has been battle-tested on the JP server for several years."
+								onClose={() => setOverlayPanel(null)}
+							/>
+						)}
+						{overlayPanel === 'bugs' && (
+							<InfoModal
+								title="Known bugs"
+								intro="Unlike the limitations above, these are not deliberate approximations -- the simulator was meant to get these right and doesn't yet:"
+								entries={BUGS}
 								onClose={() => setOverlayPanel(null)}
 							/>
 						)}

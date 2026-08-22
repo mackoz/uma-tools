@@ -29,6 +29,22 @@ export function IntroText(props) {
 								unique skills are simulated at level 1's unscaled base value,
 								not "level 3★").
 							</li>
+							<li>
+								Added a <strong>Known bugs</strong> panel (the bug icon right
+								below Limitations) listing currently-open bugs that give a wrong
+								result rather than an intentional approximation — a Rushed uma
+								recovering early far less often than it should, skill activation
+								conditions that can crash the simulation or use the wrong
+								horse's Wit, activation-timing and corner-condition edge cases
+								on a handful of named skills, a recovery counter that also
+								counts draining debuffs, and a few small interface bugs. Also
+								fixed the Limitations/Known-bugs panels silently swallowing a
+								click on any other sidebar or mobile-bar button while one of
+								them was open (it just closed the open panel instead of
+								switching) — a pre-existing issue in the Limitations panel above
+								that only became obvious once there were two panels to switch
+								between.
+							</li>
 						</ul>
 					</details>
 					<details class="release">

@@ -129,3 +129,132 @@ export const LIMITATIONS: InfoEntry[] = [
 		),
 	},
 ];
+
+// Known-wrong results and outright failures, shown in the "Known bugs" panel. Unlike
+// LIMITATIONS above, these are not deliberate approximations -- the simulator was meant to
+// get these right and doesn't. Each of these is tracked with a stable ID in this project's
+// internal work queue; keep that queue updated as the underlying bugs get fixed rather than
+// editing this copy out of sync with it.
+export const BUGS: InfoEntry[] = [
+	{
+		summary:
+			'A Rushed (kakari) uma calms down early far less often than it should, so it burns much more stamina than intended.',
+		body: (
+			<p>
+				The simulator is supposed to give a Rushed uma a chance to calm down
+				every 3 seconds. A timing bug in that check means it actually only gets
+				that chance roughly 1 time in 4 -- so a Rushed uma stays Rushed for
+				close to the maximum duration far more often than in the real game, and
+				burns correspondingly more stamina.
+			</p>
+		),
+	},
+	{
+		summary:
+			'Some skills crash the entire simulation instead of just not working.',
+		body: (
+			<p>
+				A skill that references an activation condition the simulator doesn't
+				recognize aborts the whole run rather than being skipped. On Global this
+				currently affects Trick (Front), Trick (Rear), Tantalizing Trick, Catch
+				'Em Off Guard, and Oppression; a further ~11 conditions used only by JP
+				skills have the same problem.
+			</p>
+		),
+	},
+	{
+		summary:
+			"Some skills can crash the simulation, or make it hang forever, or cause other umas' wisdom checks to use the wrong horse's Wit.",
+		body: (
+			<p>
+				Any skill that internally has two separate ways to activate can throw
+				off an internal bookkeeping step -- depending on the exact skill
+				combination, this either crashes the simulation outright, makes it hang
+				on "Running…" forever with no error (currently reproducible with Twin
+				Turbo's unique skill), or silently uses the wrong horse's Wit stat when
+				deciding whether a later skill's wisdom check passes. A fix has been
+				written for the underlying issue but hasn't shipped yet.
+			</p>
+		),
+	},
+	{
+		summary:
+			'A skill combining two possible activation conditions can trigger in the wrong part of the race.',
+		body: (
+			<p>
+				Restless Step is a confirmed case: on Kyoto 3000m, the skill's condition
+				should still be checkable on the course's 2nd uphill, but the simulator
+				only ever considers the 1st uphill as its trigger window -- so the skill
+				can fail to activate on this course even though the real game would
+				allow it.
+			</p>
+		),
+	},
+	{
+		summary:
+			'A handful of skills only ever show their first effect -- a documented second effect never happens, no matter what happens in the race.',
+		body: (
+			<p>
+				Several unique skills define two different situations they can trigger
+				under, each with a different effect. The simulator only ever places the
+				first one; the second is silently dropped rather than approximated. This
+				affects around three dozen unique skills across both JP and Global data,
+				including Vodka's, Daiwa Scarlet's, and Narita Brian's uniques.
+			</p>
+		),
+	},
+	{
+		summary:
+			'A couple of skills that reference a specific corner behave inconsistently.',
+		body: (
+			<p>
+				One skill's "not this corner" condition is currently treated as "any
+				corner is fine," which is the opposite of what it should check.
+				Separately, skills that should randomly trigger at one of several
+				corners are supposed to pick one corner specifically -- most get this
+				right, but a few skills with the exact same condition as already-correct
+				ones don't, so two visually identical skills can behave differently in
+				the sim.
+			</p>
+		),
+	},
+	{
+		summary:
+			'Skills that count how many recovery effects have happened also count stamina-draining debuffs as if they were heals.',
+		body: (
+			<p>
+				A skill conditioned on "you've triggered N recovery skills" can be
+				satisfied by debuffs that drain stamina instead, since both are
+				implemented as the same kind of effect internally and the counter
+				doesn't check which direction the effect actually went.
+			</p>
+		),
+	},
+	{
+		summary:
+			'Skills needing both a specific race phase and a specific corner can fail to activate right where the two happen to line up.',
+		body: (
+			<p>
+				When a corner's start exactly coincides with the end of a race phase
+				(one known case: Chukyo 1800m dirt), a skill checking both conditions
+				can miss its activation window entirely. Ten specific skills have been
+				individually patched around this, but the underlying timing mismatch
+				isn't fixed for skills outside that list.
+			</p>
+		),
+	},
+	{
+		summary: 'Several small interface bugs.',
+		body: (
+			<p>
+				Removing a debuff and then adding a different one can silently overwrite
+				a debuff you already had, rather than adding a new slot. Longchamp has
+				no name in the Global course list (the course itself works fine). The JP
+				and Global apps share one language setting even though they're separate
+				pages, so changing it in one silently changes the other. And a course
+				with no stat-threshold requirement looks visually identical to one whose
+				threshold data simply failed to load.
+			</p>
+		),
+	},
+];
