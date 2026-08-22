@@ -164,21 +164,6 @@ export const BUGS: InfoEntry[] = [
 	},
 	{
 		summary:
-			"Some skills can crash the simulation, or make it hang forever, or cause other umas' wisdom checks to use the wrong horse's Wit.",
-		body: (
-			<p>
-				Any skill that internally has two separate ways to activate can throw
-				off an internal bookkeeping step -- depending on the exact skill
-				combination, this either crashes the simulation outright, makes it hang
-				on "Running…" forever with no error (currently reproducible with Twin
-				Turbo's unique skill), or silently uses the wrong horse's Wit stat when
-				deciding whether a later skill's wisdom check passes. A fix has been
-				written for the underlying issue but hasn't shipped yet.
-			</p>
-		),
-	},
-	{
-		summary:
 			'A skill combining two possible activation conditions can trigger in the wrong part of the race.',
 		body: (
 			<p>

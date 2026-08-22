@@ -34,16 +34,36 @@ export function IntroText(props) {
 								below Limitations) listing currently-open bugs that give a wrong
 								result rather than an intentional approximation — a Rushed uma
 								recovering early far less often than it should, skill activation
-								conditions that can crash the simulation or use the wrong
-								horse's Wit, activation-timing and corner-condition edge cases
-								on a handful of named skills, a recovery counter that also
-								counts draining debuffs, and a few small interface bugs. Also
-								fixed the Limitations/Known-bugs panels silently swallowing a
-								click on any other sidebar or mobile-bar button while one of
-								them was open (it just closed the open panel instead of
-								switching) — a pre-existing issue in the Limitations panel above
-								that only became obvious once there were two panels to switch
-								between.
+								conditions that can crash the simulation, activation-timing and
+								corner-condition edge cases on a handful of named skills, a
+								recovery counter that also counts draining debuffs, and a few
+								small interface bugs. Also fixed the Limitations/Known-bugs
+								panels silently swallowing a click on any other sidebar or
+								mobile-bar button while one of them was open (it just closed the
+								open panel instead of switching) — a pre-existing issue in the
+								Limitations panel above that only became obvious once there were
+								two panels to switch between.
+							</li>
+							<li>
+								<strong>Global only:</strong> added 22 umas/outfits that aren't
+								released on Global yet -- 11 new characters (Aston Machan,
+								Yamanin Zephyr, Nakayama Festa, Wonder Acute, Zenno Rob Roy,
+								Daitaku Helios, Shinko Windy, Mr. C.B., Twin Turbo, Daiichi
+								Ruby, Symboli Kris S) and 11 new alt costumes on umas Global
+								already has (including Mejiro Ardan's Ballroom outfit, Neige
+								Émeraude). Datamined from the Global client's own staged text
+								and ported from JP's already-implemented mechanics for these
+								umas, using JP's original release order as the cutoff (through
+								2023-03-29). They're off by default -- enable{' '}
+								<strong>Show Unreleased Umas</strong> in Settings to plan around
+								them (e.g. for an upcoming Champion's Meeting or an inherited
+								unique) before they're actually playable.
+							</li>
+							<li>
+								Fixed a bug in the simulation engine that made certain skills
+								(anything with a two-stage "activates again once you've already
+								used it" effect, like Twin Turbo's unique) hang the simulation
+								indefinitely instead of running, with no error shown.
 							</li>
 						</ul>
 					</details>
