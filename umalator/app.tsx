@@ -10,6 +10,7 @@ import {
 	Save,
 	Settings,
 	Trash2,
+	TriangleAlert,
 	Upload,
 } from 'lucide-preact';
 import { Fragment, h, render } from 'preact';
@@ -76,8 +77,10 @@ import {
 	type SkillStatus,
 } from './chartLadder';
 import type { ChartRunTrace } from './compare';
+import { InfoModal } from './components/InfoModal';
 import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
+import { LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
@@ -3232,6 +3235,9 @@ function App(props) {
 	const [competeFight, setCompeteFight] = useState(false);
 	const [leadCompetition, setLeadCompetition] = useState(true);
 	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
+	// A nullable union rather than a boolean so a future "Bugs" panel is a one-line
+	// addition (`| 'bugs'`) instead of a second parallel state variable.
+	const [overlayPanel, setOverlayPanel] = useState<null | 'limitations'>(null);
 	const [duelingRates, setDuelingRates] = useState({
 		runaway: 10,
 		frontRunner: 20,
@@ -5331,6 +5337,17 @@ function App(props) {
 										<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
 									</svg>
 								</button>
+								<button
+									class={`sidebarIcon ${overlayPanel === 'limitations' ? 'active' : ''}`}
+									onClick={() =>
+										setOverlayPanel(
+											overlayPanel === 'limitations' ? null : 'limitations',
+										)
+									}
+									title="Limitations"
+								>
+									<TriangleAlert size={20} />
+								</button>
 							</div>
 						)}
 						<div id="mainContent">
@@ -5756,6 +5773,19 @@ function App(props) {
 										</svg>
 										<span>Settings</span>
 									</button>
+									<button
+										type="button"
+										class={`mobileBottomBarBtn ${overlayPanel === 'limitations' ? 'active' : ''}`}
+										onClick={() =>
+											setOverlayPanel(
+												overlayPanel === 'limitations' ? null : 'limitations',
+											)
+										}
+										title="Limitations"
+									>
+										<TriangleAlert size={20} />
+										<span>Limits</span>
+									</button>
 								</div>
 								{(mobileDialogOpen === 'uma' ||
 									mobileDialogOpen === 'settings') && (
@@ -5792,6 +5822,15 @@ function App(props) {
 								skillid={popoverSkill}
 								results={tableData.get(popoverSkill).results}
 								courseDistance={course.distance}
+							/>
+						)}
+						{overlayPanel === 'limitations' && (
+							<InfoModal
+								title="Simulator limitations"
+								intro="The simulator implements nearly all relevant game mechanics, with the following known approximations and gaps:"
+								entries={LIMITATIONS}
+								outro="By and large it should be highly accurate -- it has been battle-tested on the JP server for several years."
+								onClose={() => setOverlayPanel(null)}
 							/>
 						)}
 						{duelingConfigOpen && (
