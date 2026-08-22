@@ -5679,7 +5679,7 @@ function App(props) {
 											<span class="toggleTrack"></span>
 										</label>
 									</div>
-									<span class="chartRunEstimate" style={{ marginLeft: '12px' }}>
+									<span class="chartHoverHint" style={{ marginLeft: '12px' }}>
 										Hover a column heading for what it means
 									</span>
 								</div>

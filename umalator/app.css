@@ -615,6 +615,11 @@ body.splitterDragging {
 	font-size: 11px;
 }
 
+.chartHoverHint {
+	color: var(--muted, #6b7280);
+	font-size: 11px;
+}
+
 #stopChart {
 	color: #c53030;
 	border-color: #c53030;
@@ -1706,6 +1711,9 @@ body.splitterDragging {
 }
 .dark .settingsToggleRow + .settingsToggleRow {
 	border-top-color: var(--border);
+}
+.dark .chartHoverHint {
+	color: #b8963e;
 }
 .dark .toggleTrack {
 	background: #3a3a3a;
