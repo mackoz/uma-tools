@@ -106,6 +106,32 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
+						<summary>2026-08-22</summary>
+						<ul>
+							<li>
+								<strong>Global only:</strong> added 22 umas/outfits that aren't
+								released on Global yet -- 11 new characters (Aston Machan,
+								Yamanin Zephyr, Nakayama Festa, Wonder Acute, Zenno Rob Roy,
+								Daitaku Helios, Shinko Windy, Mr. C.B., Twin Turbo, Daiichi
+								Ruby, Symboli Kris S) and 11 new alt costumes on umas Global
+								already has (including Mejiro Ardan's Ballroom outfit, Neige
+								Émeraude). Datamined from the Global client's own staged text
+								and ported from JP's already-implemented mechanics for these
+								umas, using JP's original release order as the cutoff (through
+								2023-03-29). They're off by default -- enable{' '}
+								<strong>Show Unreleased Umas</strong> in Settings to plan around
+								them (e.g. for an upcoming Champion's Meeting or an inherited
+								unique) before they're actually playable.
+							</li>
+							<li>
+								Fixed a bug in the simulation engine that made certain skills
+								(anything with a two-stage "activates again once you've already
+								used it" effect, like Twin Turbo's unique) hang the simulation
+								indefinitely instead of running, with no error shown.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-21</summary>
 						<ul>
 							<li>
