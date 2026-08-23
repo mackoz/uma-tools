@@ -1202,10 +1202,12 @@ body.splitterDragging {
 #umaPane {
 	grid-row: 2 / -1;
 	grid-column: 2;
-	width: 630px;
+	/* Elastic between HorseDef's internal-grid minimum and a readable max (D3). */
+	width: clamp(560px, 38vw, 720px);
 	position: relative;
 	overflow-y: auto;
-	border-right: 1px solid hsl(210 10% 85%);
+	background: var(--bg);
+	border-right: 1px solid var(--border);
 	min-height: 0;
 	align-self: stretch;
 }
@@ -1389,12 +1391,6 @@ body.splitterDragging {
 .dark #expandBtn::after {
 	border-right-color: var(--muted);
 	border-top-color: var(--muted);
-}
-
-/* --- Dark mode: Uma pane --- */
-.dark #umaPane {
-	background: #181818;
-	border-right-color: var(--border);
 }
 
 /* --- Dark mode: Overlay (expanded view) --- */
