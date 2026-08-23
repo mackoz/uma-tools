@@ -101,6 +101,15 @@ function uniqueSkillForOutfit(oid) {
 	return String(100000 + 10000 * (v - 1) + i * 10 + 1);
 }
 
+// The inherited variant of a unique is a genuinely separate skill row (different baseDuration,
+// modifiers, baseCost, iconId -- not derivable, must be copied), keyed by swapping the base
+// unique's leading '1' for '9'. Verified against the Global client's own master.mdb:
+// skill_data.unique_skill_id_1 on every '9...' row points back at its base unique, with zero
+// exceptions in that table.
+function inheritedSkillForUnique(sid) {
+	return '9' + sid.slice(1);
+}
+
 function main() {
 	console.log(`Reading staged text from: ${mdbPath}`);
 	console.log(`Cutoff (JP implementation date, inclusive): ${opts.until}`);
@@ -201,6 +210,65 @@ function main() {
 		);
 	}
 
+	// Inherited-twin sweep: every base unique already in Global skill_data.json (this run's new
+	// ones included) should also have its '9...' inherited variant, or it silently can't be
+	// selected on another uma in the skill picker (Object.keys(skill_data.json) is the picker's
+	// entire candidate universe -- see components/HorseDef.tsx's nonUniqueSkills). Sweeping every
+	// base unique rather than just this run's outfits makes this idempotent and self-healing: it
+	// also backfills any pre-existing gap left by an earlier run or a hand-edit.
+	const newInherited = [];
+	const skippedInheritedNoMechanics = [];
+	for (const sid of Object.keys(globalSkillData)) {
+		if (sid[0] !== '1' || sid.length !== 6) continue;
+		const inh = inheritedSkillForUnique(sid);
+		if (inh in globalSkillData) continue;
+		if (
+			!(inh in jpSkillMeta) ||
+			!(inh in jpSkillData) ||
+			!(inh in globalSkillNames)
+		) {
+			skippedInheritedNoMechanics.push(`${inh} (base ${sid})`);
+			continue;
+		}
+		globalSkillMeta[inh] = jpSkillMeta[inh];
+		globalSkillData[inh] = jpSkillData[inh];
+		newInherited.push(`${inh} (base ${sid})`);
+	}
+	console.log(`\nNew inherited-unique twins: +${newInherited.length}`);
+	newInherited.forEach((s) => {
+		console.log(`  ${s}`);
+	});
+	if (skippedInheritedNoMechanics.length) {
+		console.log(
+			`\nSKIPPED inherited twin (missing from JP skill_meta/skill_data, or from Global skillnames): ${skippedInheritedNoMechanics.join(', ')}`,
+		);
+	}
+
+	// Sentinel audit: warn if any outfit already in the Global roster belongs to a character
+	// master.mdb marks as unreleased (chara_data.start_date == the 2524608000 / 2050-01-01
+	// sentinel) but that the release-order table doesn't cover -- i.e. a roster entry that's
+	// visible regardless of the "Show Unreleased Umas" toggle despite not actually being live.
+	// This is exactly the class of bug that let Hokko Tarumae (109901) go unflagged; catching it
+	// here means it can't recur silently.
+	const sentinelChars = new Set(
+		Object.keys(
+			queryMdb('SELECT id FROM chara_data WHERE start_date=2524608000;'),
+		),
+	);
+	const unflagged = [];
+	for (const [cid, u] of Object.entries(globalUmas)) {
+		if (!sentinelChars.has(cid)) continue;
+		for (const oid of Object.keys(u.outfits)) {
+			if (!(oid in releaseOrder)) unflagged.push(`${oid} ${u.name[1]}`);
+		}
+	}
+	if (unflagged.length) {
+		console.log(
+			`\nWARNING: roster outfit(s) belong to a master.mdb-unreleased character but aren't in ` +
+				`scripts/data/global-release-order.json, so they're visible regardless of the toggle: ${unflagged.join(', ')}`,
+		);
+	}
+
 	// unreleased.json is fully recomputed each run from umas.json ∩ the release-order table,
 	// rather than accumulated -- so it self-heals if umas.json is ever hand-edited or a future
 	// sync/generator run adds one of these outfits by a different path.
@@ -208,7 +276,13 @@ function main() {
 		.filter((k) => k !== '_comment')
 		.filter((oid) => oid in (globalUmas[oid.slice(0, 4)]?.outfits ?? {}));
 	unreleasedOutfits.sort();
-	const unreleasedSkills = unreleasedOutfits.map(uniqueSkillForOutfit);
+	// Both the base unique and its inherited twin need to be hidden together, or the toggle would
+	// leave the inherited half selectable while the uma itself stays hidden from the picker.
+	const unreleasedSkills = unreleasedOutfits.flatMap((oid) => {
+		const sid = uniqueSkillForOutfit(oid);
+		return [sid, inheritedSkillForUnique(sid)];
+	});
+	unreleasedSkills.sort();
 	const unreleasedJson = {
 		outfits: unreleasedOutfits,
 		skills: unreleasedSkills,
@@ -221,6 +295,8 @@ function main() {
 	if (!dryRun) {
 		if (newChars.length || newOutfits.length) {
 			writeJSON(umasPath, globalUmas);
+		}
+		if (newChars.length || newOutfits.length || newInherited.length) {
 			writeJSON(skillMetaPath, globalSkillMeta);
 			writeJSON(skillDataPath, globalSkillData);
 		}

@@ -625,6 +625,13 @@ body.splitterDragging {
 	font-size: 11px;
 }
 
+.settingsHint {
+	display: block;
+	color: var(--muted, #6b7280);
+	font-size: 11px;
+	margin-top: 4px;
+}
+
 #stopChart {
 	color: #c53030;
 	border-color: #c53030;
