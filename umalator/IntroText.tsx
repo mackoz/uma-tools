@@ -25,13 +25,15 @@ export function IntroText(props) {
 								accent-colored Run button, subtler borders and shadows, one
 								shared blue accent, and matching underline-style tabs for the
 								top nav, the Compare/Skill Chart/Uma Chart switcher, and the Uma
-								1/Uma 2 tabs. The left sidebar icons now show labels on hover,
-								and a new ⓘ icon there opens this About/changelog panel any time
-								— it no longer disappears after your first run. Dark mode now
-								covers a few spots it previously missed. Layout and pane
-								contents are unchanged — that's a later phase. If anything looks
-								broken or unreadable (especially in dark mode), please report
-								it.
+								1/Uma 2 tabs. The left sidebar icons show labels on hover, and
+								the ⓘ icon there opens this About/changelog panel any time — it
+								no longer disappears after your first run. The uma editor and
+								the Umas tab now follow the same design language and are fully
+								readable in dark mode (including the Skill Chart's expanded row
+								details, which used to stay light-mode-only), and the uma editor
+								pane stretches a bit with your window instead of being locked to
+								one width. If anything looks broken or unreadable (especially in
+								dark mode), please report it.
 							</li>
 						</ul>
 					</details>
