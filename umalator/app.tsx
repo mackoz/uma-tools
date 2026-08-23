@@ -2516,149 +2516,6 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 	}
 }
 
-function StatsTable({ caption, captionColor, rows }) {
-	const formatValue = (value, label) => {
-		if (value == null) return 'N/A';
-		if (label === 'Velocity') {
-			return value.toFixed(3) + ' m/s';
-		}
-		return value.toFixed(2) + ' m';
-	};
-
-	return (
-		<table
-			style={{ borderCollapse: 'collapse', marginTop: '0', width: '100%' }}
-		>
-			<caption
-				style={{
-					fontWeight: 'bold',
-					marginBottom: '8px',
-					marginTop: '10px',
-					color: captionColor,
-				}}
-			>
-				{caption}
-			</caption>
-			<thead>
-				<tr>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					></th>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					>
-						Count
-					</th>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					>
-						Min
-					</th>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					>
-						Max
-					</th>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					>
-						Mean
-					</th>
-					<th
-						style={{
-							border: '1px solid #ccc',
-							padding: '8px',
-							textAlign: 'center',
-						}}
-					>
-						Median
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				{rows.map(({ label, stats }) => (
-					<tr key={label}>
-						<th
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'left',
-							}}
-						>
-							{label}
-						</th>
-						<td
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'center',
-							}}
-						>
-							{stats.count != null ? stats.count : 0}
-						</td>
-						<td
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'center',
-							}}
-						>
-							{formatValue(stats.min, label)}
-						</td>
-						<td
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'center',
-							}}
-						>
-							{formatValue(stats.max, label)}
-						</td>
-						<td
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'center',
-							}}
-						>
-							{formatValue(stats.mean, label)}
-						</td>
-						<td
-							style={{
-								border: '1px solid #ccc',
-								padding: '8px',
-								textAlign: 'center',
-							}}
-						>
-							{formatValue(stats.median, label)}
-						</td>
-					</tr>
-				))}
-			</tbody>
-		</table>
-	);
-}
-
 function horseStateToUmaState(state: HorseState): UmaState {
 	return {
 		outfitId: state.outfitId,
@@ -4755,11 +4612,9 @@ function App(props) {
 			const baseCost = (skillmeta as any)[skillId]?.baseCost;
 
 			return (
-				<div style="position: relative;">
-					<div style={`margin-bottom: 8px; width: 300px;`}>
-						<div
-							style={`font-size: 9px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;`}
-						>
+				<div class="expandedContent">
+					<div class="expandedSummary">
+						<div class="expandedMetaRow">
 							<span>
 								Total samples: {acc.n} ({acc.procTotal} skill procs)
 							</span>
@@ -4774,28 +4629,26 @@ function App(props) {
 								{isSimulationRunning ? 'Simulation running…' : 'Refine'}
 							</button>
 						</div>
-						<div style={`font-size: 9px; margin-bottom: 2px;`}>
+						<div class="expandedMetaLine">
 							Helps: {helpRate.toFixed(1)}% · Ties: {tieRate.toFixed(1)}% ·
 							Hurts: {hurtRate.toFixed(1)}%
 						</div>
-						<div
-							style={`display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden;`}
-						>
+						<div class="expandedRateBar">
 							<div
-								style={`width: ${helpRate}%; background-color: #4caf50; height: 100%;`}
+								class="expandedRateBar-help"
+								style={`width: ${helpRate}%;`}
 							></div>
 							<div
-								style={`width: ${Math.max(0, 100 - helpRate - hurtRate)}%; background-color: #999; height: 100%;`}
+								class="expandedRateBar-tie"
+								style={`width: ${Math.max(0, 100 - helpRate - hurtRate)}%;`}
 							></div>
 							<div
-								style={`width: ${hurtRate}%; background-color: #f44336; height: 100%;`}
+								class="expandedRateBar-hurt"
+								style={`width: ${hurtRate}%;`}
 							></div>
 						</div>
 						{stats && (
-							<table
-								class="expandedStatsTable"
-								style="font-size: 9px; margin-top: 6px; width: 100%;"
-							>
+							<table class="expandedStatsTable">
 								<tbody>
 									<tr>
 										<th>Time saved</th>
@@ -4833,7 +4686,7 @@ function App(props) {
 							</table>
 						)}
 					</div>
-					<div style={`display: flex; gap: 20px; align-items: flex-start;`}>
+					<div class="expandedCharts">
 						<div>
 							<LengthDifferenceChart
 								skillId={skillId}
@@ -4850,7 +4703,7 @@ function App(props) {
 						</div>
 						{detail ? (
 							<div>
-								<div style="font-size: 9px; margin-bottom: 2px; display: flex; justify-content: flex-end; gap: 4px; align-items: center;">
+								<div class="expandedShowingRow">
 									<label for={`displaying-${skillId}`}>Showing</label>
 									<select
 										id={`displaying-${skillId}`}
@@ -4872,12 +4725,10 @@ function App(props) {
 								/>
 							</div>
 						) : (
-							<div style="width:400px;height:200px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#888;">
-								Loading velocity chart…
-							</div>
+							<div class="expandedChartLoading">Loading velocity chart…</div>
 						)}
 					</div>
-					<div style="position: absolute; bottom: 0; right: 0; font-size: 9px; font-style: italic; padding: 4px;">
+					<div class="expandedCredit">
 						(yes these graphs are copied from utools &gt;-&lt;)
 					</div>
 				</div>
