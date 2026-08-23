@@ -1,6 +1,7 @@
 .horseDef {
-	--uma-brown: rgb(121, 64, 22);
-	--uma-brown-muted: rgba(121, 64, 22, 0.5);
+	/* Legacy game-palette alias; --theme-brown carries the light/dark swap. */
+	--uma-brown: var(--theme-brown, rgb(121, 64, 22));
+	--uma-brown-muted: color-mix(in srgb, var(--uma-brown) 50%, transparent);
 
 	background: var(--bg, #fff);
 	border: 1px solid var(--border, hsl(210 10% 85%));
@@ -18,16 +19,11 @@
 	background: none;
 	border-bottom: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 0;
-	color: hsl(215 20% 15%);
+	color: var(--fg, hsl(215 20% 15%));
 	font-size: 2em;
 	font-weight: bold;
 	padding: 6px 0;
 	text-align: center;
-}
-
-.dark .horseDefHeader {
-	border-bottom-color: var(--border);
-	color: var(--fg);
 }
 
 /* ── Header action buttons ───────────────────────────────────── */
@@ -48,34 +44,22 @@
 	justify-content: center;
 	width: 28px;
 	height: 28px;
-	background: var(--bg, white);
-	border: 1px solid hsl(210 10% 82%);
+	background: var(--input-bg, white);
+	border: 1px solid var(--input-border, hsl(210 10% 82%));
 	border-radius: 5px;
-	color: hsl(215 10% 50%);
+	color: var(--muted-2, hsl(215 10% 50%));
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		border-color 0.15s,
-		color 0.15s;
+		background var(--transition-fast),
+		border-color var(--transition-fast),
+		color var(--transition-fast);
 	font-size: 0;
 }
 
 .horseActionBtn:hover {
-	background: hsl(210 6% 93%);
-	border-color: hsl(215 10% 70%);
-	color: hsl(215 20% 20%);
-}
-
-.dark .horseActionBtn {
-	background: #1e1e1e;
-	border-color: var(--border);
-	color: hsl(215 10% 65%);
-}
-
-.dark .horseActionBtn:hover {
-	background: #2a2a2a;
-	border-color: hsl(215 10% 45%);
-	color: var(--fg);
+	background: var(--hover, hsl(210 6% 93%));
+	border-color: var(--input-border-hover, hsl(215 10% 70%));
+	color: var(--fg, hsl(215 20% 20%));
 }
 
 /* ── Uma selector ────────────────────────────────────────────── */
@@ -135,7 +119,7 @@
 }
 
 .umaSuggestions {
-	border: 2px solid rgb(224, 214, 204);
+	border: 2px solid var(--theme-brown-light, rgb(224, 214, 204));
 	cursor: default;
 	display: none;
 	left: -2px;
@@ -154,17 +138,17 @@
 }
 
 .umaSuggestion {
-	background: white;
+	background: var(--bg, white);
 	padding: 4px;
 }
 
 .umaSuggestion:nth-child(even) {
-	background: rgb(242, 242, 242);
+	background: var(--surface, rgb(242, 242, 242));
 }
 
 .umaSuggestion.selected,
 .umaSuggestion:hover {
-	background: rgb(0, 120, 215);
+	background: var(--accent, rgb(0, 120, 215));
 	color: #fff;
 }
 
@@ -188,7 +172,7 @@
 		linear-gradient(rgb(173, 219, 60), rgb(85, 143, 24)) border-box;
 	border: 2px solid transparent;
 	border-radius: 20px;
-	box-shadow: 0px 2px 0 rgb(180, 178, 192);
+	box-shadow: 0px 2px 0 var(--border, rgb(180, 178, 192));
 	box-sizing: border-box;
 	color: white;
 	cursor: pointer;
@@ -202,7 +186,7 @@
 	background:
 		linear-gradient(rgb(178, 237, 15), rgb(107, 184, 32)) padding-box,
 		linear-gradient(rgb(183, 229, 70), rgb(95, 153, 34)) border-box;
-	box-shadow: 0px 3px 0 rgb(180, 178, 192);
+	box-shadow: 0px 3px 0 var(--border, rgb(180, 178, 192));
 	transform: translateY(-1px);
 }
 
@@ -213,14 +197,6 @@
 	display: flex;
 	gap: 8px;
 	z-index: 10;
-}
-
-.dark .resetUmaButton {
-	box-shadow: 0px 2px 0 #444;
-}
-
-.dark .resetUmaButton:hover {
-	box-shadow: 0px 3px 0 #444;
 }
 
 /* ── Stats ───────────────────────────────────────────────────── */
@@ -264,7 +240,7 @@
 
 .horseStat > input {
 	background: var(--input-bg, #fff);
-	border: 1px solid var(--border, hsl(210 10% 83%));
+	border: 1px solid var(--input-border, hsl(210 10% 83%));
 	border-radius: 5px;
 	box-sizing: border-box;
 	color: var(--fg, #111827);
@@ -281,7 +257,7 @@
 }
 
 .horseStat > input:focus {
-	border-color: hsl(215 70% 55%);
+	border-color: var(--accent, hsl(215 70% 55%));
 }
 
 /* Hide number spinners everywhere */
@@ -295,20 +271,6 @@
 .horseStat > input[type="number"] {
 	-moz-appearance: textfield;
 	appearance: textfield;
-}
-
-.dark .horseStats {
-	border-bottom-color: var(--border);
-}
-
-.dark .horseStat > input {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-
-.dark .horseStat > input:focus {
-	border-color: hsl(215 60% 55%);
 }
 
 /* ── Aptitudes ───────────────────────────────────────────────── */
@@ -349,10 +311,6 @@
 	white-space: nowrap;
 }
 
-.dark .horseApts {
-	border-bottom-color: var(--border);
-}
-
 /* AptitudeSelect */
 
 .horseAptitudeSelect {
@@ -363,7 +321,7 @@
 	gap: 3px;
 	position: relative;
 	background: var(--input-bg, #fff);
-	border: 1px solid var(--border, hsl(210 10% 83%));
+	border: 1px solid var(--input-border, hsl(210 10% 83%));
 	border-radius: 5px;
 	padding: 3px 5px 3px 6px;
 	height: 28px;
@@ -372,7 +330,7 @@
 }
 
 .horseAptitudeSelect:hover {
-	border-color: hsl(215 50% 60%);
+	border-color: var(--input-border-hover, hsl(215 50% 60%));
 }
 
 .horseAptitudeSelect::after {
@@ -391,7 +349,7 @@
 	background: var(--bg, white);
 	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
 	list-style: none;
 	padding: 4px 0;
 	position: absolute;
@@ -411,28 +369,13 @@
 }
 
 .horseAptitudeSelect li:hover {
-	background: hsl(215 50% 95%);
+	background: var(--accent-active-bg, hsl(215 50% 95%));
 }
 
 .horseAptitudeSelect img {
 	height: 20px;
 	width: 20px;
 	object-fit: contain;
-}
-
-.dark .horseAptitudeSelect {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-}
-
-.dark .horseAptitudeSelect > ul {
-	background: #222;
-	border-color: var(--border);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.dark .horseAptitudeSelect li:hover {
-	background: hsl(215 20% 22%);
 }
 
 /* MoodSelect */
@@ -445,7 +388,7 @@
 	gap: 3px;
 	position: relative;
 	background: var(--input-bg, #fff);
-	border: 1px solid var(--border, hsl(210 10% 83%));
+	border: 1px solid var(--input-border, hsl(210 10% 83%));
 	border-radius: 5px;
 	padding: 3px 5px 3px 6px;
 	height: 28px;
@@ -454,7 +397,7 @@
 }
 
 .horseMoodSelect:hover {
-	border-color: hsl(215 50% 60%);
+	border-color: var(--input-border-hover, hsl(215 50% 60%));
 }
 
 .horseMoodSelect::after {
@@ -481,7 +424,7 @@
 	background: var(--bg, white);
 	border: 1px solid var(--border, hsl(210 10% 85%));
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
 	list-style: none;
 	margin: 0;
 	padding: 4px 0;
@@ -502,7 +445,7 @@
 }
 
 .horseMoodSelect > ul > li:hover {
-	background: hsl(215 50% 95%);
+	background: var(--accent-active-bg, hsl(215 50% 95%));
 }
 
 .horseMoodSelect > ul > li > img {
@@ -511,26 +454,11 @@
 	object-fit: contain;
 }
 
-.dark .horseMoodSelect {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-}
-
-.dark .horseMoodSelect > ul {
-	background: #222;
-	border-color: var(--border);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.dark .horseMoodSelect > ul > li:hover {
-	background: hsl(215 20% 22%);
-}
-
 /* StrategySelect */
 
 .horseStrategySelect {
 	background: var(--input-bg, #fff);
-	border: 1px solid var(--border, hsl(210 10% 83%));
+	border: 1px solid var(--input-border, hsl(210 10% 83%));
 	border-radius: 5px;
 	color: var(--fg, #111827);
 	font-family: inherit;
@@ -547,13 +475,7 @@
 }
 
 .horseStrategySelect:focus {
-	border-color: hsl(215 70% 55%);
-}
-
-.dark .horseStrategySelect {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
+	border-color: var(--accent, hsl(215 70% 55%));
 }
 
 /* ── Section label ───────────────────────────────────────────── */
@@ -570,7 +492,7 @@
 /* ── Skill list (pills) ──────────────────────────────────────── */
 
 .horseSkillListWrapper {
-	background: hsl(0 0% 96%);
+	background: var(--surface, hsl(0 0% 96%));
 	border-radius: 4px;
 	height: 100%;
 	margin: 0 6px 6px 6px;
@@ -618,23 +540,23 @@
 }
 
 .horseSkillPills .skill-white {
-	background: hsl(220 10% 97%);
-	border-left-color: hsl(220 15% 65%);
+	background: var(--skill-white-bg, hsl(220 10% 97%));
+	border-left-color: var(--skill-white-accent, hsl(220 15% 65%));
 }
 
 .horseSkillPills .skill-gold {
-	background: hsl(44 90% 98%);
-	border-left-color: hsl(43 90% 50%);
+	background: var(--skill-gold-bg, hsl(44 90% 98%));
+	border-left-color: var(--skill-gold-accent, hsl(43 90% 50%));
 }
 
 .horseSkillPills .skill-pink {
-	background: hsl(320 60% 98%);
-	border-left-color: hsl(320 70% 60%);
+	background: var(--skill-pink-bg, hsl(320 60% 98%));
+	border-left-color: var(--skill-pink-accent, hsl(320 70% 60%));
 }
 
 .horseSkillPills .skill-unique {
-	background: hsl(270 60% 98%);
-	border-left-color: hsl(270 65% 65%);
+	background: var(--skill-unique-bg, hsl(270 60% 98%));
+	border-left-color: var(--skill-unique-accent, hsl(270 65% 65%));
 }
 
 .horseSkillPills .skillIcon {
@@ -706,9 +628,9 @@
 }
 
 .horseAddSkillBtn:hover {
-	border-color: hsl(215 50% 55%);
-	color: hsl(215 60% 40%);
-	background: hsl(215 70% 98%);
+	border-color: var(--accent, hsl(215 50% 55%));
+	color: var(--accent, hsl(215 60% 40%));
+	background: var(--accent-active-bg, hsl(215 70% 98%));
 }
 
 /* ── Forced position ─────────────────────────────────────────── */
@@ -720,7 +642,7 @@
 	font-size: 0.9em;
 	padding: 6px 8px;
 	width: 80px;
-	background: rgba(255, 255, 255, 0.3);
+	background: color-mix(in srgb, var(--bg, #fff) 35%, transparent);
 	color: var(--uma-brown, rgb(121, 64, 22));
 	transition: all 0.2s ease;
 	backdrop-filter: blur(2px);
@@ -729,13 +651,14 @@
 .forcedPositionInput:focus {
 	outline: none;
 	border-color: var(--uma-brown, rgb(121, 64, 22));
-	background: rgba(255, 255, 255, 0.5);
-	box-shadow: 0 0 0 2px rgba(121, 64, 22, 0.2);
+	background: color-mix(in srgb, var(--bg, #fff) 55%, transparent);
+	box-shadow: 0 0 0 2px
+		color-mix(in srgb, var(--uma-brown, rgb(121, 64, 22)) 20%, transparent);
 }
 
 .forcedPositionInput:hover {
 	border-color: var(--uma-brown-muted, rgba(121, 64, 22, 0.6));
-	background: rgba(255, 255, 255, 0.4);
+	background: color-mix(in srgb, var(--bg, #fff) 45%, transparent);
 }
 
 .forcedPositionInput.inline {
@@ -763,7 +686,11 @@
 	color: var(--uma-brown, rgb(121, 64, 22));
 	font-size: 0.75em;
 	font-weight: normal;
-	background: rgba(121, 64, 22, 0.1);
+	background: color-mix(
+		in srgb,
+		var(--uma-brown, rgb(121, 64, 22)) 12%,
+		transparent
+	);
 	padding: 1px 5px;
 	border-radius: 3px;
 	pointer-events: none;
@@ -879,114 +806,19 @@
 }
 
 .skillProcDataContent {
+	color: var(--fg, #111827);
 	padding: 16px;
 	position: relative;
 }
 
 /* ── Dark mode ───────────────────────────────────────────────── */
 
-.dark .horseDef {
-	background: var(--surface, #1e1e1e);
-	border-color: var(--border, #2e2e2e);
-}
-
-.dark .umaSuggestions {
-	border-color: var(--border, #2e2e2e);
-}
-
-.dark .umaSuggestion {
-	background: #222;
-}
-
-.dark .umaSuggestion:nth-child(even) {
-	background: #1a1a1a;
-}
-
-.dark .umaSuggestion.selected,
-.dark .umaSuggestion:hover {
-	background: #3a3a3a;
-}
-
-.dark .horseSkillListWrapper {
-	background: hsl(0 0% 9%);
-}
-
-.dark .horseSkillPickerWrapper {
-	background: #1a1a1a;
-}
-
-.dark .horseAddSkillBtn:hover {
-	border-color: hsl(215 40% 45%);
-	color: hsl(215 60% 75%);
-	background: hsl(215 25% 15%);
-}
-
-.dark .horseSkillPills .skill-white {
-	background: hsl(220 10% 14%);
-	border-left-color: hsl(220 15% 50%);
-	border-top-color: var(--border);
-	border-right-color: var(--border);
-	border-bottom-color: var(--border);
-}
-
-.dark .horseSkillPills .skill-gold {
-	background: hsl(44 30% 14%);
-	border-left-color: hsl(43 70% 45%);
-	border-top-color: var(--border);
-	border-right-color: var(--border);
-	border-bottom-color: var(--border);
-}
-
-.dark .horseSkillPills .skill-pink {
-	background: hsl(320 20% 14%);
-	border-left-color: hsl(320 60% 55%);
-	border-top-color: var(--border);
-	border-right-color: var(--border);
-	border-bottom-color: var(--border);
-}
-
-.dark .horseSkillPills .skill-unique {
-	background: hsl(270 20% 14%);
-	border-left-color: hsl(270 55% 60%);
-	border-top-color: var(--border);
-	border-right-color: var(--border);
-	border-bottom-color: var(--border);
-}
-
-.dark .horseSkillPills .skillName {
-	color: var(--fg);
-}
-
-.dark .forcedPositionInput {
-	background: rgba(30, 30, 30, 0.5);
-	border-color: var(--theme-brown, #d4a574);
-	color: var(--theme-brown, #d4a574);
-}
-
-.dark .forcedPositionInput:focus {
-	background: rgba(40, 40, 40, 0.7);
-	border-color: var(--theme-brown, #d4a574);
-	box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
-}
-
-.dark .forcedPositionLabel {
-	color: var(--theme-brown, #d4a574);
-}
-
-.dark .forcedPositionLabel.inline {
-	color: var(--theme-brown, #d4a574);
-	background: rgba(212, 165, 116, 0.15);
-}
-
+/* The only remaining non-token styling: the proc-data dialog's legacy green
+ * game-palette chrome has no token equivalent yet (UI-13's sweep decides). */
 .dark .skillProcDataDialog {
-	background: #1a1a1a;
 	border-color: #3d6e1e;
 }
 
 .dark .skillProcDataHeader {
 	border-bottom-color: #3d6e1e;
-}
-
-.dark .skillProcDataContent {
-	color: var(--fg, #e4e4e7);
 }

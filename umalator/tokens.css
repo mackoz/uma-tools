@@ -58,6 +58,16 @@
 	--negative: #f44336;
 	--neutral: #999999;
 
+	/* Skill rarity colors (pill background + left-edge accent in HorseDef) */
+	--skill-white-bg: hsl(220 10% 97%);
+	--skill-white-accent: hsl(220 15% 65%);
+	--skill-gold-bg: hsl(44 90% 98%);
+	--skill-gold-accent: hsl(43 90% 50%);
+	--skill-pink-bg: hsl(320 60% 98%);
+	--skill-pink-accent: hsl(320 70% 60%);
+	--skill-unique-bg: hsl(270 60% 98%);
+	--skill-unique-accent: hsl(270 65% 65%);
+
 	/* Typography */
 	--font-sans: Inter, "Noto Sans JP", sans-serif;
 	--font-xs: 0.6875rem;
@@ -122,6 +132,15 @@
 	--positive: #66bb6a;
 	--negative: #ef5350;
 	--neutral: #8a8a8a;
+
+	--skill-white-bg: hsl(220 10% 14%);
+	--skill-white-accent: hsl(220 15% 50%);
+	--skill-gold-bg: hsl(44 30% 14%);
+	--skill-gold-accent: hsl(43 70% 45%);
+	--skill-pink-bg: hsl(320 20% 14%);
+	--skill-pink-accent: hsl(320 60% 55%);
+	--skill-unique-bg: hsl(270 20% 14%);
+	--skill-unique-accent: hsl(270 55% 60%);
 
 	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
 	--shadow-md: 0 2px 8px rgb(0 0 0 / 0.5);
