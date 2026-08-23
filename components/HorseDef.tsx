@@ -395,15 +395,20 @@ export function HorseDef(props) {
 	}
 
 	const umaId = state.outfitId;
+	// Optional, Global-only: same rationale as UmaSelector's hiddenOutfitIds above -- a skill
+	// already equipped (a saved slot or share link) always works regardless, it's just left out of
+	// the "+ Add Skill" picker's results unless the "Show Unreleased Umas" setting is on. Undefined
+	// for every other consumer of this shared component.
 	const selectableSkills = useMemo(
 		() =>
 			nonUniqueSkills.filter(
 				(id) =>
-					skilldata[id].rarity != 6 ||
-					id.startsWith(umaId) ||
-					universallyAccessiblePinks.indexOf(id) != -1,
+					(skilldata[id].rarity != 6 ||
+						id.startsWith(umaId) ||
+						universallyAccessiblePinks.indexOf(id) != -1) &&
+					!props.hiddenSkillIds?.has(id),
 			),
-		[umaId],
+		[umaId, props.hiddenSkillIds],
 	);
 
 	function setter(prop: keyof HorseState) {
