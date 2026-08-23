@@ -1,19 +1,5 @@
-@font-face {
-	font-family: "Inter";
-	src:
-		local("Inter"),
-		url("/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
-}
-
-@font-face {
-	font-family: "Noto Sans JP";
-	src:
-		local("Noto Sans JP"),
-		url("/uma-tools/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
-}
-
 body {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	margin: 0;
 }
 
@@ -44,11 +30,11 @@ body {
 	width: 48px;
 	background: var(--bg, #fff);
 	border-right: 1px solid hsl(210 10% 85%);
-	/* Above InfoModal's full-viewport backdrop (z-index: 1000) so sidebar navigation stays
+	/* Above InfoModal's full-viewport backdrop (--z-modal) so sidebar navigation stays
 	   clickable while a panel (Limitations/Bugs) is open -- otherwise the backdrop silently
 	   swallows the click and just closes the current panel instead of switching. */
 	position: relative;
-	z-index: 1001;
+	z-index: var(--z-above-modal);
 }
 
 .sidebarIcon {
@@ -84,7 +70,7 @@ body {
 	background: var(--bg, #fff);
 	padding: 0 16px;
 	height: 44px;
-	z-index: 10;
+	z-index: var(--z-sticky);
 }
 
 #navTabs {
@@ -258,7 +244,7 @@ body {
 	border: 1px solid rgb(148, 150, 189);
 	border-radius: 4px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	z-index: 1000;
+	z-index: var(--z-modal);
 	margin-top: 2px;
 }
 
@@ -412,7 +398,7 @@ body.splitterDragging {
 }
 
 .controlPanelLabel {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	font-size: 11px;
 	font-weight: 600;
 	color: hsl(215 10% 50%);
@@ -422,7 +408,7 @@ body.splitterDragging {
 
 .controlPanel select,
 .controlPanel input {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	font-size: 13px;
 	padding: 6px 10px;
 	border: 1px solid hsl(210 14% 83%);
@@ -462,7 +448,7 @@ body.splitterDragging {
 	align-items: center;
 	gap: 12px;
 	padding: 8px 0;
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	font-size: 13px;
 	flex-wrap: wrap;
 }
@@ -509,7 +495,7 @@ body.splitterDragging {
 }
 
 .runBarGroup label {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	font-size: 11px;
 	font-weight: 600;
 	color: hsl(215 10% 50%);
@@ -519,7 +505,7 @@ body.splitterDragging {
 }
 
 .runBarGroup input[type="number"] {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	width: 70px;
 	padding: 6px 10px;
 	border: 1px solid hsl(210 14% 83%);
@@ -812,7 +798,7 @@ body.splitterDragging {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 1000;
+	z-index: var(--z-modal);
 }
 
 .duelingModal {
@@ -893,7 +879,7 @@ body.splitterDragging {
 }
 
 #seedWrapper button {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	padding: 4px 8px;
 	border: 1px solid hsl(210 14% 83%);
 	border-left: none;
@@ -915,7 +901,7 @@ body.splitterDragging {
 }
 
 #run {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 	border: 2px solid #1e40af;
 	border-radius: 8px;
@@ -961,7 +947,7 @@ body.splitterDragging {
 }
 
 #runOnce {
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	background: linear-gradient(135deg, #6b7280, #4b5563);
 	border: 2px solid #374151;
 	border-radius: 6px;
@@ -1071,7 +1057,7 @@ body.splitterDragging {
 	gap: 12px 16px;
 	justify-content: center;
 	padding: 8px 0;
-	font-family: Inter, "Noto Sans JP", sans-serif;
+	font-family: var(--font-sans);
 	font-size: 12px;
 }
 
@@ -1413,7 +1399,7 @@ body.splitterDragging {
 	width: 100vw;
 	overflow-x: auto;
 	overflow-y: auto;
-	z-index: 9999;
+	z-index: var(--z-overlay);
 	justify-content: flex-start;
 }
 
@@ -1430,7 +1416,7 @@ body.splitterDragging {
 	position: fixed;
 	right: 12px;
 	top: 12px;
-	z-index: 10000;
+	z-index: var(--z-overlay-top);
 	cursor: pointer;
 }
 
@@ -1498,35 +1484,6 @@ body.splitterDragging {
 
 .basinnChartPopover .expandedSkill {
 	width: 345px;
-}
-
-:root {
-	--bg: #ffffff;
-	--fg: #111827;
-	--muted: #374151;
-	--card: #f9fafb;
-	--border: #e5e7eb;
-	--surface: #f2f2f2;
-	--input-bg: #ffffff;
-	--input-border: hsl(210 14% 83%);
-	--input-border-hover: hsl(215 50% 70%);
-	--theme-brown: rgb(121, 64, 22);
-	--theme-brown-light: rgb(224, 214, 204);
-	--theme-brown-bg: rgb(248, 248, 248);
-}
-.dark {
-	--bg: #141414;
-	--fg: #e4e4e7;
-	--muted: #a1a1aa;
-	--card: #1c1c1c;
-	--border: #2e2e2e;
-	--surface: #1e1e1e;
-	--input-bg: #191919;
-	--input-border: #363636;
-	--input-border-hover: #555;
-	--theme-brown: #d4a574;
-	--theme-brown-light: #3a3a3a;
-	--theme-brown-bg: #1e1e1e;
 }
 
 /* --- Dark mode: Navbar --- */
@@ -1945,9 +1902,9 @@ body {
 		gap: 0;
 		background: var(--bg, #fff);
 		border-top: 1px solid hsl(210 10% 85%);
-		/* Above InfoModal's full-viewport backdrop (z-index: 1000), same reasoning as
+		/* Above InfoModal's full-viewport backdrop (--z-modal), same reasoning as
 		   #iconSidebar -- otherwise this bar is unreachable while a panel is open. */
-		z-index: 1001;
+		z-index: var(--z-above-modal);
 	}
 	.mobileBottomBarBtn {
 		flex: 1;
@@ -1977,7 +1934,7 @@ body {
 		position: fixed;
 		inset: 0;
 		background: rgba(0, 0, 0, 0.5);
-		z-index: 1000;
+		z-index: var(--z-modal);
 		display: flex;
 		align-items: flex-end;
 		justify-content: center;
@@ -2065,7 +2022,7 @@ body {
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.5);
-	z-index: 1000;
+	z-index: var(--z-modal);
 	display: flex;
 	align-items: center;
 	justify-content: center;
