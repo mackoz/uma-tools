@@ -1177,37 +1177,8 @@ body.splitterDragging {
 }
 
 .umaTabBar {
-	display: flex;
-	align-items: stretch;
 	width: 100%;
-	border-bottom: 1px solid hsl(210 10% 85%);
-	gap: 0;
-}
-
-.umaTabItem {
-	padding: 10px 20px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	color: hsl(215 16% 50%);
-	background: none;
-	border: none;
-	border-bottom: 2px solid transparent;
-	margin-bottom: -1px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.umaTabItem:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	border-bottom-color: hsl(210 10% 80%);
-}
-
-.umaTabItem.selected {
-	color: hsl(215 70% 50%);
-	font-weight: 600;
-	border-bottom-color: hsl(215 70% 50%);
+	border-bottom: 1px solid var(--border);
 }
 
 .umaTabBar #expandBtn,
@@ -1215,41 +1186,6 @@ body.splitterDragging {
 	margin-left: auto;
 	align-self: center;
 	margin-right: 8px;
-}
-
-.umaTabsGroup {
-	display: inline-flex;
-	background: hsl(210 6% 93%);
-	border-radius: 8px;
-	padding: 3px;
-	gap: 2px;
-}
-
-.umaTab {
-	padding: 6px 20px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: hsl(215 16% 47%);
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.umaTab:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	background: hsl(210 6% 88%);
-}
-
-.umaTab.selected {
-	background: #fff;
-	color: hsl(215 20% 15%);
-	box-shadow:
-		0 1px 3px rgba(0, 0, 0, 0.08),
-		0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #expandBtn {
@@ -1402,37 +1338,6 @@ body.splitterDragging {
 .dark .sidebarIcon.active {
 	background: #2a2a2a;
 	color: #e4e4e7;
-}
-
-/* --- Dark mode: Uma tab bar --- */
-.dark .umaTabBar {
-	border-bottom-color: var(--border);
-}
-.dark .umaTabItem {
-	color: var(--muted);
-}
-.dark .umaTabItem:hover:not(.selected) {
-	color: var(--fg);
-	border-bottom-color: #555;
-}
-.dark .umaTabItem.selected {
-	color: var(--fg);
-	border-bottom-color: var(--fg);
-}
-.dark .umaTabsGroup {
-	background: #1e1e1e;
-}
-.dark .umaTab {
-	color: var(--muted);
-}
-.dark .umaTab:hover:not(.selected) {
-	color: var(--fg);
-	background: #2a2a2a;
-}
-.dark .umaTab.selected {
-	background: #333;
-	color: var(--fg);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* --- Dark mode: Expand button --- */

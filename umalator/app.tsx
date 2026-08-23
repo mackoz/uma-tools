@@ -4665,31 +4665,28 @@ function App(props) {
 	}
 
 	const umaTabs = (
-		<Fragment>
-			<div class="umaTabBar">
-				<div
-					class={`umaTabItem ${currentIdx == 0 ? 'selected' : ''}`}
-					onClick={() => updateUiState(UiStateMsg.SetCurrentIdx0)}
-				>
-					Uma 1
-				</div>
-				{mode == Mode.Compare && (
-					<div
-						class={`umaTabItem ${currentIdx == 1 ? 'selected' : ''}`}
-						onClick={() => updateUiState(UiStateMsg.SetCurrentIdx1)}
-					>
-						Uma 2
-					</div>
-				)}
-				{posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare && (
-					<div
-						class={`umaTabItem ${currentIdx == 2 ? 'selected' : ''}`}
-						onClick={() => updateUiState(UiStateMsg.SetCurrentIdx2)}
-					>
-						Pacemaker
-					</div>
-				)}
-				{mode == Mode.Compare && (
+		<Tabs
+			class="umaTabBar"
+			variant="underline"
+			items={[
+				{ key: '0', label: 'Uma 1' },
+				...(mode == Mode.Compare ? [{ key: '1', label: 'Uma 2' }] : []),
+				...(posKeepMode == PosKeepMode.Virtual && mode == Mode.Compare
+					? [{ key: '2', label: 'Pacemaker' }]
+					: []),
+			]}
+			selected={`${currentIdx}`}
+			onSelect={(key) =>
+				updateUiState(
+					key === '0'
+						? UiStateMsg.SetCurrentIdx0
+						: key === '1'
+							? UiStateMsg.SetCurrentIdx1
+							: UiStateMsg.SetCurrentIdx2,
+				)
+			}
+			trailing={
+				mode == Mode.Compare && (
 					<button
 						class="horseActionBtn"
 						title="Reset all umas"
@@ -4697,9 +4694,9 @@ function App(props) {
 					>
 						{h(Trash2, { size: 16 })}
 					</button>
-				)}
-			</div>
-		</Fragment>
+				)
+			}
+		/>
 	);
 
 	// Unlike the old per-row embedded runData, an expanded chart row now sources everything itself
