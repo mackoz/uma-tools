@@ -22,43 +22,15 @@ body {
 #iconSidebar {
 	grid-column: 1;
 	grid-row: 2 / -1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
 	padding: 12px 0;
-	gap: 4px;
 	width: 48px;
-	background: var(--bg, #fff);
-	border-right: 1px solid hsl(210 10% 85%);
+	background: var(--bg);
+	border-right: 1px solid var(--border);
 	/* Above InfoModal's full-viewport backdrop (--z-modal) so sidebar navigation stays
 	   clickable while a panel (Limitations/Bugs) is open -- otherwise the backdrop silently
 	   swallows the click and just closes the current panel instead of switching. */
 	position: relative;
 	z-index: var(--z-above-modal);
-}
-
-.sidebarIcon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 8px;
-	border: none;
-	background: transparent;
-	color: hsl(215 16% 50%);
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.sidebarIcon:hover {
-	background: hsl(210 6% 93%);
-	color: hsl(215 20% 30%);
-}
-
-.sidebarIcon.active {
-	background: hsl(215 95% 95%);
-	color: hsl(215 70% 50%);
 }
 
 #navBar {
@@ -1321,23 +1293,6 @@ body.splitterDragging {
 
 .basinnChartPopover .expandedSkill {
 	width: 345px;
-}
-
-/* --- Dark mode: Sidebar --- */
-.dark #iconSidebar {
-	background: #181818;
-	border-right-color: var(--border);
-}
-.dark .sidebarIcon {
-	color: var(--muted);
-}
-.dark .sidebarIcon:hover {
-	background: #2a2a2a;
-	color: var(--fg);
-}
-.dark .sidebarIcon.active {
-	background: #2a2a2a;
-	color: #e4e4e7;
 }
 
 /* --- Dark mode: Expand button --- */
