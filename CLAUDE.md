@@ -34,11 +34,14 @@ cd rougelike && node build.mjs
 cd umadle && node build.mjs
 
 npm run build                                # all of the above in one shot
+
+npm run verify                               # build both umalator apps + typecheck + CSS metrics, one-line diff vs scripts/verify-baseline.json
+npm run verify:baseline                      # re-record that baseline (run on master right after a merge)
 ```
 
 `build.mjs` is authoritative for every app that has one. Several apps still carry legacy Windows-oriented `build.bat` scripts, but `build-planner` is now the only app with no `build.mjs`. The old scripts predate the current build setup; in particular, `umalator/build.bat` does not emit `simulator.worker.js`, so it is not a substitute for `umalator/build.mjs`.
 
-There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any build script. As of 2026-08-20 this reports **1,084 pre-existing errors** (roughly 1,100), dominated by implicit-`any` errors and concentrated in a handful of large files (`umalator/app.tsx`, `compare.ts`, `SkillList.tsx`, `HorseDef.tsx`) — a known, tracked backlog, not something a normal change is expected to fix incidentally. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models.
+There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any build script. The pre-existing backlog is dominated by implicit-`any` errors concentrated in a handful of large files (`umalator/app.tsx`, `compare.ts`, `SkillList.tsx`, `HorseDef.tsx`) — a known, tracked backlog, not something a normal change is expected to fix incidentally. **Beware: tsc 7.x (typescript-go) hard-caps reported diagnostics at 1000, and this backlog saturates the cap** — so the total count reads as exactly 1000 and which diagnostics get reported varies run to run (concurrent checking); counts above 1000 quoted in older notes came from a counting path that no longer applies. `npm run verify` prints the count as ">=1000 (capped)" and only treats it as a regression signal below the cap. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models.
 
 `umadle` now builds from a clean install: `accessible-autocomplete` is a declared dependency, and `.npmrc` supplies the legacy-peer setting required for its optional Preact 8 peer against this repo's Preact 10. See `docs/apps.md` for the details.
 

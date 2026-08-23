@@ -18,6 +18,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
+    "verify:baseline": "node scripts/verify.mjs --baseline",
     "test:stats": "node --experimental-strip-types umalator/statisticalAnalysis.test.ts && node --experimental-strip-types umalator/chartLadder.test.ts",
     "prepare": "husky"
   },
