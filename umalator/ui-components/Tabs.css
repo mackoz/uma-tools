@@ -1,0 +1,114 @@
+/* Shared tab primitive (see UI-11). Two variants:
+ *   underline — horizontal text tabs with a bottom-border active indicator
+ *               (navTabs, modeTabs, umaTabBar)
+ *   iconrail  — vertical icon-button rail with CSS-only tooltips (iconSidebar)
+ * Layout/placement specific to a site (grid position, borders, heights) stays
+ * with that site's container rules in app.css; everything about the tab items
+ * themselves lives here, token-driven so dark mode needs no overrides. */
+
+.tabs {
+	display: flex;
+	gap: 0;
+}
+
+.tabsItem {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	color: var(--muted-2);
+	cursor: pointer;
+	font-family: inherit;
+	user-select: none;
+	transition: all var(--transition-fast);
+	white-space: nowrap;
+}
+
+.tabsItem:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+	border-radius: var(--radius-sm);
+}
+
+.tabsItem.disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+/* --- underline variant --- */
+
+.tabs--underline {
+	align-items: stretch;
+}
+
+.tabs--underline .tabsItem {
+	padding: 8px 16px;
+	font-size: var(--font-base);
+	font-weight: 500;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+
+.tabs--underline .tabsItem:hover:not(.active):not(.disabled) {
+	color: var(--fg);
+	border-bottom-color: var(--input-border);
+}
+
+.tabs--underline .tabsItem.active {
+	color: var(--accent);
+	font-weight: 600;
+	border-bottom-color: var(--accent);
+}
+
+/* --- iconrail variant --- */
+
+.tabs--iconrail {
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.tabs--iconrail .tabsItem {
+	position: relative;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--radius-sm);
+}
+
+.tabs--iconrail .tabsItem:hover:not(.active) {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+.tabs--iconrail .tabsItem.active {
+	background: var(--accent-active-bg);
+	color: var(--accent);
+}
+
+/* CSS-only tooltip, local to the rail (shared Tooltip.css stays untouched). */
+.tabs--iconrail .tabsItem[data-tip]:hover::after,
+.tabs--iconrail .tabsItem[data-tip]:focus-visible::after {
+	content: attr(data-tip);
+	position: absolute;
+	left: calc(100% + 10px);
+	top: 50%;
+	transform: translateY(-50%);
+	background: var(--fg);
+	color: var(--bg);
+	padding: 4px 8px;
+	border-radius: var(--radius-sm);
+	font-size: var(--font-sm);
+	font-weight: 500;
+	white-space: nowrap;
+	pointer-events: none;
+	box-shadow: var(--shadow-md);
+	opacity: 0;
+	animation: tabsTipIn var(--transition-fast) 0.3s forwards;
+}
+
+@keyframes tabsTipIn {
+	to {
+		opacity: 1;
+	}
+}

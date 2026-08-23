@@ -1,6 +1,5 @@
 #introtext {
 	font-size: 14px;
-	height: 500px;
 	margin-left: 20px;
 	margin-top: 0px;
 	overflow: auto;
@@ -8,12 +7,19 @@
 	width: auto;
 }
 
+/* Inside the About overlay the modal supplies padding and scrolling. */
+.infoModal #introtext {
+	margin-left: 0;
+	padding-right: 0;
+	overflow: visible;
+}
+
 #introtext > details > summary {
 	font-size: 1.4em;
 }
 
 .warning-text {
-	color: red;
+	color: var(--negative);
 }
 
 #introtext .releaseList {
@@ -48,7 +54,7 @@
 #introtext .release > summary::before {
 	border-bottom: 1.5px solid currentColor;
 	border-right: 1.5px solid currentColor;
-	content: '';
+	content: "";
 	height: 0.4em;
 	opacity: 0.55;
 	transform: rotate(-45deg);
@@ -92,7 +98,8 @@
 	margin: 0;
 }
 
-@media (max-width: 700px) {
+/* bp-mobile */
+@media (max-width: 768px) {
 	#credits {
 		grid-template-columns: 1fr;
 		row-gap: 0.25em;

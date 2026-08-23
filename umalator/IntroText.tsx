@@ -20,16 +20,18 @@ export function IntroText(props) {
 							<li>
 								Ongoing UI refresh (in progress): the app now runs on a single
 								design-token stylesheet, and so far the buttons, inputs,
-								dropdowns, toggles, and cards have been restyled with a cleaner,
-								more consistent look — flat accent-colored Run button, subtler
-								borders and shadows, and one shared blue accent replacing the
-								old mix of blues, lavenders, and browns (Run bar, race/skill
-								settings panels, Settings pane, save/load/import dialogs, and
-								the screenshot-import window). Dark mode now covers a few spots
-								it previously missed, like the import dialog's error text.
-								Layout and navigation are unchanged — that's a later phase. If
-								anything looks broken or unreadable (especially in dark mode),
-								please report it.
+								dropdowns, toggles, cards, and all the tab strips have been
+								restyled with a cleaner, more consistent look — flat
+								accent-colored Run button, subtler borders and shadows, one
+								shared blue accent, and matching underline-style tabs for the
+								top nav, the Compare/Skill Chart/Uma Chart switcher, and the Uma
+								1/Uma 2 tabs. The left sidebar icons now show labels on hover,
+								and a new ⓘ icon there opens this About/changelog panel any time
+								— it no longer disappears after your first run. Dark mode now
+								covers a few spots it previously missed. Layout and pane
+								contents are unchanged — that's a later phase. If anything looks
+								broken or unreadable (especially in dark mode), please report
+								it.
 							</li>
 						</ul>
 					</details>

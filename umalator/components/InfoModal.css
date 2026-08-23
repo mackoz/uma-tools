@@ -24,6 +24,11 @@
 	box-shadow: var(--shadow-lg);
 }
 
+/* Wider panel for content-heavy overlays (About/changelog). */
+.infoModal--wide {
+	max-width: 780px;
+}
+
 .infoModal h2 {
 	margin: 0 0 12px 0;
 	font-size: var(--font-2xl);
