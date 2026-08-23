@@ -104,6 +104,7 @@ import {
 } from './storage';
 import { initTelemetry, postEvent } from './telemetry';
 import { Dropdown } from './ui-components/Dropdown';
+import { Tabs } from './ui-components/Tabs';
 import { createWorkerPool, type WorkerPool } from './workerPool';
 
 import './app.css';
@@ -5268,20 +5269,16 @@ function App(props) {
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
 				<nav id="navBar">
-					<div id="navTabs">
-						<div
-							class={`navTab ${activeTab === 'umalator' ? 'selected' : ''}`}
-							onClick={() => setActiveTab('umalator')}
-						>
-							Umalator
-						</div>
-						<div
-							class={`navTab ${activeTab === 'umas' ? 'selected' : ''}`}
-							onClick={() => setActiveTab('umas')}
-						>
-							Umas
-						</div>
-					</div>
+					<Tabs
+						id="navTabs"
+						variant="underline"
+						items={[
+							{ key: 'umalator', label: 'Umalator' },
+							{ key: 'umas', label: 'Umas' },
+						]}
+						selected={activeTab}
+						onSelect={(key) => setActiveTab(key as 'umalator' | 'umas')}
+					/>
 					<button
 						id="themeToggle"
 						onClick={() => setDarkMode((d) => !d)}
