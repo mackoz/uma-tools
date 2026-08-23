@@ -14,6 +14,15 @@
 }
 
 @font-face {
+	font-family: "Inter";
+	font-style: italic;
+	src:
+		local("Inter Italic"),
+		url("/uma-tools/fonts/Inter-Italic-VariableFont_opsz,wght.ttf")
+		format("truetype");
+}
+
+@font-face {
 	font-family: "Noto Sans JP";
 	src:
 		local("Noto Sans JP"),
