@@ -4191,6 +4191,7 @@ function App(props) {
 		} else {
 			skills = getActivateableSkills(
 				baseSkillsToTest.filter((id) => {
+					if (!showUnreleasedUmas && unreleasedSkillIds.has(id)) return false; // keep the Chart's candidate pool in sync with the picker's toggle
 					return !(
 						(
 							(id[0] == '9' && uma1.skills.includes('1' + id.slice(1))) || // reject inherited uniques if we already have the regular version
@@ -4976,6 +4977,7 @@ function App(props) {
 					runData={mode == Mode.Compare ? runData : null}
 					umaIndex={mode == Mode.Compare ? 0 : null}
 					hiddenOutfitIds={showUnreleasedUmas ? undefined : unreleasedOutfitIds}
+					hiddenSkillIds={showUnreleasedUmas ? undefined : unreleasedSkillIds}
 					headerActions={
 						<HorseSaveLoadActions
 							state={uma1}
@@ -5018,6 +5020,7 @@ function App(props) {
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}
+						hiddenSkillIds={showUnreleasedUmas ? undefined : unreleasedSkillIds}
 						headerActions={
 							<HorseSaveLoadActions
 								state={uma2}
@@ -5042,6 +5045,7 @@ function App(props) {
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}
+						hiddenSkillIds={showUnreleasedUmas ? undefined : unreleasedSkillIds}
 						headerActions={
 							<HorseSaveLoadActions
 								state={pacer}
@@ -5069,7 +5073,7 @@ function App(props) {
 				<div class="settingsCard">
 					<h4>Roster</h4>
 					<div class="settingsToggleRow">
-						<span title="Umas and uniques datamined from the Global client's own game data, ahead of their official release. Not currently playable on Global.">
+						<span title="Umas, outfits, and unique skills datamined from the Global client's own game data, ahead of their official release. Includes the inherited version of each unique, so you can plan inheritance before the uma is out. Not currently playable on Global.">
 							Show Unreleased Umas
 						</span>
 						<label class="toggleSwitch">
@@ -5081,6 +5085,10 @@ function App(props) {
 							<span class="toggleTrack"></span>
 						</label>
 					</div>
+					<span class="settingsHint">
+						Not playable on Global yet. Adds them to the uma picker, and their
+						uniques to the inheritable skill list.
+					</span>
 				</div>
 			)}
 			{mode == Mode.Compare && (

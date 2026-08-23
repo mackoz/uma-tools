@@ -65,6 +65,16 @@ export function IntroText(props) {
 								used it" effect, like Twin Turbo's unique) hang the simulation
 								indefinitely instead of running, with no error shown.
 							</li>
+							<li>
+								<strong>Global only:</strong> fixed the unreleased umas above
+								not actually being inheritable — their unique skills were
+								missing the separate "inherited" skill entry, so none of them
+								could be found in the "+ Add Skill" picker on a different uma,
+								which was the whole point of adding them. Also moved Hokko
+								Tarumae behind the <strong>Show Unreleased Umas</strong> toggle:
+								she was already in the roster but isn't actually live on Global
+								either, and had been showing up regardless of the setting.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
