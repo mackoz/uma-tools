@@ -2757,26 +2757,21 @@ function ImportDialog({
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div
-				class="saveLoadModal"
-				style="width:420px;max-width:92vw"
-				onKeyDown={handleKeyDown}
-			>
+			<div class="saveLoadModal importDialogModal" onKeyDown={handleKeyDown}>
 				<h3 class="saveLoadModalTitle">Import Uma</h3>
-				<p style="margin:4px 0 10px;font-size:13px;color:var(--muted,#6b7280)">
+				<p class="importDialogHint">
 					Paste a single-uma export code from{' '}
 					<a
 						href="https://uma.guide/roster-viewer/"
 						target="_blank"
 						rel="noopener"
-						style="color:hsl(215 70% 50%)"
 					>
 						uma.guide/roster-viewer
 					</a>
 					, or browse for a JSON file.
 				</p>
 				<textarea
-					style="width:100%;box-sizing:border-box;height:72px;padding:8px 10px;font-size:12px;font-family:monospace;resize:vertical;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--input-bg,#fff);color:var(--fg,#111827);outline:none"
+					class="importTextarea"
 					placeholder="e.g. ARlXmWBdob…"
 					value={b64Input}
 					onInput={(e) => {
@@ -2785,12 +2780,8 @@ function ImportDialog({
 					}}
 					autoFocus
 				/>
-				{error && (
-					<p style="margin:6px 0 0;font-size:12px;color:hsl(0 70% 45%)">
-						{error}
-					</p>
-				)}
-				<div class="saveLoadModalActions" style="margin-top:14px">
+				{error && <p class="importDialogError">{error}</p>}
+				<div class="saveLoadModalActions">
 					<button class="saveLoadBtnSecondary" onClick={onClose}>
 						Cancel
 					</button>
