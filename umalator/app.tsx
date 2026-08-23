@@ -1,3 +1,7 @@
+// tokens.css must stay the first import so its custom properties and @font-face
+// declarations lead bundle.css ahead of every component stylesheet.
+import './tokens.css';
+
 import { computePosition, flip } from '@floating-ui/dom';
 import * as d3 from 'd3';
 import { Map as ImmMap, Set as ImmSet, Record } from 'immutable';

@@ -13,6 +13,18 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
+						<summary>2026-08-23</summary>
+						<ul>
+							<li>
+								Internal groundwork for an upcoming UI refresh: all colors,
+								fonts, spacing, and layering now resolve through a single
+								design-token stylesheet. No visible changes yet — if anything
+								looks different (especially in dark mode), it's a bug; please
+								report it.
+							</li>
+						</ul>
+					</details>
+					<details class="release" open={true}>
 						<summary>2026-08-22</summary>
 						<ul>
 							<li>
