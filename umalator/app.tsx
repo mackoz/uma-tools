@@ -11,6 +11,7 @@ import {
 	Clipboard,
 	Copy,
 	Download,
+	Info,
 	RotateCcw,
 	Save,
 	Settings,
@@ -83,7 +84,7 @@ import {
 	type SkillStatus,
 } from './chartLadder';
 import type { ChartRunTrace } from './compare';
-import { InfoModal } from './components/InfoModal';
+import { InfoModal, InfoModalShell } from './components/InfoModal';
 import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
 import { BUGS, LIMITATIONS } from './components/simNotes';
@@ -3285,7 +3286,7 @@ function App(props) {
 	const [leadCompetition, setLeadCompetition] = useState(true);
 	const [duelingConfigOpen, setDuelingConfigOpen] = useState(false);
 	const [overlayPanel, setOverlayPanel] = useState<
-		null | 'limitations' | 'bugs'
+		null | 'limitations' | 'bugs' | 'about'
 	>(null);
 	const [duelingRates, setDuelingRates] = useState({
 		runaway: 10,
@@ -5403,12 +5404,18 @@ function App(props) {
 										active: overlayPanel === 'bugs',
 										icon: <Bug size={20} />,
 									},
+									{
+										key: 'about',
+										tooltip: 'About & changelog',
+										active: overlayPanel === 'about',
+										icon: <Info size={20} />,
+									},
 								]}
 								onSelect={(key) => {
 									if (key === 'uma' || key === 'settings') {
 										setLeftPanel(key);
 									} else {
-										const panel = key as 'limitations' | 'bugs';
+										const panel = key as 'limitations' | 'bugs' | 'about';
 										setOverlayPanel(overlayPanel === panel ? null : panel);
 									}
 								}}
@@ -5918,6 +5925,14 @@ function App(props) {
 								entries={BUGS}
 								onClose={() => setOverlayPanel(null)}
 							/>
+						)}
+						{overlayPanel === 'about' && (
+							<InfoModalShell
+								class="infoModal--wide"
+								onClose={() => setOverlayPanel(null)}
+							>
+								<IntroText />
+							</InfoModalShell>
 						)}
 						{duelingConfigOpen && (
 							<div
