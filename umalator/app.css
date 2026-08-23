@@ -833,13 +833,13 @@ body.splitterDragging {
 
 #runOnce {
 	font-family: var(--font-sans);
-	background: var(--bg);
-	border: 1px solid var(--input-border);
+	background: var(--accent-active-bg);
+	border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 	border-radius: var(--radius-sm);
-	color: var(--muted);
+	color: var(--accent);
 	cursor: pointer;
 	font-size: var(--font-base);
-	font-weight: 500;
+	font-weight: 600;
 	margin: 0;
 	padding: 8px 16px;
 	transition:
@@ -848,12 +848,12 @@ body.splitterDragging {
 }
 
 #runOnce:hover {
-	background: var(--hover);
-	border-color: var(--input-border-hover);
+	background: color-mix(in srgb, var(--accent) 22%, var(--bg));
+	border-color: var(--accent);
 }
 
 #runOnce:active {
-	background: var(--hover);
+	background: color-mix(in srgb, var(--accent) 30%, var(--bg));
 }
 
 #runOnce:disabled,
