@@ -116,16 +116,16 @@ body {
 	height: 36px;
 	align-self: center;
 	background: transparent;
-	border: 1px solid hsl(210 10% 85%);
-	border-radius: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
 	cursor: pointer;
-	color: hsl(215 16% 47%);
-	transition: all 0.15s ease;
+	color: var(--muted-2);
+	transition: all var(--transition-fast);
 }
 
 #themeToggle:hover {
-	background: hsl(210 6% 93%);
-	color: hsl(215 20% 30%);
+	background: var(--hover);
+	color: var(--fg);
 }
 
 #pacemakerIndicator {
@@ -137,23 +137,26 @@ body {
 }
 
 #pacemakerIndicator span {
-	color: rgb(121, 64, 22);
+	color: var(--muted);
 	font-size: 0.95em;
 }
 
 #pacemakerIndicator button {
-	background: none;
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 8px;
-	color: rgb(121, 64, 22);
+	background: var(--bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	color: var(--muted);
 	cursor: pointer;
 	font-weight: 500;
 	padding: 8px 16px;
-	transition: background 0.2s;
+	transition:
+		background var(--transition-fast),
+		border-color var(--transition-fast);
 }
 
 #pacemakerIndicator button:hover {
-	background: rgb(248, 248, 248);
+	background: var(--hover);
+	border-color: var(--input-border-hover);
 }
 
 #pacemakerCountControl {
@@ -162,12 +165,12 @@ body {
 	gap: 5px;
 	margin-top: 10px;
 	padding-top: 10px;
-	border-top: 1px solid rgb(224, 214, 204);
+	border-top: 1px solid var(--border);
 }
 
 #pacemakerCountControl label {
 	font-size: 0.85em;
-	color: rgb(121, 64, 22);
+	color: var(--muted);
 	font-weight: 500;
 }
 
@@ -212,9 +215,9 @@ body {
 }
 
 .pacemaker-combobox-button {
-	background: white;
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 4px;
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
 	padding: 6px 12px;
 	width: 100%;
 	text-align: left;
@@ -223,11 +226,11 @@ body {
 	justify-content: space-between;
 	align-items: center;
 	font-size: 0.9em;
-	color: rgb(121, 64, 22);
+	color: var(--fg);
 }
 
 .pacemaker-combobox-button:hover {
-	background: rgb(248, 248, 248);
+	border-color: var(--input-border-hover);
 }
 
 .pacemaker-combobox-arrow {
@@ -240,10 +243,10 @@ body {
 	top: 100%;
 	left: 0;
 	right: 0;
-	background: white;
-	border: 1px solid rgb(148, 150, 189);
-	border-radius: 4px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-md);
 	z-index: var(--z-modal);
 	margin-top: 2px;
 }
@@ -255,7 +258,7 @@ body {
 	padding: 8px 12px;
 	cursor: pointer;
 	font-size: 0.9em;
-	border-bottom: 1px solid rgb(240, 240, 240);
+	border-bottom: 1px solid var(--border);
 }
 
 .pacemaker-combobox-option:last-child {
@@ -263,7 +266,7 @@ body {
 }
 
 .pacemaker-combobox-option:hover {
-	background: rgb(248, 248, 248);
+	background: var(--hover);
 }
 
 .pacemaker-combobox-option input[type="checkbox"] {
@@ -337,7 +340,7 @@ body {
 	margin: 2px 20px 0;
 	border-radius: 5px;
 	cursor: row-resize;
-	background: hsl(210 10% 88%);
+	background: var(--border);
 	position: relative;
 	touch-action: none;
 }
@@ -351,11 +354,11 @@ body {
 	width: 40px;
 	height: 2px;
 	border-radius: 1px;
-	background: hsl(210 8% 62%);
+	background: var(--muted-2);
 }
 
 #chartSplitter:hover {
-	background: hsl(210 12% 82%);
+	background: var(--input-border-hover);
 }
 
 body.splitterDragging {
@@ -364,8 +367,8 @@ body.splitterDragging {
 }
 
 .controlPanel {
-	background: rgb(242, 242, 242);
-	border-radius: 8px;
+	background: var(--surface);
+	border-radius: var(--radius-md);
 	padding: 8px 14px 8px 0;
 	margin-bottom: 8px;
 	overflow: hidden;
@@ -394,14 +397,14 @@ body.splitterDragging {
 	transform: translateY(-50%);
 	height: 75%;
 	width: 1px;
-	background: hsl(210 10% 82%);
+	background: var(--border);
 }
 
 .controlPanelLabel {
 	font-family: var(--font-sans);
-	font-size: 11px;
+	font-size: var(--font-xs);
 	font-weight: 600;
-	color: hsl(215 10% 50%);
+	color: var(--muted-2);
 	text-transform: uppercase;
 	letter-spacing: 0.4px;
 }
@@ -409,16 +412,16 @@ body.splitterDragging {
 .controlPanel select,
 .controlPanel input {
 	font-family: var(--font-sans);
-	font-size: 13px;
+	font-size: var(--font-base);
 	padding: 6px 10px;
-	border: 1px solid hsl(210 14% 83%);
-	border-radius: 6px;
-	background: white;
-	color: hsl(215 20% 20%);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	background: var(--input-bg);
+	color: var(--fg);
 	outline: none;
 	transition:
-		border-color 0.15s,
-		box-shadow 0.15s;
+		border-color var(--transition-fast),
+		box-shadow var(--transition-fast);
 	appearance: none;
 	-webkit-appearance: none;
 	cursor: pointer;
@@ -434,13 +437,13 @@ body.splitterDragging {
 
 .controlPanel select:hover,
 .controlPanel input:hover {
-	border-color: hsl(215 50% 70%);
+	border-color: var(--input-border-hover);
 }
 
 .controlPanel select:focus,
 .controlPanel input:focus {
-	border-color: hsl(215 70% 55%);
-	box-shadow: 0 0 0 3px hsla(215 70% 55% / 0.12);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 #runBar {
@@ -449,42 +452,36 @@ body.splitterDragging {
 	gap: 12px;
 	padding: 8px 0;
 	font-family: var(--font-sans);
-	font-size: 13px;
+	font-size: var(--font-base);
 	flex-wrap: wrap;
 }
 
 #runBar #run {
 	font-family: inherit;
-	font-size: 13px;
+	font-size: var(--font-base);
 	font-weight: 600;
 	padding: 6px 16px;
 	margin: 0;
 	width: auto;
-	border-radius: 6px;
-	box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
-}
-
-#runBar #run:hover {
-	transform: none;
-	box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+	border-radius: var(--radius-sm);
 }
 
 #runBar #runOnce {
 	font-family: inherit;
-	font-size: 13px;
+	font-size: var(--font-base);
 	padding: 6px 12px;
 	margin: 0;
 	width: auto;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 }
 
 .runBarError {
 	font-family: inherit;
-	font-size: 13px;
-	color: #b91c1c;
-	background: rgba(185, 28, 28, 0.08);
-	border: 1px solid rgba(185, 28, 28, 0.25);
-	border-radius: 6px;
+	font-size: var(--font-base);
+	color: var(--negative);
+	background: color-mix(in srgb, var(--negative) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
+	border-radius: var(--radius-sm);
 	padding: 4px 10px;
 }
 
@@ -496,9 +493,9 @@ body.splitterDragging {
 
 .runBarGroup label {
 	font-family: var(--font-sans);
-	font-size: 11px;
+	font-size: var(--font-xs);
 	font-weight: 600;
-	color: hsl(215 10% 50%);
+	color: var(--muted-2);
 	text-transform: uppercase;
 	letter-spacing: 0.4px;
 	white-space: nowrap;
@@ -508,24 +505,24 @@ body.splitterDragging {
 	font-family: var(--font-sans);
 	width: 70px;
 	padding: 6px 10px;
-	border: 1px solid hsl(210 14% 83%);
-	border-radius: 6px;
-	font-size: 13px;
-	background: white;
-	color: hsl(215 20% 20%);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--font-base);
+	background: var(--input-bg);
+	color: var(--fg);
 	outline: none;
 	transition:
-		border-color 0.15s,
-		box-shadow 0.15s;
+		border-color var(--transition-fast),
+		box-shadow var(--transition-fast);
 }
 
 .runBarGroup input[type="number"]:hover {
-	border-color: hsl(215 50% 70%);
+	border-color: var(--input-border-hover);
 }
 
 .runBarGroup input[type="number"]:focus {
-	border-color: hsl(215 70% 55%);
-	box-shadow: 0 0 0 3px hsla(215 70% 55% / 0.12);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .runBarCheckbox {
@@ -548,12 +545,12 @@ body.splitterDragging {
 	width: 28px;
 	height: 28px;
 	padding: 0;
-	background-color: #e8e8e8;
+	background-color: var(--surface);
 	background-size: 22px 22px;
 	background-position: center;
 	background-repeat: no-repeat;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	opacity: 0.45;
 	transition:
@@ -563,8 +560,8 @@ body.splitterDragging {
 		background-color 0.12s ease;
 }
 .chart-icon-filter-btn:hover:not(:disabled) {
-	background-color: #f2f2f2;
-	border-color: #9ca3af;
+	background-color: var(--hover);
+	border-color: var(--input-border-hover);
 	opacity: 0.8;
 }
 .chart-icon-filter-btn:disabled {
@@ -573,23 +570,10 @@ body.splitterDragging {
 	opacity: 0.35 !important;
 }
 .chart-icon-filter-btn.active {
-	background-color: #f2f2f2;
-	border-color: #3b82f6;
-	box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+	background-color: var(--card);
+	border-color: var(--accent);
+	box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent);
 	opacity: 1;
-}
-.dark .chart-icon-filter-btn {
-	background-color: #2a2a2a;
-	border-color: #444;
-}
-.dark .chart-icon-filter-btn:hover:not(:disabled) {
-	background-color: #333;
-	border-color: #666;
-}
-.dark .chart-icon-filter-btn.active {
-	background-color: #1e1e1e;
-	border-color: #60a5fa;
-	box-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
 }
 
 #chartRunSettings {
@@ -598,29 +582,29 @@ body.splitterDragging {
 	gap: 16px;
 	padding: 8px 20px 4px;
 	flex-wrap: wrap;
-	font-size: 12px;
+	font-size: var(--font-sm);
 }
 
 .chartRunEstimate {
-	color: var(--muted, #6b7280);
-	font-size: 11px;
+	color: var(--muted);
+	font-size: var(--font-xs);
 }
 
 .chartHoverHint {
-	color: var(--muted, #6b7280);
-	font-size: 11px;
+	color: var(--muted);
+	font-size: var(--font-xs);
 }
 
 .settingsHint {
 	display: block;
-	color: var(--muted, #6b7280);
-	font-size: 11px;
+	color: var(--muted);
+	font-size: var(--font-xs);
 	margin-top: 4px;
 }
 
 #stopChart {
-	color: #c53030;
-	border-color: #c53030;
+	color: var(--negative);
+	border-color: var(--negative);
 }
 
 .expandedStatsTable th {
@@ -639,8 +623,8 @@ body.splitterDragging {
 	grid-column: 2;
 	width: 360px;
 	overflow-y: auto;
-	border-right: 1px solid hsl(210 10% 85%);
-	background: hsl(210 10% 96%);
+	border-right: 1px solid var(--border);
+	background: var(--bg);
 	padding: 20px;
 	box-sizing: border-box;
 	min-height: 0;
@@ -649,38 +633,38 @@ body.splitterDragging {
 
 #settingsPane h3 {
 	margin: 0 0 16px 0;
-	font-size: 11px;
+	font-size: var(--font-xs);
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 1px;
-	color: hsl(215 15% 55%);
+	color: var(--muted-2);
 }
 
 .settingsCard {
-	background: white;
-	border: 1px solid hsl(210 10% 88%);
-	border-radius: 10px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
 	padding: 16px;
 	margin-bottom: 12px;
 }
 
 .settingsCard h4 {
 	margin: 0 0 12px 0;
-	font-size: 11px;
+	font-size: var(--font-xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	color: hsl(215 15% 55%);
+	color: var(--muted-2);
 }
 
 .settingsCard select {
 	width: 100%;
-	background: hsl(210 10% 97%);
-	border: 1px solid hsl(210 10% 85%);
-	border-radius: 6px;
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
 	padding: 8px 10px;
-	font-size: 13px;
-	color: hsl(215 20% 25%);
+	font-size: var(--font-base);
+	color: var(--fg);
 	font-family: inherit;
 }
 
@@ -689,12 +673,12 @@ body.splitterDragging {
 	align-items: center;
 	justify-content: space-between;
 	padding: 8px 0;
-	font-size: 13px;
-	color: hsl(215 20% 25%);
+	font-size: var(--font-base);
+	color: var(--fg);
 }
 
 .settingsToggleRow + .settingsToggleRow {
-	border-top: 1px solid hsl(210 10% 93%);
+	border-top: 1px solid var(--border);
 }
 
 .toggleSwitch {
@@ -719,7 +703,7 @@ body.splitterDragging {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: hsl(210 10% 82%);
+	background: var(--input-border);
 	border-radius: 10px;
 	transition: background 0.2s;
 }
@@ -738,7 +722,7 @@ body.splitterDragging {
 }
 
 .toggleSwitch input:checked + .toggleTrack {
-	background: rgb(148, 150, 189);
+	background: var(--accent);
 }
 
 .toggleSwitch input:checked + .toggleTrack::after {
@@ -746,22 +730,22 @@ body.splitterDragging {
 }
 
 .settingsSmallBtn {
-	background: hsl(210 10% 97%);
-	border: 1px solid hsl(210 10% 85%);
-	border-radius: 6px;
+	background: var(--bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
 	padding: 4px 8px;
 	cursor: pointer;
-	font-size: 12px;
+	font-size: var(--font-sm);
 	line-height: 1;
-	color: hsl(215 20% 40%);
+	color: var(--muted);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	transition: background 0.15s ease;
+	transition: background var(--transition-fast);
 }
 
 .settingsSmallBtn:hover {
-	background: hsl(210 6% 91%);
+	background: var(--hover);
 }
 
 .settingsCopyBtn {
@@ -769,23 +753,23 @@ body.splitterDragging {
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	background: white;
-	border: 1px solid hsl(210 10% 85%);
-	border-radius: 10px;
+	background: var(--bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-md);
 	padding: 10px;
 	cursor: pointer;
-	font-size: 13px;
+	font-size: var(--font-base);
 	font-weight: 500;
 	font-family: inherit;
-	color: hsl(215 20% 35%);
+	color: var(--muted);
 	transition:
-		background 0.15s,
-		border-color 0.15s;
+		background var(--transition-fast),
+		border-color var(--transition-fast);
 }
 
 .settingsCopyBtn:hover {
-	background: hsl(210 6% 95%);
-	border-color: hsl(210 10% 78%);
+	background: var(--hover);
+	border-color: var(--input-border-hover);
 }
 
 .duelingOverlay {
@@ -802,21 +786,21 @@ body.splitterDragging {
 }
 
 .duelingModal {
-	background: white;
-	border-radius: 10px;
+	background: var(--bg);
+	border-radius: var(--radius-md);
 	padding: 24px;
 	max-width: 500px;
 	width: 90%;
 	max-height: 90vh;
 	overflow-y: auto;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+	box-shadow: var(--shadow-lg);
 }
 
 .duelingModal h2 {
 	margin: 0 0 20px 0;
-	font-size: 16px;
+	font-size: var(--font-2xl);
 	font-weight: 600;
-	color: hsl(215 20% 15%);
+	color: var(--fg);
 }
 
 .duelingSliders {
@@ -829,8 +813,8 @@ body.splitterDragging {
 	display: block;
 	margin-bottom: 8px;
 	font-weight: 500;
-	font-size: 13px;
-	color: hsl(215 20% 25%);
+	font-size: var(--font-base);
+	color: var(--fg);
 }
 
 .duelingSliders input[type="range"] {
@@ -838,16 +822,16 @@ body.splitterDragging {
 }
 
 .duelingWarning {
-	background: #fee;
-	border: 1px solid #fcc;
-	border-radius: 6px;
+	background: color-mix(in srgb, var(--negative) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
+	border-radius: var(--radius-sm);
 	padding: 12px;
 	margin-top: 8px;
 }
 
 .duelingWarning p {
 	margin: 0;
-	color: #c00;
+	color: var(--negative);
 	font-size: 0.9em;
 }
 
@@ -858,20 +842,20 @@ body.splitterDragging {
 }
 
 .duelingActions button {
-	background: rgb(148, 150, 189);
+	background: var(--accent);
 	color: white;
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	padding: 8px 16px;
 	cursor: pointer;
 	font-weight: 500;
 	font-family: inherit;
-	font-size: 13px;
-	transition: background 0.15s;
+	font-size: var(--font-base);
+	transition: background var(--transition-fast);
 }
 
 .duelingActions button:hover {
-	background: rgb(128, 130, 172);
+	background: var(--accent-hover);
 }
 
 #seedWrapper {
@@ -881,115 +865,94 @@ body.splitterDragging {
 #seedWrapper button {
 	font-family: var(--font-sans);
 	padding: 4px 8px;
-	border: 1px solid hsl(210 14% 83%);
+	border: 1px solid var(--input-border);
 	border-left: none;
-	border-radius: 0 6px 6px 0;
-	background: hsl(210 10% 97%);
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+	background: var(--card);
 	cursor: pointer;
 	font-size: 14px;
-	transition: background 0.15s;
+	color: var(--fg);
+	transition: background var(--transition-fast);
 }
 
 #seedWrapper button:hover {
-	background: hsl(210 10% 93%);
+	background: var(--hover);
 }
 
 #seed {
 	flex: 1 1 auto;
 	width: 100px;
-	border-radius: 6px 0 0 6px !important;
+	border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
 }
 
 #run {
 	font-family: var(--font-sans);
-	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-	border: 2px solid #1e40af;
-	border-radius: 8px;
+	background: var(--accent);
+	border: none;
+	border-radius: var(--radius-sm);
 	color: white;
 	cursor: pointer;
-	font-size: 1.2em;
+	font-size: var(--font-lg);
 	font-weight: 600;
 	margin: 0;
-	padding: 12px 24px;
-	transition: all 0.2s ease;
-	box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+	padding: 10px 24px;
+	transition:
+		background var(--transition-fast),
+		box-shadow var(--transition-fast);
+	box-shadow: var(--shadow-sm);
 }
 
 #run:hover {
-	background: linear-gradient(135deg, #2563eb, #1e3a8a);
-	border-color: #1e3a8a;
-	transform: translateY(-2px);
-	box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+	background: var(--accent-hover);
+	box-shadow: var(--shadow-md);
 }
 
 #run:active {
-	background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
-	border-color: #1e3a8a;
-	transform: translateY(0);
-	box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+	background: var(--accent-hover);
+	box-shadow: var(--shadow-sm);
 }
 
-#run:disabled {
-	background: linear-gradient(135deg, #9ca3af, #6b7280);
-	border-color: #6b7280;
-	color: #d1d5db;
+#run:disabled,
+#run:disabled:hover {
+	background: var(--muted-2);
+	color: var(--bg);
 	cursor: not-allowed;
 	opacity: 0.6;
-	transform: none;
-	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
-}
-
-#run:disabled:hover {
-	background: linear-gradient(135deg, #9ca3af, #6b7280);
-	border-color: #6b7280;
-	transform: none;
-	box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+	box-shadow: none;
 }
 
 #runOnce {
 	font-family: var(--font-sans);
-	background: linear-gradient(135deg, #6b7280, #4b5563);
-	border: 2px solid #374151;
-	border-radius: 6px;
-	color: white;
+	background: var(--bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	color: var(--muted);
 	cursor: pointer;
-	font-size: 0.9em;
+	font-size: var(--font-base);
 	font-weight: 500;
 	margin: 0;
 	padding: 8px 16px;
-	transition: all 0.2s ease;
-	box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
+	transition:
+		background var(--transition-fast),
+		border-color var(--transition-fast);
 }
 
 #runOnce:hover {
-	background: linear-gradient(135deg, #4b5563, #374151);
-	border-color: #1f2937;
-	transform: translateY(-1px);
-	box-shadow: 0 3px 8px rgba(107, 114, 128, 0.4);
+	background: var(--hover);
+	border-color: var(--input-border-hover);
 }
 
 #runOnce:active {
-	background: linear-gradient(135deg, #374151, #1f2937);
-	border-color: #111827;
-	transform: translateY(0);
-	box-shadow: 0 1px 4px rgba(107, 114, 128, 0.3);
+	background: var(--hover);
 }
 
-#runOnce:disabled {
-	background: linear-gradient(135deg, #9ca3af, #6b7280);
-	border-color: #6b7280;
-	color: #d1d5db;
+#runOnce:disabled,
+#runOnce:disabled:hover {
+	background: var(--bg);
+	border-color: var(--input-border);
+	color: var(--muted-2);
 	cursor: not-allowed;
 	opacity: 0.6;
-	transform: none;
-	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
-}
-
-#runOnce:disabled:hover {
-	background: linear-gradient(135deg, #9ca3af, #6b7280);
-	border-color: #6b7280;
-	transform: none;
-	box-shadow: 0 1px 3px rgba(107, 114, 128, 0.2);
 }
 
 #rtMouseOverBox > text {
@@ -1004,11 +967,11 @@ body.splitterDragging {
 }
 
 .controlPanel .trackSelect > select {
-	border-radius: 0 6px 6px 0;
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .controlPanel .trackSelect > select:first-child {
-	border-radius: 6px 0 0 6px;
+	border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 	border-right: none;
 }
 
@@ -1039,7 +1002,7 @@ body.splitterDragging {
 }
 
 .controlPanel img.selected {
-	background: hsla(215 60% 50% / 0.1);
+	background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .racetrackRow {
@@ -1066,7 +1029,7 @@ body.splitterDragging {
 	align-items: center;
 	gap: 5px;
 	cursor: pointer;
-	color: hsl(215 10% 40%);
+	color: var(--muted);
 	font-weight: 500;
 }
 
@@ -1505,14 +1468,6 @@ body.splitterDragging {
 .dark .navTab.disabled {
 	color: #555;
 }
-.dark #themeToggle {
-	border-color: var(--border);
-	color: var(--muted);
-}
-.dark #themeToggle:hover {
-	background: #2a2a2a;
-	color: var(--fg);
-}
 
 /* --- Dark mode: Sidebar --- */
 .dark #iconSidebar {
@@ -1531,61 +1486,6 @@ body.splitterDragging {
 	color: #e4e4e7;
 }
 
-/* --- Dark mode: Control Panel --- */
-.dark .controlPanel {
-	background: var(--surface);
-}
-.dark .controlPanelLabel {
-	color: var(--muted);
-}
-.dark .controlPanelField::before {
-	background: var(--border);
-}
-.dark .controlPanel select,
-.dark .controlPanel input {
-	background-color: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-.dark .controlPanel select:hover,
-.dark .controlPanel input:hover {
-	border-color: var(--input-border-hover);
-}
-.dark .controlPanel select:focus,
-.dark .controlPanel input:focus {
-	border-color: #888;
-	box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.15);
-}
-.dark .controlPanel .groundSelect {
-	background-color: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-
-/* --- Dark mode: Run bar --- */
-.dark .runBarGroup label {
-	color: var(--muted);
-}
-.dark .runBarGroup input[type="number"] {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-.dark .runBarGroup input[type="number"]:hover {
-	border-color: var(--input-border-hover);
-}
-.dark #seedWrapper button {
-	background: var(--surface);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-.dark #seedWrapper button:hover {
-	background: #2a2a2a;
-}
-.dark .racetrackControls label {
-	color: var(--muted);
-}
-
 /* --- Dark mode: Mode tabs --- */
 .dark #modeTabs {
 	background: #1e1e1e;
@@ -1602,16 +1502,6 @@ body.splitterDragging {
 	color: var(--fg);
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-.dark #chartSplitter {
-	background: var(--border, #2e2e2e);
-}
-.dark #chartSplitter::after {
-	background: #5a5a5a;
-}
-.dark #chartSplitter:hover {
-	background: #3a3a3a;
-}
-
 /* --- Dark mode: Uma tab bar --- */
 .dark .umaTabBar {
 	border-bottom-color: var(--border);
@@ -1653,116 +1543,6 @@ body.splitterDragging {
 .dark #expandBtn::after {
 	border-right-color: var(--muted);
 	border-top-color: var(--muted);
-}
-
-/* --- Dark mode: Settings pane --- */
-.dark #settingsPane {
-	background: #141414;
-	border-right-color: var(--border);
-}
-.dark #settingsPane h3 {
-	color: hsl(215 10% 55%);
-}
-.dark .settingsCard {
-	background: #1e1e1e;
-	border-color: var(--border);
-}
-.dark .settingsCard h4 {
-	color: hsl(215 10% 50%);
-}
-.dark .settingsCard select {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--fg);
-}
-.dark .settingsToggleRow {
-	color: var(--fg);
-}
-.dark .settingsToggleRow + .settingsToggleRow {
-	border-top-color: var(--border);
-}
-.dark .chartHoverHint {
-	color: #b8963e;
-}
-.dark .toggleTrack {
-	background: #3a3a3a;
-}
-.dark .toggleSwitch input:checked + .toggleTrack {
-	background: rgb(120, 122, 168);
-}
-.dark .settingsSmallBtn {
-	background: var(--surface);
-	border-color: var(--border);
-	color: var(--fg);
-}
-.dark .settingsSmallBtn:hover {
-	background: #2a2a2a;
-}
-.dark .settingsCopyBtn {
-	background: #1e1e1e;
-	border-color: var(--border);
-	color: var(--fg);
-}
-.dark .settingsCopyBtn:hover {
-	background: #2a2a2a;
-}
-.dark .duelingModal {
-	background: #1e1e1e;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-.dark .duelingModal h2 {
-	color: var(--fg);
-}
-.dark .duelingSliders label {
-	color: var(--fg);
-}
-.dark .duelingWarning {
-	background: #2a1a1a;
-	border-color: #4a2020;
-}
-.dark .duelingWarning p {
-	color: #f88;
-}
-.dark .duelingActions button {
-	background: rgb(120, 122, 168);
-}
-.dark .duelingActions button:hover {
-	background: rgb(140, 142, 188);
-}
-.dark #pacemakerIndicator span {
-	color: var(--theme-brown);
-}
-.dark #pacemakerIndicator button {
-	border-color: var(--border);
-	color: var(--theme-brown);
-}
-.dark #pacemakerIndicator button:hover {
-	background: #2a2a2a;
-}
-.dark #pacemakerCountControl {
-	border-top-color: var(--border);
-}
-.dark #pacemakerCountControl label {
-	color: var(--theme-brown);
-}
-.dark .pacemaker-combobox-button {
-	background: var(--input-bg);
-	border-color: var(--input-border);
-	color: var(--theme-brown);
-}
-.dark .pacemaker-combobox-button:hover {
-	background: #2a2a2a;
-}
-.dark .pacemaker-combobox-dropdown {
-	background: #222;
-	border-color: var(--border);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-.dark .pacemaker-combobox-option {
-	border-bottom-color: var(--border);
-}
-.dark .pacemaker-combobox-option:hover {
-	background: #2a2a2a;
 }
 
 /* --- Dark mode: Uma pane --- */
@@ -1834,36 +1614,32 @@ body.splitterDragging {
 }
 
 .runAdditionalSamples {
-	background: #3b82f6;
-	border: 1px solid #1e40af;
+	background: var(--accent);
+	border: none;
 	border-radius: 4px;
 	color: white;
 	cursor: pointer;
 	font-size: 0.7em;
 	font-weight: 500;
 	padding: 4px 8px;
-	transition: background 0.15s ease;
+	transition: background var(--transition-fast);
 	white-space: nowrap;
 }
 
 .runAdditionalSamples:hover {
-	background: #2563eb;
+	background: var(--accent-hover);
 }
 
 .runAdditionalSamples:active {
-	background: #1d4ed8;
+	background: var(--accent-hover);
 }
 
-.runAdditionalSamples:disabled {
-	background: #9ca3af;
-	border-color: #6b7280;
-	color: #d1d5db;
+.runAdditionalSamples:disabled,
+.runAdditionalSamples:disabled:hover {
+	background: var(--muted-2);
+	color: var(--bg);
 	cursor: not-allowed;
 	opacity: 0.6;
-}
-
-.runAdditionalSamples:disabled:hover {
-	background: #9ca3af;
 }
 
 body {
@@ -2029,9 +1805,9 @@ body {
 }
 
 .saveLoadModal {
-	background: white;
-	border-radius: 10px;
-	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+	background: var(--bg);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-lg);
 	padding: 20px 24px;
 	min-width: 280px;
 	max-width: 400px;
@@ -2040,25 +1816,16 @@ body {
 	gap: 12px;
 }
 
-.dark .saveLoadModal {
-	background: #1e1e1e;
-	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-}
-
 .saveLoadModalTitle {
 	margin: 0;
-	font-size: 15px;
+	font-size: var(--font-lg);
 	font-weight: 600;
-	color: hsl(215 20% 15%);
-}
-
-.dark .saveLoadModalTitle {
 	color: var(--fg);
 }
 
 .saveLoadInputLabel {
 	display: block;
-	font-size: 12px;
+	font-size: var(--font-sm);
 	font-weight: 500;
 	color: var(--muted);
 	margin-bottom: -6px;
@@ -2072,13 +1839,16 @@ body {
 	font-family: inherit;
 	background: var(--input-bg);
 	border: 1px solid var(--input-border);
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	color: var(--fg);
 	outline: none;
-	transition: border-color 0.15s;
+	transition:
+		border-color var(--transition-fast),
+		box-shadow var(--transition-fast);
 }
 .saveLoadInput:focus {
-	border-color: var(--input-border-hover);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 .saveLoadInput::placeholder {
 	color: var(--muted);
@@ -2087,11 +1857,8 @@ body {
 .saveLoadDeleteText {
 	margin: 0;
 	font-size: 14px;
-	color: hsl(215 20% 20%);
-	line-height: 1.5;
-}
-.dark .saveLoadDeleteText {
 	color: var(--fg);
+	line-height: 1.5;
 }
 .saveLoadDeleteText strong {
 	font-weight: 600;
@@ -2105,71 +1872,97 @@ body {
 
 .saveLoadBtnSecondary {
 	padding: 6px 14px;
-	background: white;
-	border: 1px solid hsl(210 10% 85%);
-	border-radius: 6px;
-	color: hsl(215 20% 35%);
-	font-size: 13px;
+	background: var(--bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	color: var(--muted);
+	font-size: var(--font-base);
 	font-family: inherit;
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		border-color 0.15s;
+		background var(--transition-fast),
+		border-color var(--transition-fast);
 }
 .saveLoadBtnSecondary:hover {
-	background: hsl(210 6% 95%);
-	border-color: hsl(210 10% 78%);
-}
-
-.dark .saveLoadBtnSecondary {
-	background: #1e1e1e;
-	border-color: var(--border);
-	color: var(--fg);
-}
-.dark .saveLoadBtnSecondary:hover {
-	background: #2a2a2a;
+	background: var(--hover);
+	border-color: var(--input-border-hover);
 }
 
 .saveLoadBtnPrimary {
 	padding: 6px 14px;
-	background: rgb(148, 150, 189);
+	background: var(--accent);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	color: white;
-	font-size: 13px;
+	font-size: var(--font-base);
 	font-family: inherit;
 	cursor: pointer;
-	transition: background 0.15s;
+	transition: background var(--transition-fast);
 }
 .saveLoadBtnPrimary:hover {
-	background: rgb(128, 130, 172);
+	background: var(--accent-hover);
 }
-
-.dark .saveLoadBtnPrimary {
-	background: rgb(120, 122, 168);
-}
-.dark .saveLoadBtnPrimary:hover {
-	background: rgb(140, 142, 188);
+.saveLoadBtnPrimary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .saveLoadBtnDanger {
 	padding: 6px 14px;
-	background: #dc2626;
+	background: var(--negative);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	color: white;
-	font-size: 13px;
+	font-size: var(--font-base);
 	font-family: inherit;
 	cursor: pointer;
-	transition: background 0.15s;
+	transition: background var(--transition-fast);
 }
 .saveLoadBtnDanger:hover {
-	background: #b91c1c;
+	background: color-mix(in srgb, var(--negative) 85%, black);
 }
 
-.dark .saveLoadBtnDanger {
-	background: #991b1b;
+/* --- Import dialog (uses the Save/Load modal chrome) --- */
+.importDialogModal {
+	width: 420px;
+	max-width: 92vw;
 }
-.dark .saveLoadBtnDanger:hover {
-	background: #b91c1c;
+
+.importDialogHint {
+	margin: 4px 0 10px;
+	font-size: var(--font-base);
+	color: var(--muted);
+}
+
+.importDialogHint a {
+	color: var(--accent);
+}
+
+.importTextarea {
+	width: 100%;
+	box-sizing: border-box;
+	height: 72px;
+	padding: 8px 10px;
+	font-size: var(--font-sm);
+	font-family: monospace;
+	resize: vertical;
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	background: var(--input-bg);
+	color: var(--fg);
+	outline: none;
+	transition:
+		border-color var(--transition-fast),
+		box-shadow var(--transition-fast);
+}
+
+.importTextarea:focus {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.importDialogError {
+	margin: 6px 0 0;
+	font-size: var(--font-sm);
+	color: var(--negative);
 }
