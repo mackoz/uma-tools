@@ -1,0 +1,118 @@
+/* Design tokens for umalator (see docs/adr/0010-design-tokens.md).
+ *
+ * This file must stay custom-properties + @font-face only, and must remain the FIRST
+ * import in app.tsx so it concatenates ahead of every component stylesheet in bundle.css.
+ * Dark mode works by redefining the color tokens under `.dark` (set on <html> by app.tsx);
+ * rules that consume tokens need no `.dark` override of their own.
+ */
+
+@font-face {
+	font-family: "Inter";
+	src:
+		local("Inter"),
+		url("/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+}
+
+@font-face {
+	font-family: "Noto Sans JP";
+	src:
+		local("Noto Sans JP"),
+		url("/uma-tools/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
+}
+
+:root {
+	/* Surfaces and text */
+	--bg: #ffffff;
+	--fg: #111827;
+	--muted: #374151;
+	--card: #f9fafb;
+	--border: #e5e7eb;
+	--surface: #f2f2f2;
+	--input-bg: #ffffff;
+	--input-border: hsl(210 14% 83%);
+	--input-border-hover: hsl(215 50% 70%);
+
+	/* Legacy Uma-game palette (kept for RaceTrack/SkillList-era styles) */
+	--theme-brown: rgb(121, 64, 22);
+	--theme-brown-light: rgb(224, 214, 204);
+	--theme-brown-bg: rgb(248, 248, 248);
+
+	/* Names for the recurring ad-hoc palette scattered through app.css */
+	--accent: hsl(215 70% 50%);
+	--accent-hover: hsl(215 70% 44%);
+	--accent-active-bg: hsl(215 95% 95%);
+	--hover: hsl(210 6% 93%);
+	--muted-2: hsl(215 16% 50%);
+
+	/* Data/result colors (win/loss/neutral in results and expanded chart rows) */
+	--positive: #4caf50;
+	--negative: #f44336;
+	--neutral: #999999;
+
+	/* Typography */
+	--font-sans: Inter, "Noto Sans JP", sans-serif;
+	--font-xs: 0.6875rem;
+	--font-sm: 0.75rem;
+	--font-base: 0.8125rem;
+	--font-lg: 0.9375rem;
+	--font-2xl: 1.0625rem;
+
+	/* Spacing */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+
+	/* Radii */
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 14px;
+
+	/* Shadows */
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+	--shadow-md: 0 2px 8px rgb(0 0 0 / 0.1);
+	--shadow-lg: 0 8px 24px rgb(0 0 0 / 0.16);
+
+	/* Motion */
+	--transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* z-index scale. Values match the literals that predate this file; the
+	 * above-modal tier exists so the sidebar/mobile bar stay clickable over
+	 * InfoModal's full-viewport backdrop (see #iconSidebar in app.css). */
+	--z-sticky: 10;
+	--z-modal: 1000;
+	--z-above-modal: 1001;
+	--z-overlay: 9999;
+	--z-overlay-top: 10000;
+}
+
+.dark {
+	--bg: #141414;
+	--fg: #e4e4e7;
+	--muted: #a1a1aa;
+	--card: #1c1c1c;
+	--border: #2e2e2e;
+	--surface: #1e1e1e;
+	--input-bg: #191919;
+	--input-border: #363636;
+	--input-border-hover: #555;
+
+	--theme-brown: #d4a574;
+	--theme-brown-light: #3a3a3a;
+	--theme-brown-bg: #1e1e1e;
+
+	--accent: hsl(215 70% 55%);
+	--accent-hover: hsl(215 70% 62%);
+	--accent-active-bg: hsl(215 35% 20%);
+	--hover: #2a2a2a;
+	--muted-2: #a1a1aa;
+
+	--positive: #66bb6a;
+	--negative: #ef5350;
+	--neutral: #8a8a8a;
+
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+	--shadow-md: 0 2px 8px rgb(0 0 0 / 0.5);
+	--shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
+}

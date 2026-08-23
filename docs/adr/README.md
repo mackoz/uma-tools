@@ -31,3 +31,4 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0007](0007-statistical-skill-chart-method.md) | The Skill Chart ranks by paired comparisons with adaptive, CI-based elimination | Accepted |
 | [0008](0008-worker-cancellation-by-terminate.md) | Chart cancellation terminates and respawns workers | Accepted |
 | [0009](0009-chart-runs-use-real-hp-policy.md) | Chart runs request `mode: 'compare'` for a real HP policy | Accepted |
+| [0010](0010-design-tokens.md) | Umalator styles resolve through a single token file; dark mode is token redefinition | Accepted |
