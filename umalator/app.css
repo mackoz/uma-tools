@@ -22,14 +22,10 @@ body {
 #iconSidebar {
 	grid-column: 1;
 	grid-row: 2 / -1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
 	padding: 12px 0;
-	gap: 4px;
 	width: 48px;
-	background: var(--bg, #fff);
-	border-right: 1px solid hsl(210 10% 85%);
+	background: var(--bg);
+	border-right: 1px solid var(--border);
 	/* Above InfoModal's full-viewport backdrop (--z-modal) so sidebar navigation stays
 	   clickable while a panel (Limitations/Bugs) is open -- otherwise the backdrop silently
 	   swallows the click and just closes the current panel instead of switching. */
@@ -37,75 +33,20 @@ body {
 	z-index: var(--z-above-modal);
 }
 
-.sidebarIcon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 8px;
-	border: none;
-	background: transparent;
-	color: hsl(215 16% 50%);
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.sidebarIcon:hover {
-	background: hsl(210 6% 93%);
-	color: hsl(215 20% 30%);
-}
-
-.sidebarIcon.active {
-	background: hsl(215 95% 95%);
-	color: hsl(215 70% 50%);
-}
-
 #navBar {
 	grid-column: 1 / -1;
 	display: flex;
 	align-items: stretch;
 	justify-content: space-between;
-	border-bottom: 1px solid hsl(210 10% 85%);
-	background: var(--bg, #fff);
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
 	padding: 0 16px;
 	height: 44px;
 	z-index: var(--z-sticky);
 }
 
-#navTabs {
-	display: flex;
-	align-items: stretch;
-	gap: 0;
-}
-
-.navTab {
-	display: flex;
-	align-items: center;
-	padding: 0 16px;
+#navTabs .tabsItem {
 	font-size: 14px;
-	font-weight: 600;
-	color: hsl(215 16% 50%);
-	border-bottom: 2px solid transparent;
-	margin-bottom: -1px;
-	cursor: pointer;
-	user-select: none;
-	transition: all 0.15s ease;
-}
-
-.navTab:hover:not(.selected):not(.disabled) {
-	color: hsl(215 20% 30%);
-	border-bottom-color: hsl(210 10% 80%);
-}
-
-.navTab.selected {
-	color: hsl(215 70% 50%);
-	border-bottom-color: hsl(215 70% 50%);
-}
-
-.navTab.disabled {
-	color: hsl(215 10% 70%);
-	cursor: default;
 }
 
 #themeToggle {
@@ -275,40 +216,9 @@ body {
 }
 
 #modeTabs {
-	display: inline-flex;
 	align-self: center;
-	background: hsl(210 6% 93%);
-	border-radius: 8px;
-	padding: 3px;
-	gap: 2px;
+	border-bottom: 1px solid var(--border);
 	margin-bottom: 8px;
-}
-
-.modeTab {
-	padding: 6px 20px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: hsl(215 16% 47%);
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.modeTab:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	background: hsl(210 6% 88%);
-}
-
-.modeTab.selected {
-	background: #fff;
-	color: hsl(215 20% 15%);
-	box-shadow:
-		0 1px 3px rgba(0, 0, 0, 0.08),
-		0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #mainContent {
@@ -923,13 +833,13 @@ body.splitterDragging {
 
 #runOnce {
 	font-family: var(--font-sans);
-	background: var(--bg);
-	border: 1px solid var(--input-border);
+	background: var(--accent-active-bg);
+	border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 	border-radius: var(--radius-sm);
-	color: var(--muted);
+	color: var(--accent);
 	cursor: pointer;
 	font-size: var(--font-base);
-	font-weight: 500;
+	font-weight: 600;
 	margin: 0;
 	padding: 8px 16px;
 	transition:
@@ -938,12 +848,12 @@ body.splitterDragging {
 }
 
 #runOnce:hover {
-	background: var(--hover);
-	border-color: var(--input-border-hover);
+	background: color-mix(in srgb, var(--accent) 22%, var(--bg));
+	border-color: var(--accent);
 }
 
 #runOnce:active {
-	background: var(--hover);
+	background: color-mix(in srgb, var(--accent) 30%, var(--bg));
 }
 
 #runOnce:disabled,
@@ -1239,37 +1149,8 @@ body.splitterDragging {
 }
 
 .umaTabBar {
-	display: flex;
-	align-items: stretch;
 	width: 100%;
-	border-bottom: 1px solid hsl(210 10% 85%);
-	gap: 0;
-}
-
-.umaTabItem {
-	padding: 10px 20px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	color: hsl(215 16% 50%);
-	background: none;
-	border: none;
-	border-bottom: 2px solid transparent;
-	margin-bottom: -1px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.umaTabItem:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	border-bottom-color: hsl(210 10% 80%);
-}
-
-.umaTabItem.selected {
-	color: hsl(215 70% 50%);
-	font-weight: 600;
-	border-bottom-color: hsl(215 70% 50%);
+	border-bottom: 1px solid var(--border);
 }
 
 .umaTabBar #expandBtn,
@@ -1277,41 +1158,6 @@ body.splitterDragging {
 	margin-left: auto;
 	align-self: center;
 	margin-right: 8px;
-}
-
-.umaTabsGroup {
-	display: inline-flex;
-	background: hsl(210 6% 93%);
-	border-radius: 8px;
-	padding: 3px;
-	gap: 2px;
-}
-
-.umaTab {
-	padding: 6px 20px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: hsl(215 16% 47%);
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.umaTab:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	background: hsl(210 6% 88%);
-}
-
-.umaTab.selected {
-	background: #fff;
-	color: hsl(215 20% 15%);
-	box-shadow:
-		0 1px 3px rgba(0, 0, 0, 0.08),
-		0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #expandBtn {
@@ -1351,13 +1197,11 @@ body.splitterDragging {
 	display: flex;
 	gap: 30px;
 	height: calc(100vh - 18px);
-	/* please work or ill delete that fuckass button */
 	left: auto;
 	margin-left: 2px;
 	padding: 6px;
 	position: fixed;
 	top: 0;
-	/* Hopefully doesnt make it expand any longer */
 	right: 0;
 	width: 100vw;
 	overflow-x: auto;
@@ -1374,8 +1218,6 @@ body.splitterDragging {
 	color: rgb(148, 150, 189);
 	font-size: 2em;
 	height: 2em;
-
-	/* Made the close button much more accessible*/
 	position: fixed;
 	right: 12px;
 	top: 12px;
@@ -1447,90 +1289,6 @@ body.splitterDragging {
 
 .basinnChartPopover .expandedSkill {
 	width: 345px;
-}
-
-/* --- Dark mode: Navbar --- */
-.dark #navBar {
-	background: #181818;
-	border-bottom-color: var(--border);
-}
-.dark .navTab {
-	color: var(--muted);
-}
-.dark .navTab:hover:not(.selected):not(.disabled) {
-	color: var(--fg);
-	border-bottom-color: #444;
-}
-.dark .navTab.selected {
-	color: #e4e4e7;
-	border-bottom-color: #e4e4e7;
-}
-.dark .navTab.disabled {
-	color: #555;
-}
-
-/* --- Dark mode: Sidebar --- */
-.dark #iconSidebar {
-	background: #181818;
-	border-right-color: var(--border);
-}
-.dark .sidebarIcon {
-	color: var(--muted);
-}
-.dark .sidebarIcon:hover {
-	background: #2a2a2a;
-	color: var(--fg);
-}
-.dark .sidebarIcon.active {
-	background: #2a2a2a;
-	color: #e4e4e7;
-}
-
-/* --- Dark mode: Mode tabs --- */
-.dark #modeTabs {
-	background: #1e1e1e;
-}
-.dark .modeTab {
-	color: var(--muted);
-}
-.dark .modeTab:hover:not(.selected) {
-	color: var(--fg);
-	background: #2a2a2a;
-}
-.dark .modeTab.selected {
-	background: #333;
-	color: var(--fg);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-/* --- Dark mode: Uma tab bar --- */
-.dark .umaTabBar {
-	border-bottom-color: var(--border);
-}
-.dark .umaTabItem {
-	color: var(--muted);
-}
-.dark .umaTabItem:hover:not(.selected) {
-	color: var(--fg);
-	border-bottom-color: #555;
-}
-.dark .umaTabItem.selected {
-	color: var(--fg);
-	border-bottom-color: var(--fg);
-}
-.dark .umaTabsGroup {
-	background: #1e1e1e;
-}
-.dark .umaTab {
-	color: var(--muted);
-}
-.dark .umaTab:hover:not(.selected) {
-	color: var(--fg);
-	background: #2a2a2a;
-}
-.dark .umaTab.selected {
-	background: #333;
-	color: var(--fg);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* --- Dark mode: Expand button --- */
