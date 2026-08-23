@@ -1197,13 +1197,11 @@ body.splitterDragging {
 	display: flex;
 	gap: 30px;
 	height: calc(100vh - 18px);
-	/* please work or ill delete that fuckass button */
 	left: auto;
 	margin-left: 2px;
 	padding: 6px;
 	position: fixed;
 	top: 0;
-	/* Hopefully doesnt make it expand any longer */
 	right: 0;
 	width: 100vw;
 	overflow-x: auto;
@@ -1220,8 +1218,6 @@ body.splitterDragging {
 	color: rgb(148, 150, 189);
 	font-size: 2em;
 	height: 2em;
-
-	/* Made the close button much more accessible*/
 	position: fixed;
 	right: 12px;
 	top: 12px;
