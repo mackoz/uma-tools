@@ -244,40 +244,9 @@ body {
 }
 
 #modeTabs {
-	display: inline-flex;
 	align-self: center;
-	background: hsl(210 6% 93%);
-	border-radius: 8px;
-	padding: 3px;
-	gap: 2px;
+	border-bottom: 1px solid var(--border);
 	margin-bottom: 8px;
-}
-
-.modeTab {
-	padding: 6px 20px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: hsl(215 16% 47%);
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	user-select: none;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.modeTab:hover:not(.selected) {
-	color: hsl(215 20% 30%);
-	background: hsl(210 6% 88%);
-}
-
-.modeTab.selected {
-	background: #fff;
-	color: hsl(215 20% 15%);
-	box-shadow:
-		0 1px 3px rgba(0, 0, 0, 0.08),
-		0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #mainContent {
@@ -1435,22 +1404,6 @@ body.splitterDragging {
 	color: #e4e4e7;
 }
 
-/* --- Dark mode: Mode tabs --- */
-.dark #modeTabs {
-	background: #1e1e1e;
-}
-.dark .modeTab {
-	color: var(--muted);
-}
-.dark .modeTab:hover:not(.selected) {
-	color: var(--fg);
-	background: #2a2a2a;
-}
-.dark .modeTab.selected {
-	background: #333;
-	color: var(--fg);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
 /* --- Dark mode: Uma tab bar --- */
 .dark .umaTabBar {
 	border-bottom-color: var(--border);

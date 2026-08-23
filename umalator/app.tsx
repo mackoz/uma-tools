@@ -5418,28 +5418,31 @@ function App(props) {
 										: undefined
 								}
 							>
-								<div id="modeTabs">
-									<div
-										class={`modeTab ${mode == Mode.Compare ? 'selected' : ''}`}
-										onClick={() => updateUiState(UiStateMsg.SetModeCompare)}
-									>
-										Compare
-									</div>
-									<div
-										class={`modeTab ${mode == Mode.Chart ? 'selected' : ''}`}
-										onClick={() => updateUiState(UiStateMsg.SetModeChart)}
-									>
-										Skill Chart
-									</div>
-									<div
-										class={`modeTab ${mode == Mode.UniquesChart ? 'selected' : ''}`}
-										onClick={() =>
-											updateUiState(UiStateMsg.SetModeUniquesChart)
-										}
-									>
-										Uma Chart
-									</div>
-								</div>
+								<Tabs
+									id="modeTabs"
+									variant="underline"
+									items={[
+										{ key: 'compare', label: 'Compare' },
+										{ key: 'chart', label: 'Skill Chart' },
+										{ key: 'uniques', label: 'Uma Chart' },
+									]}
+									selected={
+										mode == Mode.Compare
+											? 'compare'
+											: mode == Mode.Chart
+												? 'chart'
+												: 'uniques'
+									}
+									onSelect={(key) =>
+										updateUiState(
+											key === 'compare'
+												? UiStateMsg.SetModeCompare
+												: key === 'chart'
+													? UiStateMsg.SetModeChart
+													: UiStateMsg.SetModeUniquesChart,
+										)
+									}
+								/>
 								<div id="runBar">
 									{mode == Mode.Compare ? (
 										<button
