@@ -86,14 +86,16 @@
 	/* Motion */
 	--transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 
-	/* z-index scale. Values match the literals that predate this file; the
-	 * above-modal tier exists so the sidebar/mobile bar stay clickable over
-	 * InfoModal's full-viewport backdrop (see #iconSidebar in app.css). */
+	/* z-index scale (rationalized in UI-11; the pre-token literals were
+	 * 1000/1001 for the modal tiers and 9999/10000 for the uma overlay).
+	 * Ordering contract: sticky < modal < above-modal < overlay < overlay-top.
+	 * The above-modal tier exists so the sidebar/mobile bar stay clickable
+	 * over InfoModal's full-viewport backdrop (see #iconSidebar in app.css). */
 	--z-sticky: 10;
-	--z-modal: 1000;
-	--z-above-modal: 1001;
-	--z-overlay: 9999;
-	--z-overlay-top: 10000;
+	--z-modal: 100;
+	--z-above-modal: 110;
+	--z-overlay: 200;
+	--z-overlay-top: 210;
 }
 
 .dark {
