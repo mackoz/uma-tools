@@ -13,32 +13,23 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
-						<summary>2026-08-23 (2)</summary>
-						<ul>
-							<li>
-								UI refresh, part 1 of the visible changes: buttons, inputs,
-								dropdowns, toggles, and cards across the app have been restyled
-								with a cleaner, more consistent look — flat accent-colored Run
-								button, subtler borders and shadows, and one shared blue accent
-								replacing the old mix of blues, lavenders, and browns (Run bar,
-								race/skill settings panels, Settings pane, save/load/import
-								dialogs, and the screenshot-import window). Dark mode now covers
-								a few spots it previously missed, like the import dialog's error
-								text. Layout and navigation are unchanged — that's the next
-								phase. If a control looks broken or unreadable (especially in
-								dark mode), please report it.
-							</li>
-						</ul>
-					</details>
-					<details class="release" open={true}>
 						<summary>2026-08-23</summary>
 						<ul>
+							{/* Rolling UI-refresh entry: rewrite this one bullet as later
+							    phases land instead of adding a new bullet per phase. */}
 							<li>
-								Internal groundwork for an upcoming UI refresh: all colors,
-								fonts, spacing, and layering now resolve through a single
-								design-token stylesheet. No visible changes yet — if anything
-								looks different (especially in dark mode), it's a bug; please
-								report it.
+								Ongoing UI refresh (in progress): the app now runs on a single
+								design-token stylesheet, and so far the buttons, inputs,
+								dropdowns, toggles, and cards have been restyled with a cleaner,
+								more consistent look — flat accent-colored Run button, subtler
+								borders and shadows, and one shared blue accent replacing the
+								old mix of blues, lavenders, and browns (Run bar, race/skill
+								settings panels, Settings pane, save/load/import dialogs, and
+								the screenshot-import window). Dark mode now covers a few spots
+								it previously missed, like the import dialog's error text.
+								Layout and navigation are unchanged — that's a later phase. If
+								anything looks broken or unreadable (especially in dark mode),
+								please report it.
 							</li>
 						</ul>
 					</details>
