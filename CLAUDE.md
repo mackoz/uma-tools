@@ -14,6 +14,16 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 4. **Any new asset reference must use the `/uma-tools/` absolute prefix**, matching the existing pattern in `icons.json`, `umalator/app.css`, `umalator/app.tsx`, `components/SkillList.tsx`, `components/SkillPicker.tsx`. This is required for GitHub Pages deployment to work — see `docs/deployment.md`. Don't switch to relative paths for icons/fonts without reading that doc first.
 
+## Branching & PRs
+
+- **One open PR per repo at a time.** Before creating a branch, check for an existing open PR/branch covering the same area (`gh pr list`) and push to that branch instead of branching off `master` again.
+- **Ask before switching branches in a checkout you didn't create, entering or removing a worktree, or killing a running process** — another session may own it. Check `git worktree list` and what a process is serving before touching either.
+- **Worktrees live under `.claude/worktrees/` and need setup**: run `scripts/worktree-setup.sh` inside a fresh worktree (submodule init, `node_modules` symlink, git-exclude), and `scripts/stage-for-review.sh <branch>` to tear one down and stage its branch in the main checkout. A dev server started from a worktree derives its static root from the repo path — the app serves at `http://localhost:8000/<worktree-name>/umalator-global/` and `/uma-tools/`-prefixed assets (icons, fonts) 404 there. That's expected inside a worktree; do final visual checks from the main checkout.
+
+## Scope control
+
+Match ceremony to change size. A trivial fix (a two-line CSS tweak, a typo) gets a commit only — no changelog entry, no ADR, no tracker ticket. Reserve those for multi-file or behavior-changing work: a changelog entry when the change visibly affects umalator-global users, an ADR when a decision could have gone another way.
+
 ## Build / verify commands
 
 ```sh
@@ -83,6 +93,12 @@ Of that 76, 11 umas (plus 11 alt outfits on already-counted umas) are **not actu
   - After a fresh clone, run `git submodule update --init` — an unitialized submodule leaves `uma-skill-tools/` looking present in listings but empty on disk, and every build fails on missing imports.
   - **Engine changes happen in the submodule repo first.** Edit inside `uma-skill-tools/`, commit and push *there* (it's its own git repo, with its own remote), then come back here and commit the resulting gitlink bump (`git add uma-skill-tools && git commit`). Editing the checked-out copy here without doing that leaves the fix on disk but unrecorded — the gitlink still points at the old commit, so a fresh clone or `git submodule update` silently reverts it.
   - One concrete trap carried over from the engine's own `CLAUDE.md`: `Rule30CARng` (`Random.ts:29`) is just an alias for a `prando`-backed PRNG here, even though alpha123's class of the same name is a real Rule-30 cellular-automaton generator.
+
+## Documentation changes
+
+- After a code change, sweep this repo's own `README`/`CLAUDE.md`/`docs/` for claims the change made stale and fix them in the same pass.
+- When rewriting a doc, keep its existing format — tables stay tables. Don't convert a table to prose unless explicitly asked.
+- Verify factual claims (stats, mechanics, HP/chart numbers) against the source code or a real `master.mdb` query before writing them, and cite the file you checked.
 
 ## Where to look next
 
