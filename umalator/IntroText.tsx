@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { cloneElement, h, toChildArray } from 'preact';
 
 import './IntroText.css';
 
@@ -6,13 +6,29 @@ export function INTRO(props) {
 	return <div id="REALINTROTEXT"></div>;
 }
 
+// The newest release is expanded by default and everything below it collapsed,
+// derived from list position — do not put `open` on individual <details class="release">
+// entries. Adding a new dated section at the top of the list is all that's needed.
+function ReleaseList(props) {
+	const releases = toChildArray(props.children);
+	return (
+		<div class="releaseList">
+			{releases.map((release, i) =>
+				i === 0 && typeof release === 'object'
+					? cloneElement(release, { open: true })
+					: release,
+			)}
+		</div>
+	);
+}
+
 export function IntroText(props) {
 	return (
 		<div id="introtext">
 			<details open={true}>
 				<summary>Changelog</summary>
-				<div class="releaseList">
-					<details class="release" open={true}>
+				<ReleaseList>
+					<details class="release">
 						<summary>2026-08-24</summary>
 						<ul>
 							<li>
@@ -30,7 +46,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-					<details class="release" open={true}>
+					<details class="release">
 						<summary>2026-08-23</summary>
 						<ul>
 							<li>
@@ -54,7 +70,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-					<details class="release" open={true}>
+					<details class="release">
 						<summary>2026-08-22</summary>
 						<ul>
 							<li>
@@ -295,7 +311,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-				</div>
+				</ReleaseList>
 			</details>
 			<details>
 				<summary>Older Changelog (previous maintainers)</summary>
