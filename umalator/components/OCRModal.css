@@ -10,21 +10,16 @@
 }
 
 .ocrModal {
-	background: white;
+	background: var(--bg);
 	border: 1px solid var(--border);
 	border-radius: 10px;
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+	box-shadow: var(--shadow-lg);
 	width: 900px;
 	max-width: 95vw;
 	max-height: 90vh;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-}
-
-.dark .ocrModal {
-	background: #1e1e1e;
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .ocrModalHeader {
@@ -40,10 +35,6 @@
 	margin: 0;
 	font-size: 16px;
 	font-weight: 600;
-	color: hsl(215 20% 15%);
-}
-
-.dark .ocrModalTitle {
 	color: var(--fg);
 }
 
@@ -83,10 +74,6 @@
 .ocrLabel {
 	font-size: 13px;
 	font-weight: 600;
-	color: hsl(215 20% 25%);
-}
-
-.dark .ocrLabel {
 	color: var(--fg);
 }
 
@@ -135,15 +122,12 @@
 	justify-content: center;
 }
 .ocrDropzone:hover {
-	border-color: hsl(215 70% 50%);
+	border-color: var(--accent);
 	background: var(--surface);
 }
 .ocrDropzone.dragover {
-	border-color: hsl(215 70% 50%);
-	background: hsl(210 6% 93%);
-}
-.dark .ocrDropzone.dragover {
-	background: #2a2a2a;
+	border-color: var(--accent);
+	background: var(--hover);
 }
 .ocrDropzone.hasImage {
 	padding: 8px;
@@ -169,33 +153,21 @@
 }
 
 .ocrInfoNote {
-	background: hsl(210 80% 96%);
-	border: 1px solid hsl(210 70% 80%);
+	background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+	border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--bg));
 	border-radius: 6px;
-	color: hsl(210 60% 35%);
+	color: color-mix(in srgb, var(--accent), var(--fg) 30%);
 	padding: 8px 12px;
 	font-size: 13px;
-}
-
-.dark .ocrInfoNote {
-	background: hsl(210 30% 18%);
-	border-color: hsl(210 30% 30%);
-	color: hsl(210 60% 75%);
 }
 
 .ocrError {
-	background: #fee;
-	border: 1px solid #fcc;
+	background: color-mix(in srgb, var(--negative) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
 	border-radius: 6px;
-	color: #c00;
+	color: var(--negative);
 	padding: 8px 12px;
 	font-size: 13px;
-}
-
-.dark .ocrError {
-	background: #2a1a1a;
-	border-color: #4a2020;
-	color: #f88;
 }
 
 .ocrSpinner {
@@ -254,14 +226,10 @@
 
 .ocrReviewKey {
 	font-weight: 600;
-	color: hsl(215 20% 25%);
+	color: var(--fg);
 	min-width: 85px;
 	font-size: 12px;
 	flex-shrink: 0;
-}
-
-.dark .ocrReviewKey {
-	color: var(--fg);
 }
 
 .ocrReviewValue {

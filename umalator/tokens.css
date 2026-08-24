@@ -57,6 +57,11 @@
 	--positive: #4caf50;
 	--negative: #f44336;
 	--neutral: #999999;
+	--warning: rgb(222, 161, 87);
+
+	/* Legacy game-palette greens (BasinnChart expanded row, proc-data dialog chrome) */
+	--highlight-green: rgb(121, 216, 35);
+	--proc-green-border: rgb(170, 221, 154);
 
 	/* Skill rarity colors (pill background + left-edge accent in HorseDef) */
 	--skill-white-bg: hsl(220 10% 97%);
@@ -67,6 +72,56 @@
 	--skill-pink-accent: hsl(320 70% 60%);
 	--skill-unique-bg: hsl(270 60% 98%);
 	--skill-unique-accent: hsl(270 65% 65%);
+
+	/* SkillList rarity pill gradients (shared component; light literals are the
+	   pre-token values, dark redefined below) */
+	--skill-white-grad: linear-gradient(
+		90deg,
+		rgb(255, 243, 247),
+		rgb(181, 178, 198)
+	);
+	--skill-white-grad-border: linear-gradient(
+		90deg,
+		rgb(214, 207, 231),
+		rgb(148, 150, 189)
+	);
+	--skill-gold-grad: linear-gradient(
+		90deg,
+		rgb(255, 255, 239),
+		rgb(255, 190, 40)
+	);
+	--skill-gold-grad-border: linear-gradient(
+		90deg,
+		rgb(255, 223, 115),
+		rgb(255, 166, 16)
+	);
+	--skill-pink-grad: linear-gradient(
+		90deg,
+		rgb(255, 238, 239),
+		rgb(255, 155, 211)
+	);
+	--skill-pink-grad-border: linear-gradient(
+		90deg,
+		rgb(255, 142, 198),
+		rgb(255, 89, 173)
+	);
+	--skill-unique-grad: linear-gradient(
+		90deg,
+		rgb(239, 255, 214),
+		rgb(161, 201, 248),
+		rgb(170, 170, 255),
+		rgb(255, 186, 231)
+	);
+	--skill-unique-grad-border: linear-gradient(
+		90deg,
+		rgb(197, 255, 190),
+		rgb(189, 235, 255),
+		rgb(195, 208, 255),
+		rgb(255, 138, 222)
+	);
+	--skill-name-halo: white;
+	--skill-shadow: rgb(180, 178, 192);
+	--filter-btn-bg: rgb(214, 207, 231);
 
 	/* Typography */
 	--font-sans: Inter, "Noto Sans JP", sans-serif;
@@ -132,6 +187,10 @@
 	--positive: #66bb6a;
 	--negative: #ef5350;
 	--neutral: #8a8a8a;
+	--warning: rgb(180, 120, 50);
+
+	--highlight-green: #3d6e1e;
+	--proc-green-border: #3d6e1e;
 
 	--skill-white-bg: hsl(220 10% 14%);
 	--skill-white-accent: hsl(220 15% 50%);
@@ -142,7 +201,62 @@
 	--skill-unique-bg: hsl(270 20% 14%);
 	--skill-unique-accent: hsl(270 55% 60%);
 
+	--skill-white-grad: linear-gradient(
+		90deg,
+		rgb(75, 70, 82),
+		rgb(140, 138, 158)
+	);
+	--skill-white-grad-border: linear-gradient(
+		90deg,
+		rgb(110, 105, 125),
+		rgb(108, 110, 140)
+	);
+	--skill-gold-grad: linear-gradient(90deg, rgb(85, 75, 40), rgb(175, 130, 25));
+	--skill-gold-grad-border: linear-gradient(
+		90deg,
+		rgb(150, 125, 50),
+		rgb(170, 110, 10)
+	);
+	--skill-pink-grad: linear-gradient(90deg, rgb(85, 55, 65), rgb(170, 95, 140));
+	--skill-pink-grad-border: linear-gradient(
+		90deg,
+		rgb(150, 80, 115),
+		rgb(170, 52, 110)
+	);
+	--skill-unique-grad: linear-gradient(
+		90deg,
+		rgb(60, 80, 50),
+		rgb(95, 125, 165),
+		rgb(100, 100, 165),
+		rgb(170, 115, 150)
+	);
+	--skill-unique-grad-border: linear-gradient(
+		90deg,
+		rgb(105, 165, 100),
+		rgb(115, 150, 165),
+		rgb(120, 130, 165),
+		rgb(170, 80, 140)
+	);
+	--skill-name-halo: #1a1a1a;
+	--skill-shadow: #333;
+	--filter-btn-bg: #333;
+
 	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
 	--shadow-md: 0 2px 8px rgb(0 0 0 / 0.5);
 	--shadow-lg: 0 8px 24px rgb(0 0 0 / 0.6);
+
+	/* SkillPicker's --sp-* variable layer, dark values (light layer + fallbacks
+	   live in components/SkillPicker.css; the picker is only reachable inside
+	   umalator, so its dark redefinitions live here with the other tokens). */
+	--sp-bg: var(--surface);
+	--sp-surface: var(--surface);
+	--sp-elevated: var(--bg);
+	--sp-overlay: #2a2a2a;
+	--sp-text-faint: #52525b;
+	--sp-border-strong: #444444;
+	--sp-primary: #60a5fa;
+	--sp-primary-glow: rgba(96, 165, 250, 0.12);
+	--sp-success: #4ade80;
+	--sp-error: #f87171;
+	--sp-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
 }
