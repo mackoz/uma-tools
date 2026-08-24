@@ -1,10 +1,17 @@
 // One-shot build + metrics check for the umalator apps.
 //
-//   npm run verify            build both apps, typecheck, CSS metrics; one diff line vs baseline
+//   npm run verify            build both apps, typecheck, CSS metrics, browser smoke, docs; one diff line vs baseline
 //   npm run verify:baseline   re-record scripts/verify-baseline.json (run on master after a merge)
 //   node scripts/verify.mjs --skip-build   metrics only (fast inner loop while editing CSS)
+//   node scripts/verify.mjs --skip-smoke   skip the browser smoke stage
 //
-// Exits non-zero if a build fails or the typecheck error count rises above the baseline.
+// The smoke stage runs scripts/smoke.mjs (Playwright chromium against the
+// umalator-global dev server, light + dark); it reports SKIPPED when playwright
+// isn't installed. The docs stage runs a strict build of the optional local
+// docs site under plans/ and is skipped when absent.
+//
+// Exits non-zero if a build fails, the typecheck error count rises above the
+// baseline, the smoke fails, or the docs build fails.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -15,6 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(root, 'scripts', 'verify-baseline.json');
 const writeBaseline = process.argv.includes('--baseline');
 const skipBuild = process.argv.includes('--skip-build');
+const skipSmoke = process.argv.includes('--skip-smoke');
 
 // tokens.css is deliberately excluded: it is the one place colors belong.
 const CSS_FILES = [
@@ -91,6 +99,40 @@ function typecheckErrors() {
 	return ((r.stdout || '').match(/error TS\d+/g) || []).length;
 }
 
+// Browser smoke (scripts/smoke.mjs owns the dev-server lifecycle). Exit code 2
+// means playwright/chromium isn't installed -- report SKIPPED, don't fail.
+function runSmoke() {
+	const r = spawnSync('node', ['scripts/smoke.mjs'], {
+		cwd: root,
+		encoding: 'utf8',
+		timeout: 180_000,
+	});
+	if (r.status === 0) return { label: 'smoke OK', ok: true };
+	if (r.status === 2) return { label: 'smoke SKIPPED (not installed)', ok: true };
+	const report = path.join(root, 'scripts', 'smoke-artifacts', 'smoke-report.json');
+	let count = '?';
+	try {
+		count = JSON.parse(fs.readFileSync(report, 'utf8')).checks.filter(c => !c.ok).length;
+	} catch {}
+	console.error((r.stdout || '').split('\n').slice(-5).join('\n'));
+	return { label: `smoke FAILED (${count}) -> scripts/smoke-artifacts/smoke-report.json`, ok: false };
+}
+
+// Optional local docs site: strict-build it when present, skip silently when not.
+function runDocs() {
+	const mkdocsBin = path.join(root, 'plans', '.venv', 'bin', 'mkdocs');
+	if (!fs.existsSync(path.join(root, 'plans', 'mkdocs.yml')) || !fs.existsSync(mkdocsBin)) {
+		return { label: 'docs -', ok: true };
+	}
+	const r = spawnSync(mkdocsBin, ['build', '--strict'], {
+		cwd: path.join(root, 'plans'),
+		encoding: 'utf8',
+	});
+	if (r.status === 0) return { label: 'docs OK', ok: true };
+	console.error((r.stderr || r.stdout || '').split('\n').slice(-10).join('\n'));
+	return { label: 'docs FAILED', ok: false };
+}
+
 function sum(obj) {
 	return Object.values(obj).reduce((a, b) => a + b, 0);
 }
@@ -125,6 +167,9 @@ if (fs.existsSync(baselinePath)) {
 	base = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
 }
 
+const smoke = skipSmoke ? { label: 'smoke -', ok: true } : runSmoke();
+const docs = runDocs();
+
 const tscLabel =
 	tsc >= TSC_CAP ? `>=${TSC_CAP} (capped)` : `${tsc}${delta(tsc, base?.tsc)}`;
 const parts = [
@@ -132,6 +177,8 @@ const parts = [
 	`tsc ${tscLabel}`,
 	`.dark ${sum(dark)}${delta(sum(dark), base ? sum(base.dark) : null)}`,
 	`literals ${sum(literals)}${delta(sum(literals), base ? sum(base.literals) : null)}`,
+	smoke.label,
+	docs.label,
 ];
 console.log(parts.join(' | '));
 
@@ -144,4 +191,4 @@ for (const [name, n] of Object.entries(dark)) {
 if (details.length) console.log(`.dark by file: ${details.join(' ')}`);
 
 const tscRegressed = base != null && base.tsc < TSC_CAP && tsc > base.tsc;
-if (!buildsOk || tscRegressed) process.exit(1);
+if (!buildsOk || tscRegressed || !smoke.ok || !docs.ok) process.exit(1);

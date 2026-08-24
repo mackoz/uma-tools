@@ -51,7 +51,8 @@
 	--accent-hover: hsl(215 70% 44%);
 	--accent-active-bg: hsl(215 95% 95%);
 	--hover: hsl(210 6% 93%);
-	--muted-2: hsl(215 16% 50%);
+	/* 46% lightness keeps muted text >= 4.5:1 on white (WCAG AA); 50% measured 4.25 */
+	--muted-2: hsl(215 16% 46%);
 
 	/* Data/result colors (win/loss/neutral in results and expanded chart rows) */
 	--positive: #4caf50;
