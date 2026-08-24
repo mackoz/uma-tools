@@ -141,19 +141,6 @@ export const LIMITATIONS: InfoEntry[] = [
 export const BUGS: InfoEntry[] = [
 	{
 		summary:
-			'A Rushed (kakari) uma calms down early far less often than it should, so it burns much more stamina than intended.',
-		body: (
-			<p>
-				The simulator is supposed to give a Rushed uma a chance to calm down
-				every 3 seconds. A timing bug in that check means it actually only gets
-				that chance roughly 1 time in 4 -- so a Rushed uma stays Rushed for
-				close to the maximum duration far more often than in the real game, and
-				burns correspondingly more stamina.
-			</p>
-		),
-	},
-	{
-		summary:
 			"Some skills can't be simulated at all, and stop the whole run when included.",
 		body: (
 			<p>

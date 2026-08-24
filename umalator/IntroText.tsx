@@ -13,6 +13,24 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<div class="releaseList">
 					<details class="release" open={true}>
+						<summary>2026-08-24</summary>
+						<ul>
+							<li>
+								Fixed a bug where a <strong>Rushed</strong> (kakari) uma calmed
+								down early far less often than it should have. The check for its
+								every-3-seconds chance to snap out of it had a timing bug that
+								made only the first of its three rolls actually fire, so a
+								Rushed uma's chance to calm down early was about 55% instead of
+								the intended ~90.9%. Rushed umas used to stay Rushed for close
+								to the maximum duration much more than in the real game and
+								burned correspondingly more stamina. Rushed umas now calm down
+								at close to the intended rate, so simulation numbers will shift
+								for any run where a uma gets Rushed. The corresponding entry in
+								the Known bugs panel has been removed.
+							</li>
+						</ul>
+					</details>
+					<details class="release" open={true}>
 						<summary>2026-08-23</summary>
 						<ul>
 							<li>
