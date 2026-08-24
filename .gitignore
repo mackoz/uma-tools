@@ -35,3 +35,6 @@ master.mdb
 /rougelike/bundle.css
 /umadle/bundle.js
 /umadle/bundle.css
+
+# Playwright smoke-test artifacts (scripts/smoke.mjs) -- screenshots + report, never committed
+/scripts/smoke-artifacts/
