@@ -5019,16 +5019,7 @@ function App(props) {
 														checked={selectedPacemakerIndices.includes(index)}
 														onChange={() => togglePacemakerSelection(index)}
 													/>
-													<span
-														style={{
-															color:
-																index === 0
-																	? '#22c55e'
-																	: index === 1
-																		? '#a855f7'
-																		: '#ec4899',
-														}}
-													>
+													<span class={`pacemakerName-${Math.min(index, 2)}`}>
 														Pacemaker {index + 1}
 													</span>
 												</label>
@@ -5606,10 +5597,7 @@ function App(props) {
 											disabled={isSimulationRunning}
 										/>
 									))}
-									<div
-										class="settingsToggleRow"
-										style={{ marginLeft: '12px', padding: '0' }}
-									>
+									<div class="settingsToggleRow settingsToggleRowInline">
 										<span>Hide Inherited Uniques</span>
 										<label class="toggleSwitch">
 											<input
@@ -5621,7 +5609,7 @@ function App(props) {
 											<span class="toggleTrack"></span>
 										</label>
 									</div>
-									<span class="chartHoverHint" style={{ marginLeft: '12px' }}>
+									<span class="chartHoverHint">
 										Hover a column heading for what it means
 									</span>
 								</div>
