@@ -15,22 +15,21 @@ export function IntroText(props) {
 					<details class="release" open={true}>
 						<summary>2026-08-23</summary>
 						<ul>
-							{/* Rolling UI-refresh entry: rewrite this one bullet as later
-							    phases land instead of adding a new bullet per phase. */}
 							<li>
-								Ongoing UI refresh (in progress): the app now runs on a single
-								design-token stylesheet, and so far the buttons, inputs,
-								dropdowns, toggles, cards, and all the tab strips have been
+								UI refresh (now complete): the whole app runs on a single
+								design-token stylesheet in both light and dark mode. Buttons,
+								inputs, dropdowns, toggles, cards, and all the tab strips were
 								restyled with a cleaner, more consistent look — flat
 								accent-colored Run button, subtler borders and shadows, one
 								shared blue accent, and matching underline-style tabs for the
 								top nav, the Compare/Skill Chart/Uma Chart switcher, and the Uma
 								1/Uma 2 tabs. The left sidebar icons show labels on hover, and
 								the ⓘ icon there opens this About/changelog panel any time — it
-								no longer disappears after your first run. The uma editor and
-								the Umas tab now follow the same design language and are fully
-								readable in dark mode (including the Skill Chart's expanded row
-								details, which used to stay light-mode-only), and the uma editor
+								no longer disappears after your first run. The uma editor, the
+								Umas tab, the Skill Chart (including expanded row details and
+								the skill list), the expanded side-by-side uma view, the OCR
+								import dialog, and the results tables all follow the same design
+								language and are fully readable in dark mode, and the uma editor
 								pane stretches a bit with your window instead of being locked to
 								one width. If anything looks broken or unreadable (especially in
 								dark mode), please report it.

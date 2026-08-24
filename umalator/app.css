@@ -503,6 +503,24 @@ body.splitterDragging {
 .chartHoverHint {
 	color: var(--muted);
 	font-size: var(--font-xs);
+	margin-left: 12px;
+}
+
+/* Inline variant used in the chart toolbar row (next to the icon filters). */
+.settingsToggleRow.settingsToggleRowInline {
+	margin-left: 12px;
+	padding: 0;
+}
+
+/* Pacemaker selection labels, colored to match the chart line colors. */
+.pacemakerName-0 {
+	color: #22c55e;
+}
+.pacemakerName-1 {
+	color: #a855f7;
+}
+.pacemakerName-2 {
+	color: #ec4899;
 }
 
 .settingsHint {
@@ -955,7 +973,7 @@ body.splitterDragging {
 
 #rtMouseOverBox > text {
 	paint-order: stroke;
-	stroke: #fff;
+	stroke: var(--bg);
 	stroke-width: 3px;
 }
 
@@ -1088,12 +1106,12 @@ body.splitterDragging {
 
 .activationFrequencyChart svg text {
 	font-size: 10px;
-	fill: black;
+	fill: var(--fg);
 }
 
 .activationFrequencyChart svg .domain,
 .activationFrequencyChart svg .tick line:not(.grid-line) {
-	stroke: rgb(121, 64, 22);
+	stroke: var(--theme-brown);
 	stroke-width: 1;
 }
 
@@ -1103,7 +1121,7 @@ body.splitterDragging {
 }
 
 #resultsHelp {
-	color: rgb(121, 64, 22);
+	color: var(--theme-brown);
 	font-size: 0.7em;
 	margin-top: 0.5em;
 }
@@ -1113,7 +1131,7 @@ body.splitterDragging {
 }
 
 #resultsSummary > tfoot th {
-	color: rgb(121, 64, 22);
+	color: var(--theme-brown);
 	cursor: pointer;
 	font-size: 0.9em;
 }
@@ -1123,10 +1141,10 @@ body.splitterDragging {
 }
 
 #resultsSummary > tbody td {
-	background: rgb(248, 248, 248);
-	border: 2px solid rgb(224, 214, 204);
+	background: var(--theme-brown-bg);
+	border: 2px solid var(--theme-brown-light);
 	border-radius: 100px;
-	color: rgb(121, 64, 22);
+	color: var(--theme-brown);
 	cursor: pointer;
 	font-size: 2em;
 	font-weight: normal;
@@ -1153,7 +1171,7 @@ body.splitterDragging {
 }
 
 #infoTables tbody {
-	border-bottom: 1px solid rgb(121, 64, 22);
+	border-bottom: 1px solid var(--border);
 	display: block;
 	width: 380px;
 	padding-top: 10px;
@@ -1175,6 +1193,7 @@ body.splitterDragging {
 }
 
 #infoTables caption {
+	color: var(--fg);
 	padding-right: 50px;
 	padding-bottom: 5px;
 	font-weight: bold;
@@ -1187,7 +1206,7 @@ body.splitterDragging {
 }
 
 #infoTables > table th {
-	color: rgb(121, 64, 22);
+	color: var(--theme-brown);
 	font-weight: bold;
 	overflow: hidden;
 	text-align: left;
@@ -1251,7 +1270,7 @@ body.splitterDragging {
 }
 
 #expandBtn {
-	background: hsl(210 6% 93%);
+	background: var(--hover);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
@@ -1263,12 +1282,12 @@ body.splitterDragging {
 }
 
 #expandBtn:hover {
-	background: hsl(210 6% 86%);
+	background: color-mix(in srgb, var(--hover), var(--fg) 8%);
 }
 
 #expandBtn::after {
-	border-right: 2px solid hsl(215 16% 47%);
-	border-top: 2px solid hsl(215 16% 47%);
+	border-right: 2px solid var(--muted-2);
+	border-top: 2px solid var(--muted-2);
 	content: "";
 	display: block;
 	height: 12px;
@@ -1280,8 +1299,8 @@ body.splitterDragging {
 }
 
 #umaOverlay {
-	background: white;
-	border: 1px solid rgb(148, 150, 189);
+	background: var(--bg);
+	border: 1px solid var(--border);
 	border-left: none;
 	border-radius: 0 12px 12px 0;
 	display: flex;
@@ -1305,7 +1324,7 @@ body.splitterDragging {
 }
 
 #closeUmaOverlay {
-	color: rgb(148, 150, 189);
+	color: var(--muted);
 	font-size: 2em;
 	height: 2em;
 	position: fixed;
@@ -1323,8 +1342,8 @@ body.splitterDragging {
 }
 
 #copyUmaButtons > div {
-	background: linear-gradient(rgb(255, 255, 255), rgb(228, 224, 233));
-	border: 2px solid rgb(181, 174, 187);
+	background: var(--surface);
+	border: 2px solid var(--input-border);
 	border-radius: 8px;
 	height: 60px;
 	line-height: 60px;
@@ -1333,8 +1352,8 @@ body.splitterDragging {
 }
 
 #copyUmaButtons > div::after {
-	border-top: 2px solid rgb(121, 64, 22);
-	border-right: 2px solid rgb(121, 64, 22);
+	border-top: 2px solid var(--theme-brown);
+	border-right: 2px solid var(--theme-brown);
 	content: "";
 	display: block;
 	height: 30px;
@@ -1355,7 +1374,7 @@ body.splitterDragging {
 }
 
 #swapUmas {
-	color: rgb(121, 64, 22);
+	color: var(--theme-brown);
 	font-size: 36px;
 	text-align: center;
 }
@@ -1365,8 +1384,8 @@ body.splitterDragging {
 }
 
 .basinnChartPopover {
-	background: white;
-	border: 2px solid rgb(181, 174, 187);
+	background: var(--card);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	display: flex;
 	height: 333px;
@@ -1379,80 +1398,6 @@ body.splitterDragging {
 
 .basinnChartPopover .expandedSkill {
 	width: 345px;
-}
-
-/* --- Dark mode: Expand button --- */
-.dark #expandBtn {
-	background: #2a2a2a;
-}
-.dark #expandBtn:hover {
-	background: #363636;
-}
-.dark #expandBtn::after {
-	border-right-color: var(--muted);
-	border-top-color: var(--muted);
-}
-
-/* --- Dark mode: Overlay (expanded view) --- */
-.dark #umaOverlay {
-	background: var(--bg);
-	border-color: var(--border);
-}
-.dark #closeUmaOverlay {
-	color: var(--muted);
-}
-.dark #copyUmaButtons > div {
-	background: linear-gradient(#2a2a2a, #222);
-	border-color: var(--border);
-}
-.dark #copyUmaButtons > div::after {
-	border-top-color: var(--theme-brown);
-	border-right-color: var(--theme-brown);
-}
-.dark #swapUmas {
-	color: var(--theme-brown);
-}
-
-/* --- Dark mode: Results pane --- */
-.dark #resultsSummary > tbody td {
-	background: var(--surface);
-	border-color: var(--border);
-	color: var(--theme-brown);
-}
-.dark #resultsSummary > tfoot th {
-	color: var(--theme-brown);
-}
-.dark #resultsHelp {
-	color: var(--theme-brown);
-}
-.dark #infoTables tbody {
-	border-bottom-color: var(--border);
-}
-.dark #infoTables > table th {
-	color: var(--theme-brown);
-}
-.dark #infoTables caption {
-	color: var(--fg);
-}
-
-/* --- Dark mode: Basinn chart popover --- */
-.dark .basinnChartPopover {
-	background: #222;
-	border-color: var(--border);
-}
-
-/* --- Dark mode: SVG text stroke --- */
-.dark #rtMouseOverBox > text {
-	stroke: var(--bg);
-}
-
-/* --- Dark mode: Activation frequency chart --- */
-.dark .activationFrequencyChart svg text {
-	fill: var(--fg);
-}
-.dark .activationFrequencyChart svg .domain,
-.dark .activationFrequencyChart svg .tick line:not(.grid-line) {
-	stroke: var(--theme-brown);
 }
 
 .runAdditionalSamples {
@@ -1519,7 +1464,7 @@ body {
 		justify-content: center;
 		gap: 0;
 		background: var(--bg, #fff);
-		border-top: 1px solid hsl(210 10% 85%);
+		border-top: 1px solid var(--border);
 		/* Above InfoModal's full-viewport backdrop (--z-modal), same reasoning as
 		   #iconSidebar -- otherwise this bar is unreachable while a panel is open. */
 		z-index: var(--z-above-modal);
@@ -1534,19 +1479,19 @@ body {
 		padding: 8px;
 		border: none;
 		background: transparent;
-		color: hsl(215 16% 50%);
+		color: var(--muted-2);
 		cursor: pointer;
 		font-size: 11px;
 		font-weight: 500;
 		transition: all 0.15s ease;
 	}
 	.mobileBottomBarBtn:hover {
-		background: hsl(210 6% 93%);
-		color: hsl(215 20% 30%);
+		background: var(--hover);
+		color: var(--fg);
 	}
 	.mobileBottomBarBtn.active {
-		background: hsl(215 95% 95%);
-		color: hsl(215 70% 50%);
+		background: var(--accent-active-bg);
+		color: var(--accent);
 	}
 	.mobileDialogOverlay {
 		position: fixed;
@@ -1596,7 +1541,7 @@ body {
 		justify-content: center;
 		border: none;
 		background: transparent;
-		color: hsl(215 16% 50%);
+		color: var(--muted-2);
 		font-size: 1.25rem;
 		cursor: pointer;
 		z-index: 1;
@@ -1604,35 +1549,9 @@ body {
 		transition: all 0.15s ease;
 	}
 	.mobileDialogClose:hover {
-		background: hsl(210 6% 93%);
-		color: hsl(215 20% 30%);
+		background: var(--hover);
+		color: var(--fg);
 	}
-}
-
-.dark #mobileBottomBar {
-	background: var(--bg);
-	border-top-color: var(--border);
-}
-.dark .mobileBottomBarBtn {
-	color: var(--muted);
-}
-.dark .mobileBottomBarBtn:hover {
-	background: hsl(210 10% 20%);
-	color: var(--fg);
-}
-.dark .mobileBottomBarBtn.active {
-	background: hsl(215 95% 20%);
-	color: hsl(215 70% 70%);
-}
-.dark .mobileDialog {
-	background: var(--bg);
-}
-.dark .mobileDialogClose {
-	color: var(--muted);
-}
-.dark .mobileDialogClose:hover {
-	background: hsl(210 10% 20%);
-	color: var(--fg);
 }
 
 /* --- Save / Load modals --- */

@@ -24,6 +24,13 @@ The 2026-08 UI redesign needed a place to stand before any restyling.
 
 ## Consequences
 
-- Restyling work is mechanical: name the literal in tokens.css if it recurs, consume it, delete the `.dark` twin. Progress is measurable (`grep -c '^\.dark' umalator/app.css`).
+- Restyling work is mechanical: name the literal in tokens.css if it recurs, consume it, delete the `.dark` twin. Progress is measurable (`grep -c '^\.dark' umalator/app.css`, or `npm run verify`'s per-file counts).
 - Shared CSS (`SkillList.css`, `RaceTrack.css`, `Tooltip.css`) is consumed by apps that never set `.dark` and never load tokens.css, so any token use added there must keep literal fallbacks (`var(--x, <literal>)`) — and courseimages rasterizes RaceTrack's styles into PNGs, so those files change only deliberately.
 - Import order in `app.tsx` is now load-bearing for correctness of the cascade; the comment above the tokens.css import records this.
+
+## Addendum (2026-08-23, UI-13 / redesign phase 5)
+
+The incremental retirement completed: every `.dark` styling override in umalator-owned CSS and in `SkillList.css` is gone (verify's tracked set reads 0). Two boundary calls made along the way, both slight drifts from the wording above:
+
+- **`RaceTrack.css` keeps its `.dark` rules deliberately.** It's the one shared file where deleting them would require touching rules that courseimages rasterizes, so it was excluded from the retirement (and from `npm run verify`'s tracked set) rather than converted.
+- **A component alias layer's *dark half* may live in tokens.css.** `SkillPicker.css` keeps its `:root` `--sp-*` block (light values + literal fallbacks, per the "alias layers stay" rule), but its `.dark` redefinitions moved into tokens.css — the picker is only reachable inside umalator, the only app that sets `.dark`, so the dark values belong with the rest of the theme. The same pattern holds for `SkillList.css`'s rarity-gradient tokens: light literals as fallbacks in the shared file, both theme values defined in tokens.css.

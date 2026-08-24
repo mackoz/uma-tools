@@ -1,6 +1,5 @@
 .basinnChartWrapper {
-	/*border: 2px solid rgb(224,214,204);*/
-	border: 2px solid rgb(181, 174, 187);
+	border: 2px solid var(--border);
 	border-radius: 6px;
 	flex: 1;
 	min-height: 0;
@@ -10,12 +9,12 @@
 }
 
 .basinnChartWrapper.dirty {
-	border: 2px solid rgb(222, 161, 87);
+	border: 2px solid var(--warning);
 }
 
 .basinnChart {
 	border-collapse: collapse;
-	color: #794016;
+	color: var(--theme-brown);
 	font-weight: bold;
 	width: 100%;
 }
@@ -26,7 +25,7 @@
 }
 
 .basinnChart th {
-	background: linear-gradient(#fff, #e4e0e9);
+	background: var(--card);
 	text-align: left;
 }
 
@@ -52,7 +51,7 @@
 }
 
 .basinnChart .columnHeader {
-	border-bottom: 2px solid rgb(181, 174, 187);
+	border-bottom: 2px solid var(--border);
 	cursor: pointer;
 	width: 100%;
 }
@@ -63,8 +62,8 @@
 
 .basinnChartSortedAsc span::after,
 .basinnChartSortedDesc span::after {
-	border-bottom: 2px solid #794016;
-	border-right: 2px solid #794016;
+	border-bottom: 2px solid var(--theme-brown);
+	border-right: 2px solid var(--theme-brown);
 	content: "";
 	display: block;
 	height: 4px;
@@ -83,23 +82,23 @@
 }
 
 .basinnChart tr.expanded {
-	background: rgb(121, 216, 35);
+	background: var(--highlight-green);
 }
 
 /* Screened/inert/pending rows: still show real numbers (however many samples they got), just
    visually receded so the still-competitive rows read as the point of the table. */
 .basinnChart tr.basinnChartMuted {
-	color: rgb(148, 150, 189);
+	color: var(--muted-2);
 	font-weight: normal;
 }
 
 .basinnChart tr.expanded-content-row {
-	background: rgb(248, 248, 248);
+	background: var(--theme-brown-bg);
 }
 
 .basinnChart tr.expanded-content-row td {
 	padding: 10px 10px 20px 10px;
-	border-top: 2px solid rgb(181, 174, 187);
+	border-top: 2px solid var(--border);
 	width: 100%;
 }
 
@@ -130,7 +129,7 @@
 .basinnChartRefresh {
 	background: unset;
 	border: unset;
-	color: rgb(222, 161, 87);
+	color: var(--warning);
 	font-size: 26px;
 	position: absolute;
 	right: -36px;
@@ -153,7 +152,7 @@
 }
 
 .basinnChartRefreshText {
-	color: rgb(222, 161, 87);
+	color: var(--warning);
 	font-size: 11px;
 	position: absolute;
 	right: -130px;
@@ -165,46 +164,6 @@
 
 .basinnChartRefreshText.hidden {
 	display: none;
-}
-
-/* --- Dark mode --- */
-.dark .basinnChartWrapper {
-	border-color: var(--border, #2e2e2e);
-}
-.dark .basinnChartWrapper.dirty {
-	border-color: rgb(180, 120, 50);
-}
-.dark .basinnChart {
-	color: var(--theme-brown, #d4a574);
-}
-.dark .basinnChart th {
-	background: linear-gradient(#2a2a2a, #222);
-}
-.dark .basinnChart .columnHeader {
-	border-bottom-color: var(--border, #2e2e2e);
-}
-.dark .basinnChartSortedAsc span::after,
-.dark .basinnChartSortedDesc span::after {
-	border-bottom-color: var(--theme-brown, #d4a574);
-	border-right-color: var(--theme-brown, #d4a574);
-}
-.dark .basinnChart tr.expanded {
-	background: #3d6e1e;
-}
-.dark .basinnChart tr.basinnChartMuted {
-	color: var(--muted, #8a8a8a);
-}
-.dark .basinnChart tr.expanded-content-row {
-	background: var(--surface, #1e1e1e);
-}
-.dark .basinnChart tr.expanded-content-row td {
-	border-top-color: var(--border, #2e2e2e);
-}
-.dark .basinnChartRefresh {
-	color: rgb(180, 120, 50);
-}
-.dark .basinnChartRefreshText {
-	color: rgb(180, 120, 50);
 }
 
 @media (max-width: 768px) {

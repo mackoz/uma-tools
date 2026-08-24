@@ -748,7 +748,7 @@
 
 .skillProcDataDialog {
 	background: var(--bg, white);
-	border: 2px solid rgb(170, 221, 154);
+	border: 2px solid var(--proc-green-border, rgb(170, 221, 154));
 	border-radius: 12px;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 	display: flex;
@@ -770,7 +770,7 @@
 
 .skillProcDataHeader {
 	background: linear-gradient(rgb(153, 219, 68), rgb(112, 190, 18));
-	border-bottom: 2px solid rgb(170, 221, 154);
+	border-bottom: 2px solid var(--proc-green-border, rgb(170, 221, 154));
 	border-radius: 10px 10px 0 0;
 	color: white;
 	display: flex;
@@ -811,14 +811,6 @@
 	position: relative;
 }
 
-/* ── Dark mode ───────────────────────────────────────────────── */
-
-/* The only remaining non-token styling: the proc-data dialog's legacy green
- * game-palette chrome has no token equivalent yet (UI-13's sweep decides). */
-.dark .skillProcDataDialog {
-	border-color: #3d6e1e;
-}
-
-.dark .skillProcDataHeader {
-	border-bottom-color: #3d6e1e;
-}
+/* The proc-data dialog's green game-palette chrome resolves through
+ * --proc-green-border (defined per-theme in umalator/tokens.css); the header
+ * gradient itself stays identical in both modes. */

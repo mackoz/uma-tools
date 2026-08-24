@@ -13,8 +13,10 @@ if [ ! -e node_modules ]; then
 	ln -s "$main_checkout/node_modules" node_modules
 fi
 
-gitdir=$(git rev-parse --absolute-git-dir)
-mkdir -p "$gitdir/info"
-grep -qx node_modules "$gitdir/info/exclude" 2>/dev/null || echo node_modules >> "$gitdir/info/exclude"
+# The exclude file git actually honors lives in the common dir (the one under
+# .git/worktrees/<name>/info/ is never read); --git-path resolves it correctly.
+exclude_file=$(git rev-parse --path-format=absolute --git-path info/exclude)
+mkdir -p "$(dirname "$exclude_file")"
+grep -qx node_modules "$exclude_file" 2>/dev/null || echo node_modules >> "$exclude_file"
 
 echo "worktree ready: submodule initialized, node_modules linked and git-excluded"
