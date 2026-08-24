@@ -5,8 +5,8 @@
 Every icon and font is referenced by an **absolute URL hardcoded to `/uma-tools/...`**, baked into the generated bundles at build time. Key source locations:
 
 - `icons.json` — every value, e.g. `"1001": "/uma-tools/icons/chara/chr_icon_1001.png"`.
-- `umalator/app.css:3,8` — `@font-face` rules for the two Inter weights and NotoSansJP.
-- `umalator/app.tsx:187–238` and `:3164` — time/weather/season icons and chart-filter backgrounds.
+- `umalator/tokens.css:9,16,25` — `@font-face` rules for the two Inter weights and NotoSansJP (moved here from `app.css` during the UI-9 design-token redesign).
+- `umalator/app.tsx:700,751,775,5594` — time/weather/season icons and chart-filter backgrounds.
 - `components/SkillList.tsx:208,398,612` and `components/SkillPicker.tsx:30,405` — skill icons and filter backgrounds.
 - `courseimages/index.html` — inline `@font-face` rules.
 
