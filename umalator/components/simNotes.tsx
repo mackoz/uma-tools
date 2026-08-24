@@ -18,11 +18,11 @@ export const LIMITATIONS: InfoEntry[] = [
 				requirement dropped entirely -- only the skill's other conditions
 				(timing, corner, etc.) decide whether it can activate. In the{' '}
 				<strong>Skill Chart</strong>, your running style is instead assumed to
-				hold one fixed placement band for the whole race -- Front Runner: 1st,
-				Pace Chaser: 2nd-4th, Late Surger / End Closer: 5th-9th -- and the field
-				size is always assumed to be 9. So the skill is either eligible for your
-				entire run or never fires at all, rather than varying moment to moment
-				the way real position does.
+				hold one fixed placement band for the whole race -- Runaway / Front
+				Runner: 1st, Pace Chaser: 2nd-4th, Late Surger / End Closer: 5th-9th --
+				and the field size is always assumed to be 9. So the skill is either
+				eligible for your entire run or never fires at all, rather than varying
+				moment to moment the way real position does.
 			</p>
 		),
 	},
@@ -39,9 +39,10 @@ export const LIMITATIONS: InfoEntry[] = [
 					mechanics like Spot Struggle or Dueling.
 				</p>
 				<p>
-					The Skill Chart's default "Controlled" model turns lane movement off
-					completely, so any skill whose activation depends on lane position
-					will not behave the same there as it does in Compare.
+					The Skill Chart turns lane movement off completely, in both the
+					"Controlled" and "Full race" models, so any skill whose activation
+					depends on lane position will not behave the same there as it does in
+					Compare.
 				</p>
 			</Fragment>
 		),
@@ -95,9 +96,11 @@ export const LIMITATIONS: InfoEntry[] = [
 		body: (
 			<p>
 				In-game, a skill's effect scales with its level, from 1.00x at level 1
-				up to 1.20x at level 10. The simulator always uses the unscaled, level-1
-				value, for unique skills as well as ordinary ones -- there is no way to
-				simulate a higher-leveled skill.
+				up to a level-10 ceiling that depends on what the skill affects -- 1.25x
+				for target speed, 1.20x for acceleration, 1.18x for most other effects,
+				but only 1.10x for stat-boost skills. The simulator always uses the
+				unscaled, level-1 value, for unique skills as well as ordinary ones --
+				there is no way to simulate a higher-leveled skill.
 			</p>
 		),
 	},
@@ -151,14 +154,15 @@ export const BUGS: InfoEntry[] = [
 	},
 	{
 		summary:
-			'Some skills crash the entire simulation instead of just not working.',
+			"Some skills can't be simulated at all, and stop the whole run when included.",
 		body: (
 			<p>
 				A skill that references an activation condition the simulator doesn't
-				recognize aborts the whole run rather than being skipped. On Global this
-				currently affects Trick (Front), Trick (Rear), Tantalizing Trick, Catch
-				'Em Off Guard, and Oppression; a further ~11 conditions used only by JP
-				skills have the same problem.
+				recognize stops the run with an error naming the condition, rather than
+				being skipped and simulated without it. On Global this currently affects
+				Trick (Front), Trick (Rear), Tantalizing Trick, Catch 'Em Off Guard, and
+				Oppression; a further ~11 conditions used only by JP skills have the
+				same problem.
 			</p>
 		),
 	},
@@ -225,6 +229,20 @@ export const BUGS: InfoEntry[] = [
 				can miss its activation window entirely. Ten specific skills have been
 				individually patched around this, but the underlying timing mismatch
 				isn't fixed for skills outside that list.
+			</p>
+		),
+	},
+	{
+		summary: 'Skills gated on your betting popularity fire regardless of it.',
+		body: (
+			<p>
+				A skill that should only work when you're the favorite, or only when
+				you're not, is instead treated as always eligible -- the popularity
+				requirement is silently ignored rather than checked. On Global this
+				affects Long Shot ◎/○, Paddock Fright, Risk-Maker, Raise My Soul's
+				Blade!, Laugh at the Odds, Go☆Go☆Goal!, and Target in Sight ◎/○. There's
+				also no setting in the app to change your popularity from its fixed
+				default, so even a correct check would have little to work with today.
 			</p>
 		),
 	},
