@@ -621,10 +621,11 @@ function SkillGrid({
 			<div class="umasSkillGrid">
 				{known.map((s) => {
 					const idStr = String(s.id);
-					const hasMeta = !!(skillmeta as any)[idStr];
+					// No hasMeta guard here -- known's own filter (above) already requires both
+					// skillmeta[idStr] and skilldata[idStr] to be truthy, so it's unreachable
+					// inside this map (PIPE-2 review, round 4).
 					const rarity: number = (skilldata as any)[idStr]?.rarity ?? 1;
 					const rarityClass = RARITY_CLASS[rarity] ?? 'skill-white';
-					if (!hasMeta) return null;
 					return (
 						<div key={idStr} class={`umasSkillPill ${rarityClass}`}>
 							<img
