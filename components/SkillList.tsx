@@ -17,18 +17,69 @@ import skillnames from '../uma-skill-tools/data/skillnames.json';
 
 const Parser = getParser(Matcher.mockConditions);
 
+// The in-game icon for a skill tracks its primary effect type, not its rarity or name -- e.g.
+// a rarity-6 skill whose first effect is TargetSpeed almost always uses icon 20016 (259/324
+// already-iconed examples), but a same-rarity Accel skill almost always uses 20046 instead
+// (114/120) -- confirmed both from our own already-iconed data AND by spot-checking a GameTora
+// export of all 661 "Evolved" skills against their actual in-game icons (PIPE-2, 2026-08-24):
+// e.g. 100201311/111302111 are TargetSpeed-flat-boost skills (effect type 1, not 27) and
+// GameTora shows them with icon 10016 (a document glyph, not the 20016 running-figure), while
+// 114101111/114101211 (Epiphaneia's evolved skills, real type-27 TargetSpeed) do show 20016 as
+// expected. A single fixed icon per rarity is wrong whenever a zero-icon skill's type isn't the
+// rarity's dominant one -- this previously happened for Unique/Evolution specifically (hardcoded
+// to 20013/20016 unconditionally). Precompute the majority icon per (rarity, effect type) from
+// the skills that already have one, once at module load (same eager-computation pattern as
+// parsedConditions above), so the zero-icon fallback below can guess a same-type icon instead of
+// a fixed, often visually-unrelated one.
+const iconByRarityAndType: Record<string, string> = (() => {
+	const counts: Record<string, Record<string, number>> = {};
+	for (const id of Object.keys(skilldata)) {
+		const s = skilldata[id];
+		const iconId = skillmeta[id]?.iconId;
+		if (!iconId || iconId === '0') continue;
+		const type = s.alternatives[0]?.effects[0]?.type;
+		if (type === undefined) continue;
+		const key = `${s.rarity}:${type}`;
+		if (!counts[key]) counts[key] = {};
+		counts[key][iconId] = (counts[key][iconId] ?? 0) + 1;
+	}
+	const result: Record<string, string> = {};
+	for (const key of Object.keys(counts)) {
+		const entries = Object.entries(counts[key]);
+		const total = entries.reduce((sum, [, c]) => sum + c, 0);
+		// Require enough real examples to trust the majority -- OR every example agreeing
+		// regardless of count, since unanimous small samples are a low-noise signal (if the
+		// mapping were random, they wouldn't all happen to land on the same icon). This was
+		// checked, not assumed: most small (rarity, type) buckets in the real data (<10
+		// examples) are either fully unanimous or genuinely split roughly evenly -- there's no
+		// middle case of "looks unanimous by chance." A confirmed real case: rarity 6 + PowerUp
+		// (type 3) has only 2 already-iconed examples, both icon 10036 -- unanimous despite the
+		// low count, and independently confirmed correct against GameTora for the zero-icon
+		// skill this maps to (107002121, PIPE-2 2026-08-24).
+		if (total < 10 && entries.length > 1) continue;
+		entries.sort((a, b) => b[1] - a[1]);
+		result[key] = entries[0][0];
+	}
+	return result;
+})();
+
 // A handful of skills carry iconId "0" straight from master.mdb -- master.mdb itself never
 // assigned them a dedicated icon graphic (confirmed against the game's meta asset-manifest
 // DB, PIPE-2: there is no icon asset named for these ids to extract in the first place),
 // even though their mechanics are final (see docs/data-pipeline.md's JP/Global independence
 // note). `/uma-tools/icons/0.png` doesn't exist, so fall back to a generic placeholder --
-// matched to the skill's rarity so the colour family (white/gold/pink/unique/inherit, see
-// STRINGS_ja.skillfilters below) still reads correctly instead of every zero-icon skill
-// flattening to the white/green placeholder regardless of actual rarity.
+// prefer iconByRarityAndType's same-type-and-rarity guess (verified accurate against a
+// GameTora export, see the comment above); fall back further to a rarity-matched flat
+// placeholder only when there isn't enough same-(rarity,type) data to trust a guess, so the
+// colour family (white/gold/pink/unique/inherit, see STRINGS_ja.skillfilters below) still
+// reads correctly instead of every zero-icon skill flattening to a single generic icon.
 export function getSkillIconSrc(id: string): string {
 	const iconId = skillmeta[id].iconId;
 	if (iconId !== '0') return `/uma-tools/icons/${iconId}.png`;
 	const rarity = skilldata[id].rarity;
+	const type = skilldata[id].alternatives[0]?.effects[0]?.type;
+	const byType = iconByRarityAndType[`${rarity}:${type}`];
+	if (byType) return `/uma-tools/icons/${byType}.png`;
 	if (rarity === SkillRarity.Unique) return '/uma-tools/icons/20013.png';
 	if (rarity === SkillRarity.Evolution) return '/uma-tools/icons/20016.png';
 	return '/uma-tools/icons/10011.png';
