@@ -4,6 +4,7 @@
 //   npm run verify:baseline   re-record scripts/verify-baseline.json (run on master after a merge)
 //   node scripts/verify.mjs --skip-build   metrics only (fast inner loop while editing CSS)
 //   node scripts/verify.mjs --skip-smoke   skip the browser smoke stage
+//   node scripts/verify.mjs --skip-gitlink   skip the gitlink-drift check (e.g. on a flaky/offline connection)
 //
 // The smoke stage runs scripts/smoke.mjs (Playwright chromium against the
 // umalator-global dev server, light + dark); it reports SKIPPED when playwright
@@ -11,8 +12,9 @@
 // docs site under plans/ and is skipped when absent.
 //
 // Exits non-zero if a build fails, the typecheck error count rises above the
-// baseline, the smoke fails, the docs build fails, or (on master) the
-// uma-skill-tools gitlink doesn't point at the submodule's origin/master tip.
+// baseline, the smoke fails, the docs build fails, or (when HEAD matches
+// origin/master's tip) the uma-skill-tools gitlink doesn't point at the
+// submodule's origin/master tip.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,6 +26,7 @@ const baselinePath = path.join(root, 'scripts', 'verify-baseline.json');
 const writeBaseline = process.argv.includes('--baseline');
 const skipBuild = process.argv.includes('--skip-build');
 const skipSmoke = process.argv.includes('--skip-smoke');
+const skipGitlink = process.argv.includes('--skip-gitlink');
 
 // tokens.css is deliberately excluded: it is the one place colors belong.
 const CSS_FILES = [
@@ -131,18 +134,25 @@ function runGitlink() {
 	// spawnSync itself can fail (missing git binary, permissions, ...) --
 	// distinguish that from a clean non-zero exit so a broken environment can't
 	// throw an uncaught TypeError out of .stdout.trim() and crash the whole run.
+	// A bounded timeout keeps a hung/offline fetch from hanging the whole
+	// `npm run verify` invocation (PR #29 review, round 2).
 	function git(args, cwd) {
-		const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+		const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: 10_000 });
 		if (r.error) return { ok: false, out: '', err: r.error.message };
+		if (r.signal) return { ok: false, out: '', err: `killed by ${r.signal} (timeout?)` };
 		if (r.status !== 0) return { ok: false, out: '', err: (r.stderr || r.stdout || '').trim() };
 		return { ok: true, out: r.stdout.trim(), err: '' };
 	}
 
-	// Best-effort freshen; a failed fetch (offline, etc.) isn't fatal by itself
-	// -- the rev-parse calls below fail loudly if the refs they need aren't
-	// there, rather than silently comparing stale local tracking refs.
+	// Best-effort freshen for the applicability decision only -- a failed
+	// fetch here just means this run might (rarely) mis-decide whether HEAD
+	// is at origin/master's tip, which is self-limiting (worst case: the
+	// gitlink check silently doesn't run this time, same as any other skip
+	// case below). The submodule's origin/master isn't fetched here: fetching
+	// it unconditionally, before even knowing whether the check applies, is
+	// an unbounded network call the common "feature branch, not applicable"
+	// path shouldn't have to pay for.
 	git(['fetch', 'origin', 'master'], root);
-	git(['fetch', 'origin', 'master'], submodulePath);
 
 	const head = git(['rev-parse', 'HEAD'], root);
 	const rootUpstream = git(['rev-parse', 'origin/master'], root);
@@ -155,6 +165,18 @@ function runGitlink() {
 	// name at all (`git branch --show-current` returns ''). Comparing SHAs
 	// checks both without silently skipping the detached case.
 	if (head.out !== rootUpstream.out) return { label: 'gitlink -', ok: true };
+
+	// Past this point we're doing the substantive comparison, so a failed
+	// fetch must not silently fall back to a possibly-stale cached
+	// origin/master -- that's exactly the false OK/STALE this stage exists to
+	// prevent.
+	const fetchSub = git(['fetch', 'origin', 'master'], submodulePath);
+	if (!fetchSub.ok) {
+		return {
+			label: `gitlink UNKNOWN (couldn't fetch uma-skill-tools origin/master: ${fetchSub.err})`,
+			ok: false,
+		};
+	}
 
 	const recorded = git(['rev-parse', 'HEAD:uma-skill-tools'], root);
 	const upstream = git(['rev-parse', 'origin/master'], submodulePath);
@@ -219,7 +241,7 @@ if (fs.existsSync(baselinePath)) {
 
 const smoke = skipSmoke ? { label: 'smoke -', ok: true } : runSmoke();
 const docs = runDocs();
-const gitlink = runGitlink();
+const gitlink = skipGitlink ? { label: 'gitlink SKIPPED', ok: true } : runGitlink();
 
 const tscLabel =
 	tsc >= TSC_CAP ? `>=${TSC_CAP} (capped)` : `${tsc}${delta(tsc, base?.tsc)}`;
