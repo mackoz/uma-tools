@@ -12,9 +12,9 @@ cross-repo pass to catch what no single-repo review can: an engine PR whose merg
 the code PR's gitlink must record, an engine signature change `uma-tools` depends on, a
 doc claim in `uma-tools-plans` a code change makes stale.
 
-This is the review-side counterpart to `plans/scripts/wq.py land`, which automates the
-paired *merge*. `/paired-review` never merges, pushes, or lands anything — it only reviews
-and (optionally) comments.
+This is the review-side counterpart to `uma-tools-plans/scripts/wq.py land`, which
+automates the paired *merge*. `/paired-review` never merges, pushes, or lands anything —
+it only reviews and (optionally) comments.
 
 ## Step 0 — Parse arguments
 
@@ -42,10 +42,12 @@ contract `/code-review` already offers when invoked with no level.
 
 ## Step 1 — Discover the three PRs
 
-Repo table (mirrors `plans/scripts/wq.py`'s `ENGINE_REPO`/`CODE_REPO`/`PLANS` constants —
-note `ENGINE_REPO` is deliberately the *submodule inside* `uma-tools`, not any sibling
-clone, per that script's own comment on why a sibling clone let gitlink drift go
-unnoticed):
+Repo table (mirrors `uma-tools-plans/scripts/wq.py`'s `ENGINE_REPO`/`CODE_REPO`/`PLANS`
+constants — note `ENGINE_REPO` is deliberately the *submodule inside* `uma-tools`, not any
+sibling clone, per that script's own comment on why a sibling clone let gitlink drift go
+unnoticed). If you want to check those constants yourself, read the script at its real
+path, `/Users/mackoz/github/uma-tools-plans/scripts/wq.py` — not through the
+`uma-tools/plans/` symlink; see the path-guard warning just below.
 
 | Slot | Local path | GitHub repo | Base branch |
 |---|---|---|---|
@@ -61,13 +63,22 @@ off the PR object.
 For each slot without an explicit override from Step 0, run:
 
 ```
-gh pr list --repo <github repo> --state open --json number,title,headRefName,url
+gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url
 ```
+
+(`baseRefName` is what lets you read the base branch off the PR object per above, instead
+of trusting the table's per-repo guess.)
 
 - **Zero results** → skip that slot. Note it in the final summary as "no open PR — skipped."
 - **Exactly one** → that's the slot's PR.
 - **More than one** → this violates the repos' own "one open PR per repo" rule. Stop and
   ask the user which one they mean rather than guessing.
+
+For a slot resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override instead
+of discovery, look up the same fields with
+`gh pr view <number> --repo <github repo> --json number,title,headRefName,baseRefName,url`
+so the printed plan (below) and the rest of this skill have real title/URL/branch data to
+work with, not just a bare number.
 
 **Relatedness check (warn, don't block).** Paired PRs share an identical head branch name
 in practice, though nothing enforces it and `wq.py` never reads it. If two or more
@@ -87,8 +98,9 @@ understand after seeing what changed underneath it.
 1. If this isn't the first slot being reviewed, state the prior slot(s)' HANDOFF block(s)
    (see below) in your own turn, in plain text, immediately before the next call. A forked
    `code-review` run inherits the session transcript, so stating it here is how context
-   reaches it — the `code-review` argument string is positional (level, then target) and
-   cannot carry extra context itself.
+   reaches it — `code-review`'s flags are stripped out first (position-independent), and
+   what's left after that is level-then-target only, so there's no slot in the argument
+   string itself for extra context.
 
 2. Call the skill **directly** — do not wrap this in an `Agent` call:
 
@@ -111,10 +123,12 @@ understand after seeing what changed underneath it.
    run the three `/code-review` commands by hand instead of attempting a lesser
    in-line substitute.
 
-3. From that call's result, distill and record a HANDOFF block. Append it to
-   `<scratchpad dir>/paired-review-handoffs.md` (your scratchpad directory is named in
-   your system prompt) so it survives context compaction, and keep a copy in your own
-   working context for Step 3:
+3. From that call's result, distill and record a HANDOFF block. Use your in-context copy
+   for Step 3 by default; append it to `<scratchpad dir>/paired-review-handoffs.md` (your
+   scratchpad directory is named in your system prompt) as well, and re-read that file
+   instead only if context compaction has visibly happened since — i.e. the file is a
+   fallback for surviving compaction, not a second source Step 3 needs to reconcile
+   against the in-context copy:
 
    ```
    ## HANDOFF <slot> (<owner/repo>#<number>)
@@ -135,8 +149,12 @@ understand after seeing what changed underneath it.
 ## Step 3 — Cross-repo pass
 
 This is the step a single-repo `/code-review` structurally cannot perform, and the reason
-this skill exists rather than three manual `/code-review` calls. Skip this step only if
-fewer than two slots had an open PR — there's nothing cross-repo to check with just one.
+this skill exists rather than three manual `/code-review` calls. Skip this step if fewer
+than two slots had an open PR — there's nothing cross-repo to check with just one — or if
+Step 1's relatedness check warned that the discovered PRs' head branches differ: treat
+that the same as "nothing cross-repo to check," since synthesizing a relationship between
+two PRs already flagged as possibly unrelated risks fabricating a connection that isn't
+there.
 
 Launch one `Agent` (fan-out isn't needed here — this is synthesis, not diff-scanning).
 Give it: every HANDOFF block from Step 2, the PR URLs, and the specific things to check,
@@ -151,10 +169,12 @@ generally: cite `file:line` from an actual read of the file, **on every repo/sid
 compared** — never infer a match or a conflict from a PR title or commit message alone.
 
 If `--comment` was passed, each confirmed cross-repo finding gets posted as an inline
-comment on whichever repo's PR it actually belongs to (same posting mechanism the
-sub-reviews use: `gh api repos/{owner}/{repo}/pulls/{pr}/comments`, since the inline-
-comment MCP server `code-review` prefers isn't connected in this environment). A finding
-that implicates two repos at once (e.g. the gitlink-drift invariant) gets posted to both.
+comment on whichever repo's PR it actually belongs to. Use
+`mcp__github_inline_comment__create_inline_comment` if that tool is available in this
+session; otherwise fall back to `gh api repos/{owner}/{repo}/pulls/{pr}/comments` — the
+same choice `code-review` itself makes for its own inline comments, so check for the tool
+at run time rather than assuming either way. A finding that implicates two repos at once
+(e.g. the gitlink-drift invariant) gets posted to both.
 
 ## Step 4 — Consolidated summary
 
