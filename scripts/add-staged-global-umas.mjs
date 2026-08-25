@@ -16,7 +16,22 @@
 //   node scripts/add-staged-global-umas.mjs --no-dry-run          # write changes
 //
 // IMPORTANT: like sync-upstream-data.mjs, this only ever ADDS keys that don't already exist.
-// It never overwrites an existing umalator-global/ entry.
+// It never overwrites an existing umalator-global/ entry -- enforced two ways: the outfitIds
+// list below is pre-filtered to outfits not already in globalUmas (so in normal operation the
+// write sites never even see an existing sid), and an explicit guard at each write site refuses
+// to overwrite an existing globalSkillData/globalSkillMeta entry unless it was already JP-sourced
+// (see unreleased.json's `provenance` map) or --force is passed. The guard exists so a future
+// refactor of the outfit-filtering logic can't silently reopen the ability to clobber
+// Global-authoritative data with JP values.
+//
+// provenance (in umalator-global/unreleased.json) records which skill ids are JP-sourced
+// approximations rather than Global-authoritative -- i.e. mechanics ported from JP because the
+// uma/outfit isn't live on Global yet, not verified against Global's own master.mdb. It's the
+// signal scripts/check-jp-global-divergence.mjs uses to flag a JP-sourced entry whose JP source
+// has since moved on. NOTE: provenance is only tracked for currently-*unreleased* skills (see
+// PIPE-6) -- once an outfit is promoted to live by the real pipeline (make_global_uma_info.pl),
+// its provenance marker is lost even though the ported skill_data/skill_meta values are still,
+// in fact, unverified against Global's own data until someone regenerates them for real.
 
 import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
@@ -32,7 +47,11 @@ program
 		'JP implementation-date cutoff (inclusive), YYYY-MM-DD',
 		'2023-03-29',
 	)
-	.option('--no-dry-run', 'actually write merged JSON (default: report only)');
+	.option('--no-dry-run', 'actually write merged JSON (default: report only)')
+	.option(
+		'--force',
+		'allow overwriting a Global-authoritative skill_meta/skill_data entry (normally refused)',
+	);
 
 program.parse();
 const opts = program.opts();
@@ -80,6 +99,22 @@ function writeJSON(p, obj) {
 					: '\n'
 				: ''),
 	);
+}
+
+// Best-effort: the submodule commit this run's JP mechanics came from, recorded in provenance
+// so a later divergence check can tell whether a JP-sourced Global entry is still current. null
+// if uma-skill-tools isn't a git checkout for some reason (e.g. a stripped CI archive) -- that's
+// a degraded-but-not-fatal case, so this doesn't throw.
+function jpDataVersion() {
+	try {
+		return execFileSync(
+			'git',
+			['-C', path.join(forkRoot, 'uma-skill-tools'), 'rev-parse', 'HEAD'],
+			{ encoding: 'utf8' },
+		).trim();
+	} catch {
+		return null;
+	}
 }
 
 function queryMdb(sql) {
@@ -143,6 +178,35 @@ function main() {
 	const globalSkillData = readJSON(skillDataPath);
 	const globalSkillNames = readJSON(skillNamesPath);
 
+	// Provenance recorded by a *previous* run (if any) -- a sid already marked JP-sourced here is
+	// safe to refresh from this run's JP data; anything else already present is Global-authoritative
+	// and must not be touched. See the file-header comment for why this guard exists in addition to
+	// the outfit-presence filtering below.
+	const priorUnreleased = fs.existsSync(
+		path.join(forkRoot, 'umalator-global/unreleased.json'),
+	)
+		? readJSON(path.join(forkRoot, 'umalator-global/unreleased.json'))
+		: {};
+	const priorJpSourced = new Set(Object.keys(priorUnreleased.provenance ?? {}));
+	const jpVersion = jpDataVersion();
+	const provenance = {};
+	const blockedOverwrites = [];
+
+	// Refuses to clobber a Global-authoritative entry; records provenance for anything it does
+	// write. Returns whether the write happened, so callers can skip the sibling meta/data write
+	// (and any bookkeeping) on refusal instead of leaving the two files inconsistent.
+	function setJpSourced(sid) {
+		const exists = sid in globalSkillData || sid in globalSkillMeta;
+		if (exists && !priorJpSourced.has(sid) && !opts.force) {
+			blockedOverwrites.push(sid);
+			return false;
+		}
+		globalSkillMeta[sid] = jpSkillMeta[sid];
+		globalSkillData[sid] = jpSkillData[sid];
+		provenance[sid] = { source: 'jp', jpSkillDataCommit: jpVersion };
+		return true;
+	}
+
 	const alreadyPresent = new Set();
 	for (const u of Object.values(globalUmas))
 		for (const oid of Object.keys(u.outfits)) alreadyPresent.add(oid);
@@ -180,6 +244,10 @@ function main() {
 			continue;
 		}
 
+		// Write the skill mechanics first -- an outfit whose unique skill got refused isn't worth
+		// adding (it would be selectable in the roster with no working skill data behind it).
+		if (!setJpSourced(sid)) continue;
+
 		if (!(cid in globalUmas)) {
 			globalUmas[cid] = { name: ['', charName], outfits: { [oid]: epithet } };
 			newChars.push(`${oid} ${charName}`);
@@ -187,8 +255,6 @@ function main() {
 			globalUmas[cid].outfits[oid] = epithet;
 			newOutfits.push(`${oid} ${charName}`);
 		}
-		globalSkillMeta[sid] = jpSkillMeta[sid];
-		globalSkillData[sid] = jpSkillData[sid];
 	}
 
 	console.log(`New characters: +${newChars.length}`);
@@ -207,6 +273,12 @@ function main() {
 	if (skippedNoMechanics.length) {
 		console.log(
 			`\nSKIPPED (unique skill missing from JP skill_meta/skill_data, or from Global skillnames): ${skippedNoMechanics.join(', ')}`,
+		);
+	}
+	if (blockedOverwrites.length) {
+		console.log(
+			`\nREFUSED (already a Global-authoritative skill_meta/skill_data entry, not JP-sourced -- ` +
+				`pass --force to override): ${blockedOverwrites.join(', ')}`,
 		);
 	}
 
@@ -230,8 +302,7 @@ function main() {
 			skippedInheritedNoMechanics.push(`${inh} (base ${sid})`);
 			continue;
 		}
-		globalSkillMeta[inh] = jpSkillMeta[inh];
-		globalSkillData[inh] = jpSkillData[inh];
+		if (!setJpSourced(inh)) continue;
 		newInherited.push(`${inh} (base ${sid})`);
 	}
 	console.log(`\nNew inherited-unique twins: +${newInherited.length}`);
@@ -283,9 +354,22 @@ function main() {
 		return [sid, inheritedSkillForUnique(sid)];
 	});
 	unreleasedSkills.sort();
+	// provenance so far only has entries this run actually wrote; every unreleased skill is
+	// JP-sourced by construction of this pipeline (there's no other path that stages one), so
+	// backfill anything untouched this run from the prior file's record, falling back to an
+	// unknown-version marker for a skill staged before provenance tracking existed.
+	for (const sid of unreleasedSkills) {
+		if (!(sid in provenance)) {
+			provenance[sid] = priorUnreleased.provenance?.[sid] ?? {
+				source: 'jp',
+				jpSkillDataCommit: null,
+			};
+		}
+	}
 	const unreleasedJson = {
 		outfits: unreleasedOutfits,
 		skills: unreleasedSkills,
+		provenance,
 	};
 
 	console.log(
