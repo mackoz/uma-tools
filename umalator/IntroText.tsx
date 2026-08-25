@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { cloneElement, h, toChildArray } from 'preact';
 
 import './IntroText.css';
 
@@ -6,13 +6,66 @@ export function INTRO(props) {
 	return <div id="REALINTROTEXT"></div>;
 }
 
+// Pull the first text content out of a vnode tree -- used below to read a
+// release's <summary>DATE</summary> without assuming a fixed shape beyond
+// "the summary's first text is the date".
+function firstText(node) {
+	if (node == null) return '';
+	if (typeof node === 'string' || typeof node === 'number') return String(node);
+	if (Array.isArray(node)) {
+		for (const child of node) {
+			const text = firstText(child);
+			if (text) return text;
+		}
+		return '';
+	}
+	if (node.props && node.props.children != null)
+		return firstText(node.props.children);
+	return '';
+}
+
+// The newest release is expanded by default and everything below it collapsed,
+// derived from list position — do not put `open` on individual <details class="release">
+// entries. Adding a new dated section at the top of the list is all that's needed.
+// If a future edit appends instead of prepends (or a merge reorders two
+// entries), the wrong one would expand silently -- the console.warn below is
+// the tripwire for that; it doesn't change which entry expands, only flags it.
+function ReleaseList(props) {
+	const releases = toChildArray(props.children).filter(
+		(release) => release != null && typeof release === 'object',
+	);
+	if (releases.length > 1) {
+		const dates = releases.map((release) => {
+			const summary = toChildArray(release.props?.children).find(
+				(child) => child && child.type === 'summary',
+			);
+			return summary ? firstText(summary.props.children).trim() : '';
+		});
+		const sorted = [...dates].sort().reverse();
+		if (dates.some((date, i) => date !== sorted[i])) {
+			console.warn(
+				'[ReleaseList] changelog entries are not in descending date order -- ' +
+					'the newest entry is still expanded by list position, not by date:',
+				dates,
+			);
+		}
+	}
+	return (
+		<div class="releaseList">
+			{releases.map((release, i) =>
+				i === 0 ? cloneElement(release, { open: true }) : release,
+			)}
+		</div>
+	);
+}
+
 export function IntroText(props) {
 	return (
 		<div id="introtext">
 			<details open={true}>
 				<summary>Changelog</summary>
-				<div class="releaseList">
-					<details class="release" open={true}>
+				<ReleaseList>
+					<details class="release">
 						<summary>2026-08-24</summary>
 						<ul>
 							<li>
@@ -30,7 +83,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-					<details class="release" open={true}>
+					<details class="release">
 						<summary>2026-08-23</summary>
 						<ul>
 							<li>
@@ -54,7 +107,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-					<details class="release" open={true}>
+					<details class="release">
 						<summary>2026-08-22</summary>
 						<ul>
 							<li>
@@ -295,7 +348,7 @@ export function IntroText(props) {
 							</li>
 						</ul>
 					</details>
-				</div>
+				</ReleaseList>
 			</details>
 			<details>
 				<summary>Older Changelog (previous maintainers)</summary>
