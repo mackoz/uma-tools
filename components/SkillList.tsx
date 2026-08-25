@@ -17,14 +17,21 @@ import skillnames from '../uma-skill-tools/data/skillnames.json';
 
 const Parser = getParser(Matcher.mockConditions);
 
-// A handful of skills carry iconId "0" straight from master.mdb -- Cygames hasn't
-// assigned them a dedicated icon graphic yet, even though their mechanics are final
-// (see docs/data-pipeline.md's JP/Global independence note). `/uma-tools/icons/0.png`
-// doesn't exist, so fall back to the same generic placeholder SkillPicker.tsx already
-// uses for a skill with no meta entry at all.
+// A handful of skills carry iconId "0" straight from master.mdb -- master.mdb itself never
+// assigned them a dedicated icon graphic (confirmed against the game's meta asset-manifest
+// DB, PIPE-2: there is no icon asset named for these ids to extract in the first place),
+// even though their mechanics are final (see docs/data-pipeline.md's JP/Global independence
+// note). `/uma-tools/icons/0.png` doesn't exist, so fall back to a generic placeholder --
+// matched to the skill's rarity so the colour family (white/gold/pink/unique/inherit, see
+// STRINGS_ja.skillfilters below) still reads correctly instead of every zero-icon skill
+// flattening to the white/green placeholder regardless of actual rarity.
 export function getSkillIconSrc(id: string): string {
 	const iconId = skillmeta[id].iconId;
-	return `/uma-tools/icons/${iconId === '0' ? '10011' : iconId}.png`;
+	if (iconId !== '0') return `/uma-tools/icons/${iconId}.png`;
+	const rarity = skilldata[id].rarity;
+	if (rarity === SkillRarity.Unique) return '/uma-tools/icons/20013.png';
+	if (rarity === SkillRarity.Evolution) return '/uma-tools/icons/20016.png';
+	return '/uma-tools/icons/10011.png';
 }
 
 export const STRINGS_ja = Object.freeze({
