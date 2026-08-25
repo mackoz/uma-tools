@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
-import { FormattedCondition } from './SkillList';
+import {
+	FormattedCondition,
+	getResolvedIconId,
+	getSkillIconSrc,
+} from './SkillList';
 
 import './SkillPicker.css';
 
@@ -26,11 +30,12 @@ function getSkillName(skillId: string): string {
 }
 
 function getSkillIcon(skillId: string): string {
-	const meta = skillmeta[skillId];
-	// iconId "0" means master.mdb hasn't been assigned a dedicated icon graphic for this
-	// skill yet (mechanics can still be final) -- same generic placeholder as no-meta.
-	if (!meta || meta.iconId === '0') return '/uma-tools/icons/10011.png';
-	return `/uma-tools/icons/${meta.iconId}.png`;
+	// No meta entry at all (distinct from iconId "0", which getSkillIconSrc already handles
+	// via the same rarity/effect-type-aware guess SkillList.tsx and BasinnChart.tsx use --
+	// PIPE-2 review: this file previously had its own separate flat-placeholder fallback here,
+	// which showed a different, unrelated icon than the other two views of the same skill).
+	if (!skillmeta[skillId]) return '/uma-tools/icons/10011.png';
+	return getSkillIconSrc(skillId);
 }
 
 // rarity 1=white, 2=gold, 3-5=unique (purple in this app), 6=pink (evolved)
@@ -192,10 +197,13 @@ const ICON_ID_PREFIXES: Record<string, string[]> = {
 };
 
 function matchIconType(skillId: string, iconType: string): boolean {
-	const meta = skillmeta[skillId];
-	if (!meta?.iconId) return false;
+	if (!skillmeta[skillId]) return false;
+	// Resolved icon id, not the raw meta.iconId -- PIPE-2 review: iconId is genuinely "0" for
+	// 136 skills, and none of ICON_ID_PREFIXES' prefixes ever match "0", so every zero-icon
+	// skill silently failed every icon-type filter as soon as one was active.
+	const resolvedIconId = getResolvedIconId(skillId);
 	const prefixes = ICON_ID_PREFIXES[iconType];
-	return prefixes?.some((p) => meta.iconId.startsWith(p)) ?? false;
+	return prefixes?.some((p) => resolvedIconId.startsWith(p)) ?? false;
 }
 
 const ALL_ICON_TYPES = new Set(ICON_TYPE_FILTERS);

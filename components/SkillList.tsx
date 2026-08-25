@@ -73,16 +73,32 @@ const iconByRarityAndType: Record<string, string> = (() => {
 // placeholder only when there isn't enough same-(rarity,type) data to trust a guess, so the
 // colour family (white/gold/pink/unique/inherit, see STRINGS_ja.skillfilters below) still
 // reads correctly instead of every zero-icon skill flattening to a single generic icon.
-export function getSkillIconSrc(id: string): string {
+//
+// Returns the bare icon id (not a path) -- both getSkillIconSrc (the <img> src) and the
+// icontype filter below need this same resolved value. The icontype filter checking the raw
+// skillmeta[id].iconId instead of this resolved id was a real bug (PIPE-2 review): since
+// iconId is genuinely "0" for 136 skills, none of iconIdPrefixes' prefixes ever matched, so
+// every one of those skills silently failed every icontype filter as soon as one was active.
+export function getResolvedIconId(id: string): string {
 	const iconId = skillmeta[id].iconId;
-	if (iconId !== '0') return `/uma-tools/icons/${iconId}.png`;
+	if (iconId !== '0') return iconId;
 	const rarity = skilldata[id].rarity;
 	const type = skilldata[id].alternatives[0]?.effects[0]?.type;
 	const byType = iconByRarityAndType[`${rarity}:${type}`];
-	if (byType) return `/uma-tools/icons/${byType}.png`;
-	if (rarity === SkillRarity.Unique) return '/uma-tools/icons/20013.png';
-	if (rarity === SkillRarity.Evolution) return '/uma-tools/icons/20016.png';
-	return '/uma-tools/icons/10011.png';
+	if (byType) return byType;
+	// Matches SkillPicker.tsx's matchRarity 'unique' range (r > Gold && r < Evolution, i.e.
+	// rarities 3-5) rather than an exact SkillRarity.Unique (=3) check -- PIPE-2 review found
+	// the narrower check silently mis-colors a rarity-4/5 zero-icon skill that also misses the
+	// iconByRarityAndType lookup above. No such skill exists in today's data (this is currently
+	// unreachable), but a future data refresh could produce one.
+	if (rarity > SkillRarity.Gold && rarity < SkillRarity.Evolution)
+		return '20013';
+	if (rarity === SkillRarity.Evolution) return '20016';
+	return '10011';
+}
+
+export function getSkillIconSrc(id: string): string {
+	return `/uma-tools/icons/${getResolvedIconId(id)}.png`;
 }
 
 export const STRINGS_ja = Object.freeze({
@@ -951,10 +967,12 @@ export function SkillList(props) {
 					const check = groups_filters[group].filter((f) => active[group][f]);
 					if (check.length == 0) return true;
 					if (group == 'rarity') return check.some((f) => matchRarity(id, f));
-					else if (group == 'icontype')
+					else if (group == 'icontype') {
+						const resolvedIconId = getResolvedIconId(id);
 						return check.some((f) =>
-							iconIdPrefixes[f].some((p) => skillmeta[id].iconId.startsWith(p)),
+							iconIdPrefixes[f].some((p) => resolvedIconId.startsWith(p)),
 						);
+					}
 					return check.some((f) =>
 						filterOps[f].some((op) =>
 							parsedConditions[id].some((alt) => Matcher.treeMatch(op, alt)),
