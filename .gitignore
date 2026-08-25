@@ -44,9 +44,3 @@ plans
 
 # Playwright smoke-test artifacts (scripts/smoke.mjs) -- screenshots + report, never committed
 /scripts/smoke-artifacts/
-
-# GameTora skill-list exports used to spot-check the icon-fallback logic in
-# components/SkillList.tsx against real in-game icons (PIPE-2, see docs/data-pipeline.md's
-# "Skills with iconId: 0" section) -- third-party content, not ours to commit; regenerate
-# from https://gametora.com/umamusume/skills?rarity=evolved if re-verification is needed.
-evolved*.pdf
