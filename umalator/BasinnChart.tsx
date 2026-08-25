@@ -11,6 +11,7 @@ import { Fragment, h } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Text } from 'preact-i18n';
 import type { HorseState } from '../components/HorseDef';
+import { getSkillIconSrc } from '../components/SkillIcons';
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -31,6 +32,11 @@ import skillnames from '../uma-skill-tools/data/skillnames.json';
 import umas from '../umas.json';
 
 export function isPurpleSkill(id) {
+	// Deliberately the raw skillmeta[id].iconId, not the resolved (guessed) icon from
+	// components/SkillIcons.ts -- PIPE-2 review, round 2, same reasoning as
+	// HorseDefTypes.ts's isDebuffSkill: this is a semantic classification and the resolved id is
+	// only a display guess. Verified a no-op today -- none of the 136 zero-icon skills resolve
+	// to a "...4" icon. See UI-19 for keying this off effect data instead.
 	const iconId = skillmeta[id].iconId;
 	return iconId[iconId.length - 1] == '4';
 }
@@ -166,7 +172,7 @@ function SkillNameCell(props) {
 
 	return (
 		<div class="chartSkillName">
-			<img src={`/uma-tools/icons/${skillmeta[id].iconId}.png`} />
+			<img src={getSkillIconSrc(id)} />
 			<span>
 				<Text id={`skillnames.${id}`} />
 			</span>
