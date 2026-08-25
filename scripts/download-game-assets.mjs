@@ -43,12 +43,19 @@ import { program } from 'commander';
 
 const BASE_DOMAIN = 'prd-storage-game-umamusume.akamaized.net';
 const API_PATH = 'dl/resources';
-const USER_AGENT = 'UnityPlayer/2022.3.21f1 (UnityWebRequest/1.0, libcurl/8.5.0-DEV)';
+const USER_AGENT =
+	'UnityPlayer/2022.3.21f1 (UnityWebRequest/1.0, libcurl/8.5.0-DEV)';
 const MAX_ROWS_WITHOUT_EXPLICIT_LIMIT = 200;
 
 program
-	.requiredOption('--meta <path>', 'path to a decrypted meta DB (see decrypt-meta-db.mjs)')
-	.requiredOption('--like <pattern>', 'SQL LIKE pattern matched against column a.n')
+	.requiredOption(
+		'--meta <path>',
+		'path to a decrypted meta DB (see decrypt-meta-db.mjs)',
+	)
+	.requiredOption(
+		'--like <pattern>',
+		'SQL LIKE pattern matched against column a.n',
+	)
 	.option('--run', 'actually download; default is dry-run (list only)')
 	.option(
 		'--limit <n>',
@@ -63,7 +70,8 @@ program.parse();
 const opts = program.opts();
 
 function resolveEndpoint(kind) {
-	if (kind && ['master', 'sound', 'movie', 'font'].includes(kind)) return 'Generic';
+	if (kind && ['master', 'sound', 'movie', 'font'].includes(kind))
+		return 'Generic';
 	if (kind?.includes('manifest')) return 'Manifest';
 	return 'Windows/assetbundles';
 }
@@ -85,7 +93,7 @@ async function main() {
 		({ default: Database } = await import('better-sqlite3-multiple-ciphers'));
 	} catch {
 		console.error(
-			'better-sqlite3-multiple-ciphers is not installed -- see decrypt-meta-db.mjs\'s ' +
+			"better-sqlite3-multiple-ciphers is not installed -- see decrypt-meta-db.mjs's " +
 				'header comment. Install it first:\n\n  npm i -D better-sqlite3-multiple-ciphers\n',
 		);
 		process.exit(1);
@@ -123,7 +131,9 @@ async function main() {
 		`${rows.length} row(s) matched, ${(totalBytes / 1024).toFixed(1)} KiB total:`,
 	);
 	for (const row of rows) {
-		console.log(`  ${row.n}  (${row.l} bytes, ${row.e === 0n ? 'unencrypted' : 'AB-encrypted'})`);
+		console.log(
+			`  ${row.n}  (${row.l} bytes, ${row.e === 0n ? 'unencrypted' : 'AB-encrypted'})`,
+		);
 	}
 
 	if (!opts.run) {
