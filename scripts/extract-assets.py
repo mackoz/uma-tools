@@ -76,6 +76,23 @@ def extract_textures(data: bytes, out_dir: Path, base_name: str) -> list[Path]:
             sprites.append(obj)
 
     written = []
+    used_names = set()
+
+    def dedupe(path):
+        """Appends _2, _3, ... before the extension if `path` was already claimed earlier in
+        this call -- two Texture2D/Sprite objects sharing a name (or both falling back to the
+        same default) used to silently overwrite each other's output here (PIPE-2 review)."""
+        if path.name not in used_names:
+            used_names.add(path.name)
+            return path
+        i = 2
+        while True:
+            candidate = path.with_name(f"{path.stem}_{i}{path.suffix}")
+            if candidate.name not in used_names:
+                used_names.add(candidate.name)
+                return candidate
+            i += 1
+
     texture_images = []
     for tex_obj in textures:
         data_obj = tex_obj.read()
@@ -91,7 +108,7 @@ def extract_textures(data: bytes, out_dir: Path, base_name: str) -> list[Path]:
             print(f"  note: {base_name} has {len(texture_images)} textures for {len(sprites)} sprites (expected 1)")
         if texture_images:
             image, _ = texture_images[0]
-            atlas_path = out_dir / f"{base_name}.png"
+            atlas_path = dedupe(out_dir / f"{base_name}.png")
             image.save(atlas_path)
             written.append(atlas_path)
             for i, sprite_obj in enumerate(sprites):
@@ -101,12 +118,12 @@ def extract_textures(data: bytes, out_dir: Path, base_name: str) -> list[Path]:
                 # PIL and Unity treat height as starting from opposite sides.
                 sprite_img = image.crop((x, image.height - y - h, x + w, image.height - y))
                 sprite_name = sprite.m_Name or f"{i}_{base_name}"
-                sprite_path = out_dir / f"{sprite_name}.png"
+                sprite_path = dedupe(out_dir / f"{sprite_name}.png")
                 sprite_img.save(sprite_path)
                 written.append(sprite_path)
     else:
         for image, image_name in texture_images:
-            path = out_dir / f"{image_name}.png"
+            path = dedupe(out_dir / f"{image_name}.png")
             image.save(path)
             written.append(path)
 

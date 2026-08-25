@@ -75,12 +75,17 @@ async function main() {
 		process.exit(1);
 	}
 
-	// better-sqlite3's `PRAGMA rekey` rewrites the currently-open database in place, so work
-	// on a copy and never touch the original encrypted file.
-	fs.copyFileSync(inputPath, outputPath);
-
-	const db = new Database(outputPath);
+	// db declared outside the try so the catch block can clean it up regardless of which
+	// step failed -- including the copy/open steps themselves, which used to run before this
+	// try started (PIPE-2 review): an exception from either propagated as an unhandled crash
+	// instead of the intended console.error + process.exit(1) path, and a copy that succeeded
+	// before `new Database()` threw was left stray on disk with no cleanup.
+	let db;
 	try {
+		// better-sqlite3's `PRAGMA rekey` rewrites the currently-open database in place, so
+		// work on a copy and never touch the original encrypted file.
+		fs.copyFileSync(inputPath, outputPath);
+		db = new Database(outputPath);
 		db.pragma(`hexkey = '${META_DB_HEXKEY}'`);
 		// PRAGMA rekey with an empty string tells SQLite3MultipleCiphers to write the database
 		// back out unencrypted -- this is what turns the copy into a plain SQLite file the
@@ -104,12 +109,13 @@ async function main() {
 		console.log(`Decrypted ${outputPath}`);
 		console.log(`Table "a": ${count} row(s)`);
 	} catch (err) {
-		db.close();
+		db?.close();
 		fs.rmSync(outputPath, { force: true });
 		console.error(
-			'Decryption failed -- the key was rejected or the file is not the expected format. ' +
-				"If this previously worked, the game client's encryption key has most likely " +
-				"rotated; see this file's header comment. Underlying error:",
+			'Decryption failed -- the key was rejected, the file is not the expected format, ' +
+				'or the copy/open step itself failed (disk full, permissions, etc). If this ' +
+				"previously worked, the game client's encryption key has most likely rotated; " +
+				"see this file's header comment. Underlying error:",
 		);
 		console.error(err.message);
 		process.exit(1);
