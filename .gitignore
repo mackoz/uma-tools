@@ -44,3 +44,22 @@ plans
 
 # Playwright smoke-test artifacts (scripts/smoke.mjs) -- screenshots + report, never committed
 /scripts/smoke-artifacts/
+
+# Encrypted game client asset-manifest DB (meta) and its decrypted-plaintext sibling
+# (scripts/decrypt-meta-db.mjs's output) -- same story as *.mdb above, large binaries
+# never meant to be committed, see docs/data-pipeline.md. "meta-*" catches copies named
+# per-server (meta-jp, a hypothetical meta-global) the way *.mdb does for master DBs;
+# the game ships the unsuffixed file as literally "meta" with no extension, so it isn't
+# caught by *.mdb and needs its own pattern.
+meta
+meta-*
+*.decrypted
+
+# Local asset-extraction working directories (scripts/download-game-assets.mjs,
+# scripts/extract-assets.py) -- downloaded/decrypted Unity asset bundles and their
+# unpacked contents. Large, regeneratable, never meant to be committed.
+/dat/
+/need_unpack/
+
+# Python venv for scripts/extract-assets.py (UnityPy) -- see docs/data-pipeline.md.
+/scripts/.venv/

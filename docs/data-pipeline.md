@@ -109,11 +109,32 @@ Both were literal one-line fixes, landed alongside a JP data refresh (PIPE-5) th
 
 `make_uma_info.pl` remains blocked by two things unrelated to the two bugs above: `File::Slurper` isn't installed in every environment this pipeline gets run from (an environment gap, not a code bug), and — the real blocker — the encrypted `meta` asset DB it needs, per the next section.
 
-## This fork's asset extraction is broken against the current game client
+## Asset extraction against the current game client (PIPE-2)
 
-The game's `meta` asset-manifest DB is encrypted in current game clients (chacha20 on the SQLite file itself, plus a per-asset XOR keystream applied past byte offset 256) — this fork's `extract_resource.pl` still assumes an unencrypted `meta` DB and merely writes an undecrypted `.key` sidecar. **Icon/asset extraction (the flow above) will not work against a current client's data until this fork adds decryption logic for both layers.** Regenerating JSON from an already-decrypted/legacy dataset is unaffected.
+The game's `meta` asset-manifest DB is encrypted in current game clients, and this fork's `extract_resource.pl` still assumes a plain, unencrypted `meta` DB — it opens it with a bare `DBI->connect` and merely writes an undecrypted `.key` sidecar for each row. As of 2026-08-24 this is unblocked by a separate decrypt step rather than a change to `extract_resource.pl` itself:
 
-**Until that's fixed, if game data just looks stale (missing umas/skills/courses) rather than needing this whole pipeline run, see `scripts/sync-upstream-data.mjs`** — it ports already-computed data from a local checkout of `alpha123/uma-tools` instead of extracting from a live client. It's a stopgap for exactly this gap, not a replacement for the pipeline above.
+```
+scripts/decrypt-meta-db.mjs <encrypted-meta> [output]
+    -> a plaintext SQLite file (default: <input>.decrypted)
+
+extract_resource.pl <decrypted-meta> <LIKE-query>
+    -> need_unpack/  (raw, still-packed asset bundles + .key files for encrypted ones)
+
+scripts/extract-assets.py --dat <dat-dir> --hash <H> --key <e-column-value> --out <dir>
+    -> PNGs (handles the per-asset AB XOR layer + UnityPy unpacking in one step;
+       an alternative to the need_unpack/ + external-unpacker + move_unpacked_resources.pl
+       flow above when you already have a decrypted meta DB and dat/ blobs to hand)
+```
+
+**The cipher is ChaCha20 (sqleet/SQLite3MultipleCiphers), not SQLCipher** — confirmed from `meta`'s own file header: bytes 16 onward (page size, format version, reserved-space byte) are valid plaintext SQLite header fields; only the first 16 bytes are replaced with a random salt, and each page carries 32 reserved bytes (16-byte nonce + 16-byte Poly1305 tag). SQLCipher encrypts the whole first page including those header fields; sqleet does not. `scripts/decrypt-meta-db.mjs` uses `better-sqlite3-multiple-ciphers` (a maintained drop-in Node binding for exactly this cipher family) rather than hand-rolling a page-level KDF — install it yourself before running the script (`npm i -D better-sqlite3-multiple-ciphers`; deliberately not a `package.json` dependency, same reasoning as this pipeline's undeclared Perl modules).
+
+**Verified end-to-end 2026-08-24** against a real `master-jp.mdb` + `meta` + `dat/` from a Windows client install: decrypted `meta` (364,706 rows), extracted the previously-missing outfit `114101` (エピファネイア) icon that blocked `make_uma_info.pl`, and re-extracted an already-committed icon (`icons/chara/chr_icon_1001.png`) for a pixel diff against the original — identical in the face/hair interior, with differences confined to sub-pixel antialiasing on the circular mask edge (a PNG-encoder cosmetic difference, not a pipeline bug). `extract_resource.pl` opens the decrypted output without modification, confirming the plaintext-sibling design actually unblocks the existing pipeline.
+
+**The per-asset XOR layer** (applied to bundle bytes past offset 256, keyed by the `meta` row's `e` column) is reimplemented in `scripts/extract-assets.py`, adapted alongside texture/sprite extraction logic from `rockisch/umamusu-utils` (MIT) — see that script's header comment for the attribution and the key-derivation sourcing.
+
+**The CDN download route is a mixed result — read this before assuming it replaces a game install.** `scripts/download-game-assets.mjs` can fetch files from the CDN by hash, and this is **confirmed working for `master.mdb` refreshes** (the `Generic` endpoint — proven with a real download, LZ4-frame compressed, matching `forceDownloadMasterDb`'s approach) **and for `Manifest`-kind rows**, meaning `master.mdb` itself can be refreshed with no game install at all. It is **confirmed NOT working for individual asset bundles** (icons, textures) under the `Windows/assetbundles` endpoint — every hash tried 404s, including ones independently confirmed present in a real client's `dat/` folder, so this isn't resource-version staleness on an old `meta` snapshot; the endpoint just doesn't serve individual bundles this way (at minimum a missing resource-version path segment or session-scoped auth, not yet found). **Until someone finds the missing piece, individual asset/icon extraction requires a real client install's `dat/` folder**, copied in alongside `meta`/`master.mdb` the same way this fork already handles those two files.
+
+**Until decryption is available to you, if game data just looks stale (missing umas/skills/courses) rather than needing this whole pipeline run, see `scripts/sync-upstream-data.mjs`** — it ports already-computed data from a local checkout of `alpha123/uma-tools` instead of extracting from a live client. It's a stopgap for exactly this gap, not a replacement for the pipeline above.
 
 **`sync-upstream-data.mjs` is not a viable catch-up path for JP engine skill data specifically** — confirmed 2026-08-24: `alpha123/uma-skill-tools`'s own `data/skill_data.json` was itself stuck at the same 2026-03-12 commit this fork's copy was, so there was nothing newer for the sync script to port. Regenerating from a fresh `master.mdb` (see the JP dataset section above) is the only real fix once alpha123 is also stale — this is exactly what happened here (+156 skills, 86 changed, one real engine regression found and fixed).
 
