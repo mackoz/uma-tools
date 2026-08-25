@@ -1,5 +1,9 @@
 node_modules
 
+# Stock built-in agent definitions Claude Code writes to disk; not project-customized,
+# so they don't need to travel with .claude/skills/ when that gets committed.
+.claude/agents/
+
 # Local alias to CLAUDE.md for tools that discover AGENTS.md. The symlink is
 # intentionally checkout-local; CLAUDE.md is the tracked source of truth.
 AGENTS.md
