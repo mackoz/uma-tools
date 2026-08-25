@@ -120,11 +120,18 @@ scripts/decrypt-meta-db.mjs <encrypted-meta> [output]
 extract_resource.pl <decrypted-meta> <LIKE-query>
     -> need_unpack/  (raw, still-packed asset bundles + .key files for encrypted ones)
 
+scripts/download-game-assets.mjs --meta <decrypted-meta> --like <LIKE-pattern> [--run]
+    -> dat/<hash[0:2]>/<hash>  (an alternative to a game client's own dat/ folder --
+       see below, "dat/ is no longer required at all")
+
 scripts/extract-assets.py --dat <dat-dir> --hash <H> --key <e-column-value> --out <dir>
     -> PNGs (handles the per-asset AB XOR layer + UnityPy unpacking in one step;
        an alternative to the need_unpack/ + external-unpacker + move_unpacked_resources.pl
-       flow above when you already have a decrypted meta DB and dat/ blobs to hand)
+       flow above when you already have a decrypted meta DB and dat/ blobs to hand.
+       Requires a venv -- see the "Requires" note below the diagram.)
 ```
+
+`extract-assets.py` needs its own venv (UnityPy/Pillow aren't system-Python deps): `python3 -m venv scripts/.venv && scripts/.venv/bin/pip install -r scripts/requirements.txt`, then run it as `scripts/.venv/bin/python scripts/extract-assets.py ...`, not a bare `python3 scripts/extract-assets.py ...` (see the script's own docstring).
 
 **The cipher is ChaCha20 (sqleet/SQLite3MultipleCiphers), not SQLCipher** — confirmed from `meta`'s own file header: bytes 16 onward (page size, format version, reserved-space byte) are valid plaintext SQLite header fields; only the first 16 bytes are replaced with a random salt, and each page carries 32 reserved bytes (16-byte nonce + 16-byte Poly1305 tag). SQLCipher encrypts the whole first page including those header fields; sqleet does not. `scripts/decrypt-meta-db.mjs` uses `better-sqlite3-multiple-ciphers` (a maintained drop-in Node binding for exactly this cipher family) rather than hand-rolling a page-level KDF — install it yourself before running the script (`npm i -D better-sqlite3-multiple-ciphers`; deliberately not a `package.json` dependency, same reasoning as this pipeline's undeclared Perl modules).
 
