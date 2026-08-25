@@ -109,7 +109,12 @@ program.parse();
 const opts = program.opts();
 
 function resolveEndpoint(kind, platform) {
-	const k = kind?.toLowerCase();
+	// String(...) rather than kind?.toLowerCase(): only master/manifest/assetbundle kinds are
+	// confirmed to carry a string `m` end-to-end (see the header comment) -- sound/movie/font
+	// Generic-kind rows are untested and might not. `?.` alone only guards null/undefined, not
+	// a wrong type such as a bigint/number `m`, which would throw on .toLowerCase() directly
+	// (PIPE-2 review).
+	const k = kind == null ? kind : String(kind).toLowerCase();
 	if (k && ['master', 'sound', 'movie', 'font'].includes(k)) return 'Generic';
 	if (k?.includes('manifest')) return 'Manifest';
 	return `${platform}/assetbundles`;
@@ -157,7 +162,21 @@ async function main() {
 		process.exit(1);
 	}
 
-	const db = new Database(path.resolve(opts.meta), { readonly: true });
+	let db;
+	try {
+		db = new Database(path.resolve(opts.meta), { readonly: true });
+	} catch (err) {
+		// Unlike the import steps above, this previously had no try/catch -- an invalid,
+		// missing, or still-encrypted --meta path (an easy, untested mistake) crashed with a
+		// raw stack trace via an unhandled rejection instead of this file's usual friendly
+		// console.error + exit(1) pattern (PIPE-2 review).
+		console.error(`Failed to open --meta ${opts.meta}: ${err.message}`);
+		console.error(
+			'Make sure this is a plaintext (already-decrypted) SQLite file -- ' +
+				'see decrypt-meta-db.mjs.',
+		);
+		process.exit(1);
+	}
 	// The individual-assetbundle route is keyed by platform (`Windows/assetbundles` vs
 	// `Android/assetbundles`) because the bundle *content* -- and therefore its hash -- differs
 	// per platform (different texture compression, etc). `meta` records which client it came
@@ -189,8 +208,15 @@ async function main() {
 	// Sibling of --meta by default, matching extract_resource.pl's own dat/ derivation
 	// (always relative to <meta>'s directory, never its own cwd) -- keeps the two tools
 	// pointed at the same cache even when run from different working directories.
-	const outDir =
-		opts.out ?? path.join(path.dirname(path.resolve(opts.meta)), 'dat');
+	// path.resolve(opts.out), not opts.out verbatim: decompPath below derives its own
+	// directory from path.dirname(outDir), which only lines up with --meta's directory the
+	// way the comment above describes if outDir is absolute -- a relative --out (e.g. "dat",
+	// a natural value to pass) otherwise makes path.dirname(outDir) resolve to cwd, silently
+	// misplacing (and potentially overwriting an unrelated same-named file for) any
+	// decompressed sibling output (PIPE-2 review).
+	const outDir = opts.out
+		? path.resolve(opts.out)
+		: path.join(path.dirname(path.resolve(opts.meta)), 'dat');
 
 	const totalBytes = rows.reduce((sum, r) => sum + r.l, 0);
 	const rowLimit = opts.limit ?? MAX_ROWS_WITHOUT_EXPLICIT_LIMIT;
@@ -224,10 +250,19 @@ async function main() {
 	for (const row of rows) {
 		const destDir = path.join(outDir, row.h.slice(0, 2));
 		const destPath = path.join(destDir, row.h);
-		const decompPath = path.join(
-			path.dirname(outDir),
-			path.basename(row.n).replace(/\.lz4$/i, ''),
-		);
+		// Only Generic-kind rows (master/sound/movie/font) are ever LZ4-frame-compressed (see
+		// header comment) -- computing/checking a decompPath for every other row (the common
+		// case: icons and other individual asset bundles) meant the cache-hit branch below
+		// always found it missing, re-read the full cached blob, and logged "regenerating
+		// decompressed copy" on every single re-run even though nothing was ever regenerated
+		// (PIPE-2 review).
+		const isGenericKind = resolveEndpoint(row.m, platform) === 'Generic';
+		const decompPath = isGenericKind
+			? path.join(
+					path.dirname(outDir),
+					path.basename(row.n).replace(/\.lz4$/i, ''),
+				)
+			: null;
 		const cached =
 			fs.existsSync(destPath) && fs.statSync(destPath).size === row.l;
 		let buf;
@@ -235,7 +270,7 @@ async function main() {
 			// Cached raw bytes -- still worth checking whether the decompressed sibling is
 			// missing (e.g. the user deleted master.mdb but kept dat/ around) before skipping
 			// entirely, so re-running this command is a reliable way to regenerate it.
-			if (fs.existsSync(decompPath)) {
+			if (!isGenericKind || fs.existsSync(decompPath)) {
 				console.log(`skip (cached): ${row.n}`);
 				continue;
 			}
@@ -263,10 +298,12 @@ async function main() {
 			console.log(`downloaded: ${row.n} -> ${destPath}`);
 		}
 
-		const decompressed = await maybeDecompressLz4(buf);
-		if (decompressed) {
-			fs.writeFileSync(decompPath, decompressed);
-			console.log(`  decompressed (LZ4 frame detected) -> ${decompPath}`);
+		if (decompPath) {
+			const decompressed = await maybeDecompressLz4(buf);
+			if (decompressed) {
+				fs.writeFileSync(decompPath, decompressed);
+				console.log(`  decompressed (LZ4 frame detected) -> ${decompPath}`);
+			}
 		}
 	}
 }

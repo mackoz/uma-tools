@@ -61,6 +61,18 @@ async function main() {
 		console.error(`Input file does not exist: ${inputPath}`);
 		process.exit(1);
 	}
+	if (outputPath === inputPath) {
+		// PRAGMA rekey rewrites whatever file is open in place -- if output resolves to the
+		// same path as input, "work on a copy" (see the try block below) silently becomes
+		// "decrypt in place," and the catch block's cleanup (fs.rmSync on failure) would
+		// delete the only copy of the original encrypted file outright. Refuse rather than
+		// silently destroying data (PIPE-2 review).
+		console.error(
+			`Output path must differ from the input path (both resolve to ${inputPath}) -- ` +
+				'decrypting in place would destroy the original encrypted file.',
+		);
+		process.exit(1);
+	}
 
 	let Database;
 	try {
