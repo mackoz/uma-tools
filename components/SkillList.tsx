@@ -7,7 +7,7 @@ import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
 import { isDebuffSkill } from './HorseDefTypes';
 import { useLanguage } from './Language';
-import { getSkillIconSrc, matchesIconType } from './SkillIcons';
+import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { Tooltip } from './Tooltip';
 
 import './SkillList.css';
@@ -848,7 +848,7 @@ export function SkillList(props) {
 					if (check.length == 0) return true;
 					if (group == 'rarity') return check.some((f) => matchRarity(id, f));
 					else if (group == 'icontype') {
-						return check.some((f) => matchesIconType(id, f));
+						return matchesAnyIconType(id, check);
 					}
 					return check.some((f) =>
 						filterOps[f].some((op) =>

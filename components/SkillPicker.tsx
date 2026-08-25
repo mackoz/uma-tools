@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
-import { getSkillIconSrc, matchesIconType } from './SkillIcons';
+import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { FormattedCondition } from './SkillList';
 
 import './SkillPicker.css';
@@ -340,12 +340,7 @@ export function SkillPickerModal({
 			if (distance && !matchConditionFilter(id, distance)) return false;
 			if (surface && !matchConditionFilter(id, surface)) return false;
 			if (location && !matchConditionFilter(id, location)) return false;
-			if (
-				iconFiltered &&
-				!ICON_TYPE_FILTERS.some(
-					(t) => activeIconTypes.has(t) && matchesIconType(id, t),
-				)
-			)
+			if (iconFiltered && !matchesAnyIconType(id, activeIconTypes))
 				return false;
 			return true;
 		});
