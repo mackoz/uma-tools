@@ -53,12 +53,17 @@ undeclared-Perl-module precedent (`DBI`, `File::Slurper`).
   failure/retry/dependency profiles (native binding vs. plain HTTP vs. Python+UnityPy) and are
   each independently useful — `decrypt-meta-db.mjs` alone already fully unblocks
   `extract_resource.pl`'s existing flow with no CDN or Python involved at all.
-- **Wait and file this as a documentation-only gap, like the still-open CDN
-  individual-asset-bundle 404 issue.** Rejected for the `meta`-decryption half specifically:
-  unlike the CDN gap (where the missing piece — likely a resource-version path segment or
-  session-scoped auth — genuinely isn't known yet), the cipher and both keys were
-  independently confirmed against two unrelated sources, so there was a concrete, buildable
-  fix available rather than an open unknown to document around.
+- **Wait and file this as a documentation-only gap, like the CDN individual-asset-bundle 404
+  issue known at the time.** Rejected for the `meta`-decryption half specifically: unlike the
+  CDN gap as understood when this ADR was written (where the missing piece — thought to be a
+  resource-version path segment or session-scoped auth — seemed genuinely unknown), the cipher
+  and both keys were independently confirmed against two unrelated sources, so there was a
+  concrete, buildable fix available rather than an open unknown to document around. **Correction
+  (2026-08-25, later the same day): the CDN gap referenced above turned out not to be an open
+  unknown either** — it was a platform mismatch (Android- vs Windows-sourced asset hashes),
+  diagnosed and fixed same-day; see `docs/data-pipeline.md`'s PIPE-2 section and
+  `plans/work-queue/in-progress/pipe-2.md`. Left here rather than rewritten since it accurately
+  reflects what was known at the time this decision was made.
 
 ## Consequences
 
