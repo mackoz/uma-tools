@@ -6,34 +6,38 @@
 // the URL scheme and header values are extracted client/CDN facts, not their expression):
 //   https://<baseDomain>/<apiPath>/<endpoint>/<hash[0:2]>/<hash>
 // where endpoint is "Generic" for master/sound/movie/font kinds, "Manifest" for manifest
-// rows, otherwise "Windows/assetbundles".
+// rows, otherwise "<platform>/assetbundles" -- platform is "Windows" or "Android" and MUST
+// match whatever client `meta` itself came from (see the platform lookup in main() below),
+// because the bundle content -- and therefore its hash -- differs per platform.
 //
-// CONFIRMED WORKING for "Generic" (master.mdb refresh with no game install needed) and
-// "Manifest" kinds. Generic-endpoint downloads matching `forceDownloadMasterDb`'s approach
-// are LZ4-frame-compressed -- detected here by the frame magic number (bytes 04 22 4D 18)
-// and automatically decompressed via `lz4-napi` (not a package.json dependency, same
-// on-demand-install pattern as decrypt-meta-db.mjs's better-sqlite3-multiple-ciphers --
-// install it yourself: `npm i -D lz4-napi`). Verified 2026-08-25 against a real
-// `master.mdb.lz4` CDN download: `lz4-napi`'s `decompressFrameSync` produced a byte-identical
-// copy of the real client's `master.mdb`. (An earlier attempt with the `lz4` package's pure-JS
-// frame decoder failed partway through the same real file with "Invalid data block" --
-// apparently a block-dependent-mode frame this fork's game client uses that library doesn't
-// handle correctly; `lz4-napi` -- napi-rs bindings around the actively-maintained Rust
-// `lz4-flex` crate -- decoded it correctly.) The raw compressed bytes are still what land in
-// the dat/ cache (see below); the decompressed copy is written as a separate, immediately
-// usable sibling file only when the frame magic is actually detected, not assumed from `kind`
-// alone -- sound/movie/font Generic-kind rows are undemonstrated and may not be LZ4 at all.
+// CONFIRMED WORKING for all three kinds, including individual asset bundles. Corrected
+// 2026-08-25: an earlier version of this script hardcoded "Windows/assetbundles" and every
+// URL 404s when the `meta` under test actually came from an Android client (Android-sourced
+// hashes only exist under the Android prefix) -- that was misdiagnosed as PIPE-2, 2026-08-24
+// as "the route doesn't serve individual bundles this way" when it was really just a platform
+// mismatch between the test hashes and the hardcoded path. Re-verified end-to-end 2026-08-25
+// with the platform now read from `meta` itself: downloaded a real icon bundle fresh from the
+// CDN (no local dat/ needed), AB-XOR-decrypted it, extracted it with UnityPy, and pixel-diffed
+// the result against the already-committed `icons/chara/chr_icon_1001.png` -- mean per-channel
+// diff 2.2/255, identical to the diff level already documented for meta+dat-based extraction
+// in docs/data-pipeline.md (ordinary antialiasing/re-encoding rounding, not a wrong asset).
+// **This means dat/ is no longer required at all** -- only a decrypted `meta` -- see that
+// doc's PIPE-2 section for the full writeup.
 //
-// CONFIRMED *NOT* WORKING for "Windows/assetbundles" -- i.e. this does NOT currently let you
-// download individual icon/texture asset bundles. Verified 2026-08-24 (PIPE-2): every
-// assetbundles-endpoint URL tried 404s from the CDN, including hashes independently
-// confirmed present in a real client's dat/ folder (so it isn't resource-version rot on a
-// stale meta snapshot -- the route itself doesn't serve individual bundles this way, at
-// least not without something this script doesn't yet know, e.g. a resource-version path
-// segment or session-scoped auth). Left in for whoever picks this back up -- don't remove
-// it as dead code, but don't trust it either until someone finds the missing piece. Until
-// then, individual asset extraction requires a real client install's dat/ folder copied in
-// alongside meta/master.mdb, the same way this fork already handles those two files.
+// Generic-endpoint downloads matching `forceDownloadMasterDb`'s approach are LZ4-frame-
+// compressed -- detected here by the frame magic number (bytes 04 22 4D 18) and automatically
+// decompressed via `lz4-napi` (not a package.json dependency, same on-demand-install pattern
+// as decrypt-meta-db.mjs's better-sqlite3-multiple-ciphers -- install it yourself:
+// `npm i -D lz4-napi`). Verified 2026-08-25 against a real `master.mdb.lz4` CDN download:
+// `lz4-napi`'s `decompressFrameSync` produced a byte-identical copy of the real client's
+// `master.mdb`. (An earlier attempt with the `lz4` package's pure-JS frame decoder failed
+// partway through the same real file with "Invalid data block" -- apparently a block-
+// dependent-mode frame this fork's game client uses that library doesn't handle correctly;
+// `lz4-napi` -- napi-rs bindings around the actively-maintained Rust `lz4-flex` crate --
+// decoded it correctly.) The raw compressed bytes are still what land in the dat/ cache (see
+// below); the decompressed copy is written as a separate, immediately usable sibling file
+// only when the frame magic is actually detected, not assumed from `kind` alone -- sound/
+// movie/font Generic-kind rows are undemonstrated and may not be LZ4 at all.
 //
 // Downloaded bundles are cached at dat/<hash[0:2]>/<hash> (raw, as served by the CDN --
 // matching the directory layout the game client itself uses and what extract_resource.pl
@@ -104,11 +108,11 @@ program
 program.parse();
 const opts = program.opts();
 
-function resolveEndpoint(kind) {
+function resolveEndpoint(kind, platform) {
 	const k = kind?.toLowerCase();
 	if (k && ['master', 'sound', 'movie', 'font'].includes(k)) return 'Generic';
 	if (k?.includes('manifest')) return 'Manifest';
-	return 'Windows/assetbundles';
+	return `${platform}/assetbundles`;
 }
 
 async function maybeDecompressLz4(buf) {
@@ -130,12 +134,12 @@ async function maybeDecompressLz4(buf) {
 	return decompressFrameSync(buf);
 }
 
-function assetUrl(hash, kind) {
+function assetUrl(hash, kind, platform) {
 	return [
 		'https:/',
 		BASE_DOMAIN,
 		API_PATH,
-		resolveEndpoint(kind),
+		resolveEndpoint(kind, platform),
 		hash.slice(0, 2),
 		hash,
 	].join('/');
@@ -154,6 +158,18 @@ async function main() {
 	}
 
 	const db = new Database(path.resolve(opts.meta), { readonly: true });
+	// The individual-assetbundle route is keyed by platform (`Windows/assetbundles` vs
+	// `Android/assetbundles`) because the bundle *content* -- and therefore its hash -- differs
+	// per platform (different texture compression, etc). `meta` records which client it came
+	// from in table `c`; hardcoding "Windows" here previously produced a 404 for every asset
+	// when `meta` actually came from an Android client (PIPE-2, 2026-08-25 -- the CDN route
+	// works fine, the earlier "confirmed not working" finding was testing Android-sourced
+	// hashes against the Windows path). Falls back to Windows if `c` doesn't have the expected
+	// row -- matches this script's pre-fix behavior rather than guessing.
+	const platformRow = db
+		.prepare("SELECT n FROM c WHERE n = '//Android' OR n = '//Windows'")
+		.get();
+	const platform = platformRow ? platformRow.n.slice(2) : 'Windows';
 	// `e` (the per-asset AB encryption key) is a signed 64-bit value that routinely exceeds
 	// Number.MAX_SAFE_INTEGER -- safeIntegers(true) is required or better-sqlite3 silently
 	// truncates it, corrupting the key downstream. `l` (byte length) never approaches that
@@ -227,7 +243,7 @@ async function main() {
 			console.log(`cached (regenerating decompressed copy): ${row.n}`);
 		} else {
 			fs.mkdirSync(destDir, { recursive: true });
-			const url = assetUrl(row.h, row.m);
+			const url = assetUrl(row.h, row.m, platform);
 			const res = await fetch(url, {
 				headers: { 'User-Agent': USER_AGENT, 'Cache-Control': 'no-cache' },
 			});
