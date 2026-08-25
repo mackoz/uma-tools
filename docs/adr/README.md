@@ -33,3 +33,4 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0009](0009-chart-runs-use-real-hp-policy.md) | Chart runs request `mode: 'compare'` for a real HP policy | Accepted |
 | [0010](0010-design-tokens.md) | Umalator styles resolve through a single token file; dark mode is token redefinition | Accepted |
 | [0011](0011-gitlink-drift-guard.md) | Gitlink-drift guard checks commit identity, and exists twice on purpose | Accepted |
+| [0012](0012-asset-decryption-as-separate-scripts.md) | Asset decryption/extraction is a separate script layer, not a patch to the Perl pipeline | Accepted |
