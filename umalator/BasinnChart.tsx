@@ -11,6 +11,7 @@ import { Fragment, h } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Text } from 'preact-i18n';
 import type { HorseState } from '../components/HorseDef';
+import { getSkillIconSrc } from '../components/SkillList';
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -166,7 +167,7 @@ function SkillNameCell(props) {
 
 	return (
 		<div class="chartSkillName">
-			<img src={`/uma-tools/icons/${skillmeta[id].iconId}.png`} />
+			<img src={getSkillIconSrc(id)} />
 			<span>
 				<Text id={`skillnames.${id}`} />
 			</span>

@@ -15,7 +15,9 @@ plans
 
 # Extracted game client DB used locally to regenerate skill/uma/course data.
 # Large binary, never meant to be committed - see docs/data-pipeline.md.
-master.mdb
+# Glob (not just the literal master.mdb) so a differently-named copy -- e.g.
+# master-jp.mdb, kept alongside a hypothetical master-global.mdb -- is caught too.
+*.mdb
 
 # esbuild output for every app with a build.mjs. deploy.yml rebuilds these on
 # every push and Pages is configured to serve that CI artifact (build_type:
