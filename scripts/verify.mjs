@@ -11,7 +11,8 @@
 // docs site under plans/ and is skipped when absent.
 //
 // Exits non-zero if a build fails, the typecheck error count rises above the
-// baseline, the smoke fails, or the docs build fails.
+// baseline, the smoke fails, the docs build fails, or (on master) the
+// uma-skill-tools gitlink doesn't point at the submodule's origin/master tip.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -118,6 +119,36 @@ function runSmoke() {
 	return { label: `smoke FAILED (${count}) -> scripts/smoke-artifacts/smoke-report.json`, ok: false };
 }
 
+// The gitlink recorded for uma-skill-tools must point at the submodule's
+// merged master tip, not a branch head -- see docs/adr for the paired-PR
+// gitlink-drift fix. Only enforced on master; a feature branch may
+// legitimately lead master while an engine PR is still in flight.
+function runGitlink() {
+	const submodulePath = path.join(root, 'uma-skill-tools');
+	if (!fs.existsSync(path.join(submodulePath, '.git'))) return { label: 'gitlink -', ok: true };
+
+	const branch = spawnSync('git', ['branch', '--show-current'], {
+		cwd: root,
+		encoding: 'utf8',
+	}).stdout.trim();
+	if (branch !== 'master') return { label: 'gitlink -', ok: true };
+
+	const recorded = spawnSync('git', ['rev-parse', 'HEAD:uma-skill-tools'], {
+		cwd: root,
+		encoding: 'utf8',
+	}).stdout.trim();
+	const upstream = spawnSync('git', ['rev-parse', 'origin/master'], {
+		cwd: submodulePath,
+		encoding: 'utf8',
+	}).stdout.trim();
+	if (!recorded || !upstream) return { label: 'gitlink -', ok: true };
+	if (recorded === upstream) return { label: 'gitlink OK', ok: true };
+	return {
+		label: `gitlink STALE (${recorded.slice(0, 7)} != ${upstream.slice(0, 7)})`,
+		ok: false,
+	};
+}
+
 // Optional local docs site: strict-build it when present, skip silently when not.
 function runDocs() {
 	const mkdocsBin = path.join(root, 'plans', '.venv', 'bin', 'mkdocs');
@@ -169,6 +200,7 @@ if (fs.existsSync(baselinePath)) {
 
 const smoke = skipSmoke ? { label: 'smoke -', ok: true } : runSmoke();
 const docs = runDocs();
+const gitlink = runGitlink();
 
 const tscLabel =
 	tsc >= TSC_CAP ? `>=${TSC_CAP} (capped)` : `${tsc}${delta(tsc, base?.tsc)}`;
@@ -179,6 +211,7 @@ const parts = [
 	`literals ${sum(literals)}${delta(sum(literals), base ? sum(base.literals) : null)}`,
 	smoke.label,
 	docs.label,
+	gitlink.label,
 ];
 console.log(parts.join(' | '));
 
@@ -191,4 +224,4 @@ for (const [name, n] of Object.entries(dark)) {
 if (details.length) console.log(`.dark by file: ${details.join(' ')}`);
 
 const tscRegressed = base != null && base.tsc < TSC_CAP && tsc > base.tsc;
-if (!buildsOk || tscRegressed || !smoke.ok || !docs.ok) process.exit(1);
+if (!buildsOk || tscRegressed || !smoke.ok || !docs.ok || !gitlink.ok) process.exit(1);
