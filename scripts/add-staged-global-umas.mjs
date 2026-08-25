@@ -24,6 +24,12 @@
 // refactor of the outfit-filtering logic can't silently reopen the ability to clobber
 // Global-authoritative data with JP values.
 //
+// This guard is scoped to this script's own closure -- sync-upstream-data.mjs enforces its own,
+// independent add-only guarantee on the same files rather than sharing this one (PIPE-2 review,
+// round 3). Both are correct today; PIPE-7 (already tracking readJSON/boilerplate duplication
+// across these scripts) is the natural place to extract a shared guard alongside that dedup,
+// rather than one more independently-drifting copy.
+//
 // provenance (in umalator-global/unreleased.json) records which skill ids are JP-sourced
 // approximations rather than Global-authoritative -- i.e. mechanics ported from JP because the
 // uma/outfit isn't live on Global yet, not verified against Global's own master.mdb. It's the
@@ -282,16 +288,31 @@ function main() {
 		);
 	}
 
-	// Inherited-twin sweep: every base unique already in Global skill_data.json (this run's new
-	// ones included) should also have its '9...' inherited variant, or it silently can't be
+	// Inherited-twin sweep: every base unique this script is tracking as JP-sourced (this run's
+	// new ones included) should also have its '9...' inherited variant, or it silently can't be
 	// selected on another uma in the skill picker (Object.keys(skill_data.json) is the picker's
 	// entire candidate universe -- see components/HorseDef.tsx's nonUniqueSkills). Sweeping every
-	// base unique rather than just this run's outfits makes this idempotent and self-healing: it
-	// also backfills any pre-existing gap left by an earlier run or a hand-edit.
+	// JP-sourced base unique rather than just this run's outfits makes this idempotent and
+	// self-healing: it also backfills any pre-existing gap left by an earlier run.
+	//
+	// Scoped to priorJpSourced/provenance rather than every sid in globalSkillData (PIPE-2
+	// review, round 3): sweeping unconditionally would silently write JP-sourced mechanics for an
+	// already-live, Global-authoritative uma's inherited twin too, if it ever happened to be
+	// missing one -- bypassing the "Show Unreleased Umas" toggle entirely, since that gate is
+	// populated only from releaseOrder-tracked outfits below and a live uma's base sid was never
+	// one of those. Scoping to known-JP-sourced bases also fixes a second gap for free: those are
+	// exactly the sids the unreleasedSkills backfill loop below already re-derives provenance for
+	// on every run, so a self-healed twin's provenance can no longer silently disappear the way
+	// an unconditionally-swept one's would once this run's fresh `provenance` object above is
+	// discarded. A base sid promoted from staged-JP to Global-live is correctly excluded too --
+	// its own provenance was already dropped from priorJpSourced by the separate, already-
+	// documented PIPE-6 limitation (see this file's header comment), so this doesn't reopen that
+	// gap, only closes the new one.
 	const newInherited = [];
 	const skippedInheritedNoMechanics = [];
 	for (const sid of Object.keys(globalSkillData)) {
 		if (sid[0] !== '1' || sid.length !== 6) continue;
+		if (!priorJpSourced.has(sid) && !(sid in provenance)) continue;
 		const inh = inheritedSkillForUnique(sid);
 		if (inh in globalSkillData) continue;
 		if (

@@ -42,7 +42,7 @@ import {
 	RegionDisplayType,
 	TrackSelect,
 } from '../components/RaceTrack';
-import { matchesIconType } from '../components/SkillIcons';
+import { matchesAnyIconType } from '../components/SkillIcons';
 import {
 	ExpandedSkillDetails,
 	STRINGS_en as SKILL_STRINGS_en,
@@ -4061,9 +4061,7 @@ function App(props) {
 			activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
 		) {
 			skills = skills.filter((id) =>
-				CHART_ICON_TYPE_FILTERS.some(
-					(t) => activeChartIconTypes.has(t) && matchesIconType(id, t),
-				),
+				matchesAnyIconType(id, activeChartIconTypes),
 			);
 		}
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
@@ -4710,6 +4708,28 @@ function App(props) {
 		setChartData(`${run}run`);
 	}
 
+	// Memoized rather than computed inline in the render body below (PIPE-2 review, round 3): this
+	// used to be one cheap string-prefix check per skill (matchChartIconType, pre-consolidation);
+	// after being routed through the shared SkillIcons.ts resolver it now pays a zero-icon skill's
+	// heavier fallback (a skilldata lookup + an iconByRarityAndType lookup), and the unmemoized
+	// version recomputed on every re-render of App while in Chart mode with results present --
+	// e.g. hovering a chart row -- not just when the filter actually changed. No early return
+	// exists anywhere in this component before this point, so an unconditional hook call here is
+	// safe.
+	const hiddenByIconFilter = useMemo(() => {
+		if (
+			mode != Mode.Chart ||
+			activeChartIconTypes.size >= CHART_ICON_TYPE_FILTERS.length
+		) {
+			return new Set<string>();
+		}
+		return new Set(
+			Array.from(tableData.keys()).filter(
+				(id) => !matchesAnyIconType(id, activeChartIconTypes),
+			),
+		);
+	}, [mode, tableData, activeChartIconTypes]);
+
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
 		const showIntroOnCompare = compareResults === null && !isSimulationRunning;
@@ -4746,18 +4766,6 @@ function App(props) {
 			courseId !== lastRunChartCourseId ||
 			iconTypesDirty ||
 			hideUniquesDirty;
-		const hiddenByIconFilter =
-			mode == Mode.Chart &&
-			activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
-				? new Set(
-						Array.from(tableData.keys()).filter(
-							(id) =>
-								!CHART_ICON_TYPE_FILTERS.some(
-									(t) => activeChartIconTypes.has(t) && matchesIconType(id, t),
-								),
-						),
-					)
-				: new Set<string>();
 		const hiddenByUniqueFilter =
 			mode == Mode.Chart && hideInheritedUniques
 				? new Set(
