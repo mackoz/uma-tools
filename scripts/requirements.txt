@@ -1,0 +1,4 @@
+# For scripts/extract-assets.py (PIPE-2). Install into a venv, not system Python:
+#   python3 -m venv scripts/.venv && scripts/.venv/bin/pip install -r scripts/requirements.txt
+UnityPy
+Pillow
