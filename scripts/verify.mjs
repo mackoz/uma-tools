@@ -120,31 +120,50 @@ function runSmoke() {
 }
 
 // The gitlink recorded for uma-skill-tools must point at the submodule's
-// merged master tip, not a branch head -- see docs/adr for the paired-PR
-// gitlink-drift fix. Only enforced on master; a feature branch may
-// legitimately lead master while an engine PR is still in flight.
+// merged master tip, not a branch head -- see docs/adr/0011-gitlink-drift-guard.md
+// for why this is a commit-identity check rather than a branch-name check, and
+// why the same invariant is checked again, independently, by
+// plans/scripts/wq.py's `doctor`.
 function runGitlink() {
 	const submodulePath = path.join(root, 'uma-skill-tools');
 	if (!fs.existsSync(path.join(submodulePath, '.git'))) return { label: 'gitlink -', ok: true };
 
-	const branch = spawnSync('git', ['branch', '--show-current'], {
-		cwd: root,
-		encoding: 'utf8',
-	}).stdout.trim();
-	if (branch !== 'master') return { label: 'gitlink -', ok: true };
+	// spawnSync itself can fail (missing git binary, permissions, ...) --
+	// distinguish that from a clean non-zero exit so a broken environment can't
+	// throw an uncaught TypeError out of .stdout.trim() and crash the whole run.
+	function git(args, cwd) {
+		const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+		if (r.error) return { ok: false, out: '', err: r.error.message };
+		if (r.status !== 0) return { ok: false, out: '', err: (r.stderr || r.stdout || '').trim() };
+		return { ok: true, out: r.stdout.trim(), err: '' };
+	}
 
-	const recorded = spawnSync('git', ['rev-parse', 'HEAD:uma-skill-tools'], {
-		cwd: root,
-		encoding: 'utf8',
-	}).stdout.trim();
-	const upstream = spawnSync('git', ['rev-parse', 'origin/master'], {
-		cwd: submodulePath,
-		encoding: 'utf8',
-	}).stdout.trim();
-	if (!recorded || !upstream) return { label: 'gitlink -', ok: true };
-	if (recorded === upstream) return { label: 'gitlink OK', ok: true };
+	// Best-effort freshen; a failed fetch (offline, etc.) isn't fatal by itself
+	// -- the rev-parse calls below fail loudly if the refs they need aren't
+	// there, rather than silently comparing stale local tracking refs.
+	git(['fetch', 'origin', 'master'], root);
+	git(['fetch', 'origin', 'master'], submodulePath);
+
+	const head = git(['rev-parse', 'HEAD'], root);
+	const rootUpstream = git(['rev-parse', 'origin/master'], root);
+	if (!head.ok || !rootUpstream.ok) {
+		return { label: `gitlink UNKNOWN (${head.err || rootUpstream.err})`, ok: false };
+	}
+	// Applicability is commit identity, not the local branch name -- a branch
+	// literally named "master" can be ahead of origin/master (unpushed
+	// commits), and a detached CI checkout at that exact commit has no branch
+	// name at all (`git branch --show-current` returns ''). Comparing SHAs
+	// checks both without silently skipping the detached case.
+	if (head.out !== rootUpstream.out) return { label: 'gitlink -', ok: true };
+
+	const recorded = git(['rev-parse', 'HEAD:uma-skill-tools'], root);
+	const upstream = git(['rev-parse', 'origin/master'], submodulePath);
+	if (!recorded.ok || !upstream.ok) {
+		return { label: `gitlink UNKNOWN (${recorded.err || upstream.err})`, ok: false };
+	}
+	if (recorded.out === upstream.out) return { label: 'gitlink OK', ok: true };
 	return {
-		label: `gitlink STALE (${recorded.slice(0, 7)} != ${upstream.slice(0, 7)})`,
+		label: `gitlink STALE (${recorded.out.slice(0, 7)} != ${upstream.out.slice(0, 7)})`,
 		ok: false,
 	};
 }
