@@ -12,7 +12,13 @@ export function INTRO(props) {
 function firstText(node) {
 	if (node == null) return '';
 	if (typeof node === 'string' || typeof node === 'number') return String(node);
-	if (Array.isArray(node)) return node.map(firstText).join('');
+	if (Array.isArray(node)) {
+		for (const child of node) {
+			const text = firstText(child);
+			if (text) return text;
+		}
+		return '';
+	}
 	if (node.props && node.props.children != null)
 		return firstText(node.props.children);
 	return '';
