@@ -45,15 +45,19 @@ contract `/code-review` already offers when invoked with no level.
 Repo table (mirrors `uma-tools-plans/scripts/wq.py`'s `ENGINE_REPO`/`CODE_REPO`/`PLANS`
 constants — note `ENGINE_REPO` is deliberately the *submodule inside* `uma-tools`, not any
 sibling clone, per that script's own comment on why a sibling clone let gitlink drift go
-unnoticed). If you want to check those constants yourself, read the script at its real
-path, `/Users/mackoz/github/uma-tools-plans/scripts/wq.py` — not through the
-`uma-tools/plans/` symlink; see the path-guard warning just below.
+unnoticed). Derive the local paths from where you're actually running, the same way
+`wq.py` derives them from its own script location — don't hardcode one machine's home
+directory into this file: `code`'s local path is the current `uma-tools` checkout's repo
+root; `engine`'s is `<code>/uma-skill-tools`; `plans`'s is the sibling directory
+`../uma-tools-plans` next to `code`'s repo root. If you want to check `wq.py`'s constants
+yourself, read the script at `<plans>/scripts/wq.py` — not through the `uma-tools/plans/`
+symlink; see the path-guard warning just below.
 
 | Slot | Local path | GitHub repo | Base branch |
 |---|---|---|---|
-| engine | `/Users/mackoz/github/uma-tools/uma-skill-tools` | `mackoz/uma-skill-tools` | `master` |
-| code | `/Users/mackoz/github/uma-tools` | `mackoz/uma-tools` | `master` |
-| plans | `/Users/mackoz/github/uma-tools-plans` | `mackoz/uma-tools-plans` | `main` |
+| engine | `<code>/uma-skill-tools` | `mackoz/uma-skill-tools` | `master` |
+| code | current `uma-tools` checkout root | `mackoz/uma-tools` | `master` |
+| plans | `../uma-tools-plans` (sibling of `code`'s repo root) | `mackoz/uma-tools-plans` | `main` |
 
 Reach `uma-tools-plans` by that real path, **never** through the `uma-tools/plans/`
 symlink — `uma-tools-plans/CLAUDE.md` warns the symlinked path trips tool path guards.
@@ -156,25 +160,32 @@ that the same as "nothing cross-repo to check," since synthesizing a relationshi
 two PRs already flagged as possibly unrelated risks fabricating a connection that isn't
 there.
 
-Launch one `Agent` (fan-out isn't needed here — this is synthesis, not diff-scanning).
-Give it: every HANDOFF block from Step 2, the PR URLs, and the specific things to check,
-drawn from the "cross-repo invariants at risk" list above plus:
+Launch one `Agent` (fan-out isn't needed here — this is synthesis, not diff-scanning). Give
+it: every HANDOFF block from Step 2, the PR URLs, and the specific things to check, drawn
+from the "cross-repo invariants at risk" list above plus:
 
 - Do findings in one repo contradict findings or assumptions recorded in another?
 - Is a change to the paired-merge machinery (`wq.py`, `verify.mjs`) landing in the same
   batch as PRs that machinery is meant to land?
+
+If the `Agent` tool isn't available in this session at all, don't skip this step silently
+— do the synthesis yourself, in this same turn, against the same HANDOFF blocks and checks
+above.
 
 Hold cross-repo findings to the same evidence bar `uma-tools-plans/CLAUDE.md` sets
 generally: cite `file:line` from an actual read of the file, **on every repo/side being
 compared** — never infer a match or a conflict from a PR title or commit message alone.
 
 If `--comment` was passed, each confirmed cross-repo finding gets posted as an inline
-comment on whichever repo's PR it actually belongs to. Use
-`mcp__github_inline_comment__create_inline_comment` if that tool is available in this
-session; otherwise fall back to `gh api repos/{owner}/{repo}/pulls/{pr}/comments` — the
-same choice `code-review` itself makes for its own inline comments, so check for the tool
-at run time rather than assuming either way. A finding that implicates two repos at once
-(e.g. the gitlink-drift invariant) gets posted to both.
+comment on whichever repo's PR it actually belongs to. Use the `github` MCP server's
+inline-comment flow if it's loaded in this session — `pull_request_review_write` (method
+`create`) to open a pending review, `add_comment_to_pending_review` per finding, then
+`pull_request_review_write` (method `submit_pending`) to post it — otherwise fall back to
+`gh api repos/{owner}/{repo}/pulls/{pr}/comments`; the same choice `code-review` itself
+makes for its own inline comments, so check what's actually loaded at run time (exact
+`mcp__github__*` tool names can vary by server config) rather than assuming either way. A
+finding that implicates two repos at once (e.g. the gitlink-drift invariant) gets posted
+to both.
 
 ## Step 4 — Consolidated summary
 
@@ -192,8 +203,10 @@ separate top-level PR comment):
   deliberate step the user runs themselves when ready.
 - Before Step 2, if `--fix` was passed, check each target repo's working tree
   (`git status --porcelain`) and warn if it's dirty — `--fix` will write into it.
-- The `uma-skill-tools` submodule sitting in detached HEAD is its normal, healthy state
-  (see `uma-tools/CLAUDE.md`'s submodule section) — never treat that alone as a problem
-  to fix or flag.
+- The `uma-skill-tools` submodule sitting in detached HEAD is its normal, healthy state —
+  standard for any git submodule checkout, and this repo's own CI/gitlink tooling is built
+  around it (see `docs/adr/0011-gitlink-drift-guard.md`, which rejects a branch-name check
+  specifically because it breaks on detached-HEAD checkouts) — never treat that alone as a
+  problem to fix or flag.
 - `xhigh` and `max` are valid levels for the underlying `code-review` skill; forward them
   unchanged like any other level.
