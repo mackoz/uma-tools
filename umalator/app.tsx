@@ -42,6 +42,7 @@ import {
 	RegionDisplayType,
 	TrackSelect,
 } from '../components/RaceTrack';
+import { matchesIconType } from '../components/SkillIcons';
 import {
 	ExpandedSkillDetails,
 	STRINGS_en as SKILL_STRINGS_en,
@@ -2434,52 +2435,6 @@ const CHART_ICON_TYPE_FILTERS = [
 	'3007',
 ] as const;
 
-const CHART_ICON_ID_PREFIXES: { [key: string]: string[] } = {
-	'1001': ['1001'],
-	'1002': ['1002', '2018'],
-	'1003': ['1003'],
-	'1004': ['1004'],
-	'1005': ['1005'],
-	'1006': ['1006'],
-	'2002': ['2002', '2011', '2028'],
-	'2001': [
-		'2001',
-		'2010',
-		'2014',
-		'2015',
-		'2016',
-		'2019',
-		'2021',
-		'2022',
-		'2024',
-		'2026',
-		'2029',
-		'2031',
-		'2032',
-		'2033',
-	],
-	'2004': ['2004', '2012', '2017', '2020', '2025', '2027', '2030'],
-	'2005': ['2005', '2013'],
-	'2006': ['2006'],
-	'2009': ['2009'],
-	'3001': ['3001'],
-	'3002': ['3002'],
-	'3004': ['3004'],
-	'3005': ['3005'],
-	'3007': ['3007'],
-	'4001': ['4001'],
-};
-
-function matchChartIconType(skillId: string, iconType: string): boolean {
-	const meta = (skillmeta as any)[skillId];
-	if (!meta?.iconId) return false;
-	return (
-		CHART_ICON_ID_PREFIXES[iconType]?.some((p: string) =>
-			meta.iconId.startsWith(p),
-		) ?? false
-	);
-}
-
 enum UiStateMsg {
 	SetModeCompare,
 	SetModeChart,
@@ -4107,7 +4062,7 @@ function App(props) {
 		) {
 			skills = skills.filter((id) =>
 				CHART_ICON_TYPE_FILTERS.some(
-					(t) => activeChartIconTypes.has(t) && matchChartIconType(id, t),
+					(t) => activeChartIconTypes.has(t) && matchesIconType(id, t),
 				),
 			);
 		}
@@ -4311,6 +4266,14 @@ function App(props) {
 			? []
 			: chartData.sk.flatMap((a, i) => {
 					return Array.from(a.keys()).flatMap((id) => {
+						// Deliberately raw skillmeta[id].iconId, not the resolved (guessed) icon
+						// from components/SkillIcons.ts -- PIPE-2 review, round 2: NO_SHOW
+						// includes '10011', the exact generic "unknown icon" fallback
+						// getResolvedIconId returns for a zero-icon skill it can't place by
+						// (rarity, effect type). Switching this to the resolved id would hide
+						// activation labels for 4 currently-shown skills purely because their
+						// icon guess happened to land on the placeholder id (verified against
+						// today's data: 100201311, 107002121, 111302111, 204562).
 						if (NO_SHOW.indexOf(skillmeta[id].iconId) > -1) return [];
 						else
 							return a.get(id).map((ar) => ({
@@ -4790,8 +4753,7 @@ function App(props) {
 						Array.from(tableData.keys()).filter(
 							(id) =>
 								!CHART_ICON_TYPE_FILTERS.some(
-									(t) =>
-										activeChartIconTypes.has(t) && matchChartIconType(id, t),
+									(t) => activeChartIconTypes.has(t) && matchesIconType(id, t),
 								),
 						),
 					)

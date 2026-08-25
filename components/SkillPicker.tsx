@@ -5,11 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
-import {
-	FormattedCondition,
-	getResolvedIconId,
-	getSkillIconSrc,
-} from './SkillList';
+import { getSkillIconSrc, matchesIconType } from './SkillIcons';
+import { FormattedCondition } from './SkillList';
 
 import './SkillPicker.css';
 
@@ -30,10 +27,10 @@ function getSkillName(skillId: string): string {
 }
 
 function getSkillIcon(skillId: string): string {
-	// No meta entry at all (distinct from iconId "0", which getSkillIconSrc already handles
-	// via the same rarity/effect-type-aware guess SkillList.tsx and BasinnChart.tsx use --
-	// PIPE-2 review: this file previously had its own separate flat-placeholder fallback here,
-	// which showed a different, unrelated icon than the other two views of the same skill).
+	// No meta entry at all (distinct from iconId "0", which getSkillIconSrc already handles via
+	// the shared rarity/effect-type-aware guess in components/SkillIcons.ts -- PIPE-2 review:
+	// this file previously had its own separate flat-placeholder fallback here, which showed a
+	// different, unrelated icon than every other view of the same skill).
 	if (!skillmeta[skillId]) return '/uma-tools/icons/10011.png';
 	return getSkillIconSrc(skillId);
 }
@@ -159,52 +156,6 @@ const ICON_TYPE_FILTERS = [
 	'3005',
 	'3007',
 ] as const;
-
-const ICON_ID_PREFIXES: Record<string, string[]> = {
-	'1001': ['1001'],
-	'1002': ['1002', '2018'],
-	'1003': ['1003'],
-	'1004': ['1004'],
-	'1005': ['1005'],
-	'1006': ['1006'],
-	'2002': ['2002', '2011', '2028'],
-	'2001': [
-		'2001',
-		'2010',
-		'2014',
-		'2015',
-		'2016',
-		'2019',
-		'2021',
-		'2022',
-		'2024',
-		'2026',
-		'2029',
-		'2031',
-		'2032',
-		'2033',
-	],
-	'2004': ['2004', '2012', '2017', '2020', '2025', '2027', '2030'],
-	'2005': ['2005', '2013'],
-	'2006': ['2006'],
-	'2009': ['2009'],
-	'3001': ['3001'],
-	'3002': ['3002'],
-	'3004': ['3004'],
-	'3005': ['3005'],
-	'3007': ['3007'],
-	'4001': ['4001'],
-};
-
-function matchIconType(skillId: string, iconType: string): boolean {
-	if (!skillmeta[skillId]) return false;
-	// Resolved icon id, not the raw meta.iconId -- PIPE-2 review: iconId is genuinely "0" for
-	// 136 skills, and none of ICON_ID_PREFIXES' prefixes ever match "0", so every zero-icon
-	// skill silently failed every icon-type filter as soon as one was active.
-	const resolvedIconId = getResolvedIconId(skillId);
-	const prefixes = ICON_ID_PREFIXES[iconType];
-	return prefixes?.some((p) => resolvedIconId.startsWith(p)) ?? false;
-}
 
 const ALL_ICON_TYPES = new Set(ICON_TYPE_FILTERS);
 
@@ -392,7 +343,7 @@ export function SkillPickerModal({
 			if (
 				iconFiltered &&
 				!ICON_TYPE_FILTERS.some(
-					(t) => activeIconTypes.has(t) && matchIconType(id, t),
+					(t) => activeIconTypes.has(t) && matchesIconType(id, t),
 				)
 			)
 				return false;
