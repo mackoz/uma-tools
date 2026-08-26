@@ -323,7 +323,7 @@ export function SkillPickerModal({
 
 	useEffect(() => {
 		setActiveIdx(-1);
-	}, [searchQuery]);
+	}, [searchQuery, activeFilters, activeIconTypes, sortOption]);
 
 	const filteredIds = useMemo(() => {
 		const query = searchQuery.toUpperCase();
@@ -355,15 +355,48 @@ export function SkillPickerModal({
 
 	useEffect(() => {
 		if (!isOpen) return;
+		function getCols() {
+			if (!listRef.current) return 1;
+			const tracks = getComputedStyle(listRef.current).gridTemplateColumns;
+			return Math.max(1, tracks.split(/\s+/).filter(Boolean).length);
+		}
 		function handler(e: KeyboardEvent) {
 			switch (e.key) {
-				case 'ArrowDown':
+				case 'ArrowDown': {
 					e.preventDefault();
-					setActiveIdx((i) => Math.min(i + 1, filteredIds.length - 1));
+					const cols = getCols();
+					setActiveIdx((i) =>
+						i === -1
+							? Math.min(0, filteredIds.length - 1)
+							: i + cols < filteredIds.length
+								? i + cols
+								: i,
+					);
 					break;
-				case 'ArrowUp':
+				}
+				case 'ArrowUp': {
 					e.preventDefault();
-					setActiveIdx((i) => Math.max(i - 1, 0));
+					const cols = getCols();
+					setActiveIdx((i) => (i - cols >= 0 ? i - cols : -1));
+					break;
+				}
+				case 'ArrowRight':
+					if (activeIdx >= 0) {
+						e.preventDefault();
+						setActiveIdx((i) => Math.min(i + 1, filteredIds.length - 1));
+					}
+					break;
+				case 'ArrowLeft':
+					if (activeIdx >= 0) {
+						e.preventDefault();
+						setActiveIdx((i) => Math.max(i - 1, 0));
+					}
+					break;
+				case '`':
+					e.preventDefault();
+					setActiveIdx(-1);
+					searchInputRef.current?.focus();
+					searchInputRef.current?.select();
 					break;
 				case 'Enter':
 					if (activeIdx >= 0 && activeIdx < filteredIds.length) {
@@ -413,6 +446,9 @@ export function SkillPickerModal({
 								setSearchQuery((e.target as HTMLInputElement).value)
 							}
 						/>
+						<span class="skill-picker-key-hint">
+							↑↓←→ navigate · ⏎ add · ` search
+						</span>
 					</div>
 					<div class="skill-picker-sort-group">
 						<span class="skill-picker-sort-label">

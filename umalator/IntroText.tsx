@@ -69,6 +69,15 @@ export function IntroText(props) {
 						<summary>2026-08-25</summary>
 						<ul>
 							<li>
+								The skill picker now supports keyboard navigation: arrow keys
+								move a cursor through the filtered skill grid (Up/Down by row,
+								Left/Right by column), Enter adds the highlighted skill, and{' '}
+								<strong>`</strong> jumps back to the search box with its text
+								selected so the next query overwrites the last one. Typing keeps
+								refining the search live even while the cursor is elsewhere in
+								the grid.
+							</li>
+							<li>
 								Fixed <strong>Spot Struggle</strong> lasting the same amount of
 								time no matter how good a uma's Front Runner (or Runaway)
 								aptitude was. How long a spot struggle lasts is supposed to

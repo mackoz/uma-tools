@@ -16,6 +16,13 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 ## Branching & PRs
 
+- **Log a work-queue ticket before starting.** Bug and feature work is tracked in the sibling
+  `uma-tools-plans` repo, symlinked here as `plans/` (gitignored, not part of this repo). Create
+  `plans/work-queue/backlog/<category>/<id>.md` from `plans/work-queue/TEMPLATE.md`, add its row to
+  `plans/work-queue/README.md`, then `python3 plans/scripts/wq.py claim <id>` to move it to
+  `in-progress/` and cut the branch — don't do the file moves or README edits by hand. Ticket
+  changes go on their own PR in `uma-tools-plans`; never commit to its `main` directly. See
+  `plans/work-queue/README.md` for the ID scheme and the bug-vs-feature rule.
 - **One open PR per repo at a time.** Before creating a branch, check for an existing open PR/branch covering the same area (`gh pr list`) and push to that branch instead of branching off `master` again.
 - **Ask before switching branches in a checkout you didn't create, entering or removing a worktree, or killing a running process** — another session may own it. Check `git worktree list` and what a process is serving before touching either.
 - **Worktrees live under `.claude/worktrees/` and need setup**: run `scripts/worktree-setup.sh` inside a fresh worktree (submodule init, `node_modules` symlink, git-exclude), and `scripts/stage-for-review.sh <branch>` to tear one down and stage its branch in the main checkout. A dev server started from a worktree derives its static root from the repo path — the app serves at `http://localhost:8000/<worktree-name>/umalator-global/` and `/uma-tools/`-prefixed assets (icons, fonts) 404 there. That's expected inside a worktree; do final visual checks from the main checkout.
@@ -23,7 +30,7 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 ## Scope control
 
-Match ceremony to change size. A trivial fix (a two-line CSS tweak, a typo) gets a commit only — no changelog entry, no ADR, no tracker ticket. Reserve those for multi-file or behavior-changing work: a changelog entry when the change visibly affects umalator-global users, an ADR when a decision could have gone another way.
+Match ceremony to change size. A trivial fix (a two-line CSS tweak, a typo) gets a commit only — no changelog entry, no ADR, no tracker ticket; that's the one exception to the work-queue-ticket rule above. Reserve tickets, changelog entries, and ADRs for multi-file or behavior-changing work: a work-queue ticket for anything past a trivial fix, a changelog entry when the change visibly affects umalator-global users, an ADR when a decision could have gone another way.
 
 ## Build / verify commands
 
