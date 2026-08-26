@@ -323,7 +323,13 @@ export function SkillPickerModal({
 
 	useEffect(() => {
 		setActiveIdx(-1);
-	}, [searchQuery, activeFilters, activeIconTypes, sortOption]);
+	}, [
+		searchQuery,
+		activeFilters,
+		activeIconTypes,
+		sortOption,
+		availableSkillIds,
+	]);
 
 	const filteredIds = useMemo(() => {
 		const query = searchQuery.toUpperCase();
@@ -459,6 +465,7 @@ export function SkillPickerModal({
 								key={opt}
 								class={`skill-picker-sort-btn${sortOption === opt ? ' active' : ''}`}
 								type="button"
+								onMouseDown={(e) => e.preventDefault()}
 								onClick={() => setSortOption(opt)}
 							>
 								{SORT_LABELS[opt]}
@@ -483,6 +490,7 @@ export function SkillPickerModal({
 												key={f.id}
 												class={`skill-filter-btn ${fg.group} ${f.id}${activeFilters[fg.group] === f.id ? ' active' : ''}`}
 												type="button"
+												onMouseDown={(e) => e.preventDefault()}
 												onClick={() => handleFilterClick(fg.group, f.id)}
 											>
 												{f.label}
@@ -505,6 +513,7 @@ export function SkillPickerModal({
 												key={f.id}
 												class={`skill-filter-btn ${fg.group} ${f.id}${activeFilters[fg.group] === f.id ? ' active' : ''}`}
 												type="button"
+												onMouseDown={(e) => e.preventDefault()}
 												onClick={() => handleFilterClick(fg.group, f.id)}
 											>
 												{f.label}
@@ -527,6 +536,7 @@ export function SkillPickerModal({
 										style={{
 											backgroundImage: `url(/uma-tools/icons/${iconType}1.png)`,
 										}}
+										onMouseDown={(e) => e.preventDefault()}
 										onClick={() => toggleIconType(iconType)}
 									/>
 								))}
@@ -547,6 +557,7 @@ export function SkillPickerModal({
 									class={`skill-picker-item ${getSkillRarityClass(id)}${idx === activeIdx ? ' active' : ''}${isSelected ? ' selected' : ''}`}
 									type="button"
 									disabled={isSelected}
+									onMouseDown={(e) => e.preventDefault()}
 									onClick={() => !isSelected && onSelect(id)}
 								>
 									<img
