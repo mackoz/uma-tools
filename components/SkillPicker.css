@@ -106,6 +106,12 @@
 .skill-picker-search input::placeholder {
 	color: var(--sp-text-muted);
 }
+.skill-picker-key-hint {
+	flex-shrink: 0;
+	white-space: nowrap;
+	color: var(--sp-text-muted);
+	font-size: 11px;
+}
 .skill-picker-sort-group {
 	display: flex;
 	align-self: stretch;
@@ -374,9 +380,6 @@
 .skill-picker-item:hover:not(:disabled) {
 	background: var(--sp-overlay);
 }
-.skill-picker-item.active {
-	background: var(--sp-overlay);
-}
 .skill-picker-item:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
@@ -486,6 +489,17 @@
 .skill-picker-item.selected.skill-unique,
 .skill-picker-item.selected.skill-pink {
 	background: var(--sp-primary-glow);
+}
+
+/* Keyboard cursor, kept below every rule it needs to beat so equal-specificity
+   ties (same 0,2,0 as the rarity tints above) resolve in its favor for
+   `background`. `outline` is set by no other rule here, so it always shows —
+   including when the mouse is hovering this same row (rarity :hover is
+   0,4,0 and wins the `background` property there, but not `outline`). */
+.skill-picker-item.active {
+	background: var(--sp-primary-glow);
+	outline: 2px solid var(--sp-primary);
+	outline-offset: -2px;
 }
 
 /* ── Expanded skill view (replaces ExpandedSkillDetails in skill pill list) ─ */
