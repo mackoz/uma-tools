@@ -49,12 +49,19 @@ export const LIMITATIONS: InfoEntry[] = [
 	},
 	{
 		summary:
-			"Spot Struggle ignores the game's LaneGap condition and is based solely on distance between umas.",
+			"Spot Struggle's side-by-side conditions depend on the simulator's approximate lane model.",
 		body: (
 			<p>
-				Due to the difficulty of accurately simulating lane movement, Spot
-				Struggle is instead activated when two or more Front Runner umas are
-				within 3.75m of one another (5m for Runaway).
+				Spot Struggle follows the game's own rules: it can happen at most once
+				per race for Front Runners and once for Runaways, between umas within
+				3.75m behind the frontmost uma of that running style and within about
+				1.9m of her sideways, and an uma drops out early once she falls 5m
+				behind -- or about 4.7m to the side of -- every other uma still
+				struggling. The sideways half of those checks reads the simulator's lane
+				model, which is only an approximation, so it will not always agree with
+				the real game. In the Skill Chart, where lane movement is turned off
+				entirely, the sideways checks are skipped and only the distance
+				conditions apply.
 			</p>
 		),
 	},
