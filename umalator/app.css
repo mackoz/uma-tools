@@ -500,6 +500,18 @@ body.splitterDragging {
 	font-size: var(--font-xs);
 }
 
+#chartRunSettings input[type="range"] {
+	width: 110px;
+	vertical-align: middle;
+}
+
+.chartPruningValue {
+	color: var(--muted);
+	font-size: var(--font-xs);
+	min-width: 7em;
+	display: inline-block;
+}
+
 .chartHoverHint {
 	color: var(--muted);
 	font-size: var(--font-xs);

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import {
 	CHART_LADDERS,
 	candidateFromAccumulator,
+	derivePreset,
+	estimateWorstCaseScenarios,
 	evaluateRound,
+	PRUNING_DEFAULT,
 	type RoundCandidate,
 	roundBlockSeed,
 	SkillAccumulator,
@@ -243,6 +246,146 @@ function candidate(
 		true,
 	);
 	assert.equal(decisions[0].status, 'final');
+}
+
+// --- derivePreset: the Pruning slider's derivation ---
+
+{
+	// PRUNING_DEFAULT must reproduce the base preset exactly -- not approximately -- for all three
+	// presets. This is the regression guard for the whole feature: every ramp in derivePreset() is
+	// centered so t=0 falls out to an exact identity rather than being special-cased at pruning===50.
+	for (const name of Object.keys(
+		CHART_LADDERS,
+	) as (keyof typeof CHART_LADDERS)[]) {
+		const base = CHART_LADDERS[name];
+		assert.deepEqual(
+			derivePreset(base, PRUNING_DEFAULT),
+			base,
+			`${name} not identity at default`,
+		);
+	}
+}
+
+{
+	// Sample depth (rounds[i].n) and round 1's unbounded cap are the Preset selector's job, not
+	// Pruning's -- they must never move, at any slider position.
+	const base = CHART_LADDERS.balanced;
+	for (let pruning = 0; pruning <= 100; pruning += 5) {
+		const derived = derivePreset(base, pruning);
+		assert.deepEqual(
+			derived.rounds.map((r) => r.n),
+			base.rounds.map((r) => r.n),
+			`rounds[].n moved at pruning=${pruning}`,
+		);
+		assert.equal(derived.rounds[0].cap, Number.POSITIVE_INFINITY);
+	}
+}
+
+{
+	// Monotonicity across the full sweep, for every preset: lower pruning must never be less
+	// aggressive than a higher pruning value on any of the five scaled fields.
+	for (const base of Object.values(CHART_LADDERS)) {
+		let prev = derivePreset(base, 0);
+		for (let pruning = 5; pruning <= 100; pruning += 5) {
+			const cur = derivePreset(base, pruning);
+			assert.ok(
+				cur.screenZ > prev.screenZ,
+				`screenZ not strictly increasing at ${pruning}`,
+			);
+			assert.ok(
+				cur.targetPool >= prev.targetPool,
+				`targetPool decreased at ${pruning}`,
+			);
+			assert.ok(
+				cur.precisionTarget <= prev.precisionTarget,
+				`precisionTarget increased at ${pruning}`,
+			);
+			assert.ok(
+				cur.minInterestingGain <= prev.minInterestingGain,
+				`minInterestingGain increased at ${pruning}`,
+			);
+			for (let i = 0; i < cur.rounds.length; ++i) {
+				if (Number.isFinite(cur.rounds[i].cap)) {
+					assert.ok(
+						cur.rounds[i].cap >= prev.rounds[i].cap,
+						`rounds[${i}].cap decreased at ${pruning}`,
+					);
+				}
+			}
+			prev = cur;
+		}
+	}
+}
+
+{
+	// Structural invariants that must hold at every slider position, not just the default: every
+	// positive-scale field stays positive, and every finite cap stays a positive integer. (A round's
+	// cap is allowed to sit below targetPool -- CHART_LADDERS.thorough's own last round already
+	// does that by design, since evaluateRound's budget step 6 is allowed to narrow past the
+	// protected pool on a final round; derivePreset must not disturb that.)
+	for (const base of Object.values(CHART_LADDERS)) {
+		for (let pruning = 0; pruning <= 100; pruning += 5) {
+			const derived = derivePreset(base, pruning);
+			assert.ok(derived.targetPool >= 4);
+			assert.ok(derived.precisionTarget > 0);
+			assert.ok(derived.minInterestingGain > 0);
+			assert.ok(derived.screenZ > 0);
+			for (const r of derived.rounds) {
+				if (Number.isFinite(r.cap))
+					assert.ok(r.cap >= 1, `cap < 1 at pruning=${pruning}`);
+			}
+		}
+	}
+}
+
+{
+	// Behavioral end-to-end: on the same fixed candidate pool, the aggressive end of the slider
+	// must stop sampling strictly more skills this round than the lenient end. "Stops sampling"
+	// means status !== 'refining' -- not just CI/budget screening, but also an early 'converged'
+	// freeze, since a coarser precisionTarget (also part of the aggressive derivation) is just as
+	// much a way a skill stops getting sampled as being screened out is. Reuses the budget test's
+	// pool shape above (a tight mean band spanning the round's cap).
+	const round = CHART_LADDERS.quick.rounds[1]; // cap 96 in 'quick'
+	const pool = Array.from({ length: round.cap + 20 }, (_, i) =>
+		candidate(`c${i}`, 100, 1.0 + i * 0.0001, 0.02),
+	);
+	const aggressive = derivePreset(CHART_LADDERS.quick, 0);
+	const lenient = derivePreset(CHART_LADDERS.quick, 100);
+	const stoppedAggressive = evaluateRound(
+		pool,
+		aggressive.rounds[1],
+		aggressive,
+		false,
+	).filter((d) => d.status !== 'refining').length;
+	const stoppedLenient = evaluateRound(
+		pool,
+		lenient.rounds[1],
+		lenient,
+		false,
+	).filter((d) => d.status !== 'refining').length;
+	assert.ok(
+		stoppedAggressive > stoppedLenient,
+		`expected aggressive (${stoppedAggressive}) to stop sampling more than lenient (${stoppedLenient})`,
+	);
+}
+
+// --- estimateWorstCaseScenarios: cost model behind the Skill Chart's runtime estimate ---
+
+{
+	const base = CHART_LADDERS.balanced;
+	const costAt = (pruning: number) =>
+		estimateWorstCaseScenarios(derivePreset(base, pruning), 520);
+	const aggressive = costAt(0);
+	const standard = costAt(PRUNING_DEFAULT);
+	const lenient = costAt(100);
+	assert.ok(
+		aggressive < standard,
+		`expected aggressive cost (${aggressive}) < standard (${standard})`,
+	);
+	assert.ok(
+		standard < lenient,
+		`expected standard cost (${standard}) < lenient (${lenient})`,
+	);
 }
 
 console.log('chartLadder tests passed');
