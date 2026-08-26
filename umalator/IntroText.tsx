@@ -66,6 +66,38 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-25</summary>
+						<ul>
+							<li>
+								Fixed <strong>Spot Struggle</strong> lasting the same amount of
+								time no matter how good a uma's Front Runner (or Runaway)
+								aptitude was. How long a spot struggle lasts is supposed to
+								scale with that aptitude grade -- roughly 1.1x at S down to 0.1x
+								at G -- but the simulator was treating every uma as though she
+								had an A. Umas with a poor Front Runner aptitude were spending
+								far longer in a spot struggle than they should have, burning the
+								extra stamina that comes with it; umas with an S aptitude now
+								struggle slightly longer than before. Simulation numbers will
+								shift for any run where a spot struggle happens.
+							</li>
+							<li>
+								<strong>Spot Struggle</strong> now uses the game's real trigger
+								and exit rules instead of the rough approximation it had before.
+								It can now only happen once per race for Front Runners and once
+								for Runaways (previously a second, separate one could start
+								later on); umas join it based on how far behind the frontmost
+								uma of their running style they are, rather than how far they
+								are from each other; Runaways use the same 3.75m range as Front
+								Runners instead of a wider 5m; being side by side now matters,
+								both for joining and for dropping out; and an uma can now drop
+								out early once she falls behind everyone else still struggling,
+								which previously never happened. Spot Struggle will trigger
+								noticeably less often than before, so simulation numbers will
+								shift for runs involving Front Runners or Runaways.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-24</summary>
 						<ul>
 							<li>
