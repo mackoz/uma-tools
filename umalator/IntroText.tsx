@@ -66,6 +66,23 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-25</summary>
+						<ul>
+							<li>
+								Fixed <strong>Spot Struggle</strong> lasting the same amount of
+								time no matter how good a uma's Front Runner (or Runaway)
+								aptitude was. How long a spot struggle lasts is supposed to
+								scale with that aptitude grade -- roughly 1.1x at S down to 0.1x
+								at G -- but the simulator was treating every uma as though she
+								had an A. Umas with a poor Front Runner aptitude were spending
+								far longer in a spot struggle than they should have, burning the
+								extra stamina that comes with it; umas with an S aptitude now
+								struggle slightly longer than before. Simulation numbers will
+								shift for any run where a spot struggle happens.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-24</summary>
 						<ul>
 							<li>
