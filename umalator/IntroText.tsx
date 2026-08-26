@@ -80,6 +80,21 @@ export function IntroText(props) {
 								struggle slightly longer than before. Simulation numbers will
 								shift for any run where a spot struggle happens.
 							</li>
+							<li>
+								<strong>Spot Struggle</strong> now uses the game's real trigger
+								and exit rules instead of the rough approximation it had before.
+								It can now only happen once per race for Front Runners and once
+								for Runaways (previously a second, separate one could start
+								later on); umas join it based on how far behind the frontmost
+								uma of their running style they are, rather than how far they
+								are from each other; Runaways use the same 3.75m range as Front
+								Runners instead of a wider 5m; being side by side now matters,
+								both for joining and for dropping out; and an uma can now drop
+								out early once she falls behind everyone else still struggling,
+								which previously never happened. Spot Struggle will trigger
+								noticeably less often than before, so simulation numbers will
+								shift for runs involving Front Runners or Runaways.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
