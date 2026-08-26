@@ -5518,7 +5518,7 @@ function App(props) {
 							</div>
 							{(mode == Mode.Chart || mode == Mode.UniquesChart) && (
 								<div id="chartRunSettings">
-									<label>
+									<label title="Controlled uses a real HP/spurt/recovery budget with simplified position keeping and no multi-uma jostling (Rushed, dueling, compete fight, lead competition all off), for a cleaner per-skill comparison. Full race adds your own Position Keeping, Virtual pacer, and jostling settings for a more realistic but noisier race.">
 										Model{' '}
 										<select
 											value={analysisMode}
@@ -5533,7 +5533,7 @@ function App(props) {
 											<option value="full">Full race</option>
 										</select>
 									</label>
-									<label>
+									<label title="How many paired scenarios each round samples and how many rounds the ladder runs -- Quick is fastest, Thorough samples deepest and narrows to the smallest final pool. Doesn't affect how quickly an unpromising skill gets cut; see Pruning for that.">
 										Preset{' '}
 										<select
 											value={analysisPreset}
