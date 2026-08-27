@@ -76,9 +76,12 @@ import {
 	CHART_LADDERS,
 	type ChartRow,
 	candidateFromAccumulator,
+	derivePreset,
 	type EliminationReason,
+	estimateWorstCaseScenarios,
 	evaluateRound,
 	type LadderPreset,
+	PRUNING_DEFAULT,
 	type RoundCandidate,
 	roundBlockSeed,
 	SkillAccumulator,
@@ -193,31 +196,25 @@ interface ChartRunState {
 	refineCounts: Map<string, number>;
 }
 
-// Worst-case total paired-scenario count for a chart run at this preset and starting skill count
-// -- the pool only shrinks (via each round's cap), so this is an upper bound, not a prediction;
-// actual runs are usually well under it once the CI-elimination rule (chartLadder.ts) also prunes
-// skills a round's cap alone wouldn't have. Used only for the pre-run runtime estimate.
-function estimateWorstCaseScenarios(
-	preset: LadderPreset,
-	skillCount: number,
-): number {
-	let total = 0;
-	let pool = skillCount;
-	let prevN = 0;
-	for (const round of preset.rounds) {
-		const blockSize = round.n - prevN;
-		total += pool * blockSize;
-		pool = Number.isFinite(round.cap) ? Math.min(pool, round.cap) : pool;
-		prevN = round.n;
-	}
-	return total;
-}
-
 function formatEstimatedRuntime(ms: number): string {
 	if (!Number.isFinite(ms) || ms <= 0) return '?';
 	const s = ms / 1000;
 	if (s < 60) return `${Math.max(1, Math.round(s))}s`;
 	return `${Math.round(s / 60)}m`;
+}
+
+// Word for the Pruning slider's current position, plus the raw number so the setting is quotable
+// (e.g. in a bug report) without needing a screenshot of the slider itself.
+function pruningLabel(pruning: number): string {
+	let word: string;
+	if (pruning < PRUNING_DEFAULT) {
+		word = 'Aggressive';
+	} else if (pruning > PRUNING_DEFAULT) {
+		word = 'Lenient';
+	} else {
+		word = 'Standard';
+	}
+	return `${word} · ${pruning}`;
 }
 
 const DEFAULT_SAMPLES = 500;
@@ -2957,6 +2954,24 @@ function App(props) {
 			localStorage.setItem('skill-analysis-preset', analysisPreset);
 		} catch {}
 	}, [analysisPreset]);
+	// How aggressively the ladder cuts an unpromising skill -- see chartLadder.ts's derivePreset().
+	// 0-100 slider position, PRUNING_DEFAULT (50) reproduces CHART_LADDERS' own numbers exactly.
+	// Same validate/clamp/mirror pattern as analysisMode/analysisPreset above: a work-budget knob,
+	// localStorage-only, not part of the serialized race state.
+	const [chartPruning, setChartPruning] = useState<number>(() => {
+		try {
+			const v = Number.parseFloat(
+				localStorage.getItem('skill-analysis-pruning') ?? '',
+			);
+			if (Number.isFinite(v)) return Math.min(100, Math.max(0, v));
+		} catch {}
+		return PRUNING_DEFAULT;
+	});
+	useEffect(() => {
+		try {
+			localStorage.setItem('skill-analysis-pruning', String(chartPruning));
+		} catch {}
+	}, [chartPruning]);
 	const [showHp, toggleShowHp] = useReducer((b, _) => !b, false);
 	const [showLanes, toggleShowLanes] = useReducer((b, _) => !b, false);
 	const [showPoskeepGap, toggleShowPoskeepGap] = useReducer((b, _) => !b, true);
@@ -4067,7 +4082,7 @@ function App(props) {
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
 		setLastRunHideInheritedUniques(hideInheritedUniques);
 
-		const preset = CHART_LADDERS[analysisPreset];
+		const preset = derivePreset(CHART_LADDERS[analysisPreset], chartPruning);
 		const jobId = ++jobIdRef.current;
 		const run: ChartRunState = {
 			jobId,
@@ -5505,7 +5520,7 @@ function App(props) {
 							</div>
 							{(mode == Mode.Chart || mode == Mode.UniquesChart) && (
 								<div id="chartRunSettings">
-									<label>
+									<label title="Controlled uses a real HP/spurt/recovery budget with simplified position keeping and no multi-uma jostling (Rushed, dueling, compete fight, lead competition all off), for a cleaner per-skill comparison. Full race adds your own Position Keeping, Virtual pacer, and jostling settings for a more realistic but noisier race.">
 										Model{' '}
 										<select
 											value={analysisMode}
@@ -5520,7 +5535,7 @@ function App(props) {
 											<option value="full">Full race</option>
 										</select>
 									</label>
-									<label>
+									<label title="How many paired scenarios each round samples and how many rounds the ladder runs -- Quick is fastest, Thorough samples deepest and narrows to the smallest final pool. Doesn't affect how quickly an unpromising skill gets cut; see Pruning for that.">
 										Preset{' '}
 										<select
 											value={analysisPreset}
@@ -5536,19 +5551,39 @@ function App(props) {
 											<option value="thorough">Thorough</option>
 										</select>
 									</label>
+									<label title="How quickly the chart stops sampling a skill that looks unpromising. Lower prunes sooner and finishes faster; higher keeps marginal skills in the running longer.">
+										Pruning{' '}
+										<input
+											type="range"
+											min="0"
+											max="100"
+											step="5"
+											value={chartPruning}
+											onInput={(e) =>
+												setChartPruning(Number(e.currentTarget.value))
+											}
+											disabled={isSimulationRunning}
+										/>{' '}
+										<span class="chartPruningValue">
+											{pruningLabel(chartPruning)}
+										</span>
+									</label>
 									{!isSimulationRunning && chartRunRef.current && (
 										<span class="chartRunEstimate">
 											~
 											{formatEstimatedRuntime(
 												(estimateWorstCaseScenarios(
-													CHART_LADDERS[analysisPreset],
+													derivePreset(
+														CHART_LADDERS[analysisPreset],
+														chartPruning,
+													),
 													chartRunRef.current.roundParticipants.length ||
 														tableData.size,
 												) *
 													msPerScenarioRef.current) /
 													(poolRef.current?.size || 4),
 											)}{' '}
-											for a fresh run at this preset
+											for a fresh run at these settings
 										</span>
 									)}
 								</div>

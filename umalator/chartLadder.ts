@@ -36,7 +36,25 @@ export interface LadderPreset {
 	// A skill stops sampling early, before its last scheduled round, once its interval half-width
 	// (at the screening z, see evaluateRound()) is at or under this many lengths.
 	precisionTarget: number;
+	// Screening z-score and absolute "not worth it" floor -- see the SCREEN_Z / MIN_INTERESTING_GAIN
+	// module consts below for the rationale behind the default values every preset here starts
+	// from. Per-preset (rather than global consts) so derivePreset() can scale them independently
+	// of the Preset selector's round-depth knobs.
+	screenZ: number;
+	minInterestingGain: number;
 }
+
+// Default screening z -- see evaluateRound()'s SCREEN_Z-equivalent rationale: a screening bound,
+// not a claim of simultaneous 95% coverage across every candidate in the pool. A real Bonferroni
+// correction across ~500 arms x up to 4 rounds would need z ~ 4.2, wide enough that this rule
+// would eliminate almost nothing and the round cap would end up doing all the actual work; 3.5 is
+// the deliberate, documented compromise between the two.
+const SCREEN_Z = 3.5;
+
+// Default "not worth considering at all" floor, in lengths -- replaces master's `max > 0.1`
+// round-1 filter with a fixed, scale-free threshold. 12.5 cm; a skill has to clear this even to
+// be compared against the current best candidates.
+const MIN_INTERESTING_GAIN = 0.05;
 
 // Total scenario counts (K candidates, worst case, cap always binding): quick ~32,000, balanced
 // ~61,800, thorough ~119,300 at K=520 -- versus master's own ladder at ~33,000 and the flat-N
@@ -51,6 +69,8 @@ export const CHART_LADDERS: Record<AnalysisPresetName, LadderPreset> = {
 		targetPool: 16,
 		bootstrapSamples: 1000,
 		precisionTarget: 0.03,
+		screenZ: SCREEN_Z,
+		minInterestingGain: MIN_INTERESTING_GAIN,
 	},
 	balanced: {
 		rounds: [
@@ -61,6 +81,8 @@ export const CHART_LADDERS: Record<AnalysisPresetName, LadderPreset> = {
 		targetPool: 20,
 		bootstrapSamples: 2000,
 		precisionTarget: 0.02,
+		screenZ: SCREEN_Z,
+		minInterestingGain: MIN_INTERESTING_GAIN,
 	},
 	thorough: {
 		rounds: [
@@ -72,8 +94,73 @@ export const CHART_LADDERS: Record<AnalysisPresetName, LadderPreset> = {
 		targetPool: 24,
 		bootstrapSamples: 2000,
 		precisionTarget: 0.015,
+		screenZ: SCREEN_Z,
+		minInterestingGain: MIN_INTERESTING_GAIN,
 	},
 };
+
+// How quickly the ladder cuts a skill that looks unpromising, as a 0-100 UI slider position;
+// PRUNING_DEFAULT reproduces CHART_LADDERS' own numbers exactly (see derivePreset()'s identity
+// test in chartLadder.test.ts -- the ramps below are centered to fall out to identity at t=0
+// rather than special-cased at pruning===50, so a mis-centered ramp can't hide behind a shortcut).
+export const PRUNING_DEFAULT = 50;
+
+// Derive a LadderPreset from a base preset and a 0-100 "pruning aggressiveness" slider position.
+// Lower prunes sooner (tighter screening z, smaller protected pool and round caps, coarser
+// precision/floor targets -- faster, more likely to cut a skill that would've turned out fine).
+// Higher keeps marginal skills sampling longer (wider z, bigger pool and caps, finer targets --
+// slower, less likely to cut a skill early). Deliberately does NOT touch rounds[i].n or
+// bootstrapSamples: sample depth is the Preset selector's job, not this knob's, and keeping the
+// two orthogonal is what makes both controls independently explainable.
+export function derivePreset(
+	base: LadderPreset,
+	pruning: number,
+): LadderPreset {
+	const clamped = Number.isFinite(pruning)
+		? Math.min(100, Math.max(0, pruning))
+		: PRUNING_DEFAULT;
+	const t = (clamped - 50) / 50;
+
+	const targetPool = Math.max(4, Math.round(base.targetPool * 2 ** t));
+	return {
+		rounds: base.rounds.map((r) => ({
+			n: r.n,
+			// Not clamped to targetPool: CHART_LADDERS.thorough's own last round already caps below
+			// its targetPool by design (12 < 24) -- the budget rule (evaluateRound step 6) is allowed
+			// to narrow past the protected pool on a final round, so a clamp here would break the
+			// t=0 identity for that preset. Math.max(1, ...) only guards against a degenerate <1 cap
+			// at the most aggressive slider position.
+			cap: Number.isFinite(r.cap)
+				? Math.max(1, Math.round(r.cap * 2.5 ** t))
+				: r.cap,
+		})),
+		targetPool,
+		bootstrapSamples: base.bootstrapSamples,
+		precisionTarget: base.precisionTarget * 2 ** -t,
+		screenZ: base.screenZ + t * 1.0,
+		minInterestingGain: base.minInterestingGain * 2 ** -t,
+	};
+}
+
+// Worst-case total scenario count for a preset over K candidates, assuming every round's cap
+// binds (every candidate that could survive does, until capped) -- used for the Skill Chart's
+// pre-run runtime estimate. Pure function of the preset's shape, so it lives with the ladder
+// rather than in app.tsx (which only knows how to format the result for display).
+export function estimateWorstCaseScenarios(
+	preset: LadderPreset,
+	skillCount: number,
+): number {
+	let total = 0;
+	let pool = skillCount;
+	let prevN = 0;
+	for (const round of preset.rounds) {
+		const blockSize = round.n - prevN;
+		total += pool * blockSize;
+		pool = Number.isFinite(round.cap) ? Math.min(pool, round.cap) : pool;
+		prevN = round.n;
+	}
+	return total;
+}
 
 // Round r's scenarios are a fresh block, disjoint from every other round's, so a skill's sample
 // set after round r is exactly the union of blocks 1..r regardless of which other skills were
@@ -253,17 +340,6 @@ export interface RoundDecision {
 	lcb: number;
 }
 
-// A skill's "not worth considering at all" floor, in lengths -- replaces master's `max > 0.1`
-// round-1 filter with a fixed, scale-free threshold. 12.5 cm; a skill has to clear this even to
-// be compared against the current best candidates.
-const MIN_INTERESTING_GAIN = 0.05;
-
-// z = 3.5 is a screening bound, not a claim of simultaneous 95% coverage across every candidate
-// in the pool. A real Bonferroni correction across ~500 arms x up to 4 rounds would need z ~ 4.2,
-// wide enough that this rule would eliminate almost nothing and the round cap would end up doing
-// all the actual work; 3.5 is the deliberate, documented compromise between the two.
-const SCREEN_Z = 3.5;
-
 // Below this many cumulative samples, a skill's variance estimate is too noisy to eliminate on --
 // it can still be capped out by the budget rule, just not CI-eliminated.
 const MIN_SAMPLES_FOR_CI_ELIMINATION = 24;
@@ -274,14 +350,21 @@ const MIN_SAMPLES_FOR_CI_ELIMINATION = 24;
 //
 // Order of evaluation, matching plans/statistical-skill-analysis.md's design:
 //   1. Inert (exact zero effect, never proc'd) -- dropped unconditionally.
-//   2. Gate = max(MIN_INTERESTING_GAIN, the targetPool-th largest lower bound in the pool).
-//   3. Protect: the current top targetPool by mean are never eliminated by steps 4-5, regardless
+//   2. Gate = max(preset.minInterestingGain, the targetPool-th largest lower bound in the pool).
+//   3. Protect: the current top targetPool by mean are never eliminated by step 4, regardless
 //      of how their interval compares to the gate.
 //   4. CI elimination: upper bound below the gate, with enough samples to trust the interval.
 //   5. Converged: interval already narrower than the preset's precision target -- freeze as
-//      final without spending the ladder's remaining rounds on it.
+//      final without spending the ladder's remaining rounds on it. Not gated by protection:
+//      a protected skill whose interval is already this tight isn't being judged unpromising,
+//      it's being judged precisely known, which is exactly when spending no more of the
+//      ladder's budget on it is correct -- including for a top skill.
 //   6. Budget: cap whatever's left to `round.cap`, keeping the most optimistic (highest upper
 ///     bound) survivors so an unlucky-so-far skill isn't dropped on a rough early read.
+//
+// preset.screenZ and preset.minInterestingGain default to CHART_LADDERS' fixed values but can be
+// scaled by derivePreset() (the Skill Chart's Pruning slider) -- everything else about this
+// function is unaware that's happening; it just reads whatever preset it's handed.
 export function evaluateRound(
 	pool: RoundCandidate[],
 	round: LadderRound,
@@ -293,7 +376,7 @@ export function evaluateRound(
 		{ ucb: number; lcb: number; zEff: number; se: number }
 	>();
 	for (const c of pool) {
-		const zEff = SCREEN_Z * Math.sqrt(1 + 2 / Math.max(1, c.n));
+		const zEff = preset.screenZ * Math.sqrt(1 + 2 / Math.max(1, c.n));
 		const se = Math.sqrt(c.variance / Math.max(1, c.n));
 		bounds.set(c.id, {
 			ucb: c.mean + zEff * se,
@@ -315,7 +398,7 @@ export function evaluateRound(
 		sortedByLcb.length >= preset.targetPool
 			? sortedByLcb[preset.targetPool - 1]
 			: Number.NEGATIVE_INFINITY;
-	const gate = Math.max(MIN_INTERESTING_GAIN, kthBestLcb);
+	const gate = Math.max(preset.minInterestingGain, kthBestLcb);
 
 	const protectedIds = new Set(
 		active

@@ -100,13 +100,20 @@ the flat-N implementation could produce.
 ```ts
 export const CHART_LADDERS: Record<AnalysisPresetName, LadderPreset> = {
 	quick:    { rounds: [{n:32,cap:Infinity},{n:128,cap:96},{n:384,cap:24}],
-	            targetPool: 16, bootstrapSamples: 1000, precisionTarget: 0.03 },
+	            targetPool: 16, bootstrapSamples: 1000, precisionTarget: 0.03,
+	            screenZ: 3.5, minInterestingGain: 0.05 },
 	balanced: { rounds: [{n:48,cap:Infinity},{n:192,cap:128},{n:768,cap:32}],
-	            targetPool: 20, bootstrapSamples: 2000, precisionTarget: 0.02 },
+	            targetPool: 20, bootstrapSamples: 2000, precisionTarget: 0.02,
+	            screenZ: 3.5, minInterestingGain: 0.05 },
 	thorough: { rounds: [{n:64,cap:Infinity},{n:256,cap:160},{n:1024,cap:40},{n:3072,cap:12}],
-	            targetPool: 24, bootstrapSamples: 2000, precisionTarget: 0.015 },
+	            targetPool: 24, bootstrapSamples: 2000, precisionTarget: 0.015,
+	            screenZ: 3.5, minInterestingGain: 0.05 },
 };
 ```
+
+`screenZ` and `minInterestingGain` are per-preset fields (all three start from the same defaults)
+rather than module constants, so that the Pruning slider below can scale them independently of the
+Preset selector's round-depth knobs.
 
 Only round 1 is O(K) over every candidate; every later round holds `cap x delta-n` roughly constant,
 so total work is linear in the number of rounds — logarithmic in the top-end sample count, not
@@ -133,11 +140,11 @@ Run at each round boundary, over cumulative samples, in this order:
 6. **Budget** — if survivors still exceed the round's cap, keep the top `cap` by upper bound
    (optimistic, so a skill that's merely had an unlucky sample run so far isn't unfairly dropped).
 
-The screening bound uses `z_eff = 3.5 * sqrt(1 + 2/n)`, documented in `chartLadder.ts` as a
-screening bound, not a claim of simultaneous 95% coverage across the whole candidate pool — a real
-Bonferroni correction across ~500 arms would need z ~ 4.2, wide enough that this rule would
-eliminate almost nothing and the round cap would end up doing all the actual work. 3.5 is the
-deliberate, documented compromise.
+The screening bound uses `z_eff = screenZ * sqrt(1 + 2/n)` (`screenZ` defaults to 3.5 in every
+preset), documented in `chartLadder.ts` as a screening bound, not a claim of simultaneous 95%
+coverage across the whole candidate pool — a real Bonferroni correction across ~500 arms would
+need z ~ 4.2, wide enough that this rule would eliminate almost nothing and the round cap would end
+up doing all the actual work. 3.5 is the deliberate, documented compromise.
 
 Eliminated skills still show a number in the table — the one from however many samples they got —
 with `status` (`screened`, `inert`, `final`, `refining`, `pending`) rendered as a visual tier (muted
@@ -145,6 +152,36 @@ row styling for screened/inert/pending) and an `n` column, with the elimination 
 tooltip. This is a genuine improvement over both prior implementations: the original ladder showed
 25-sample min/max with no confidence signal for eliminated skills, and the flat-N implementation
 showed nothing at all for the whole run.
+
+### Pruning: adjusting elimination speed (`derivePreset`)
+
+The Preset selector (Quick/Balanced/Thorough) only controls sample *depth* — the `rounds[i].n`
+values. A separate **Pruning** slider (0-100, default 50) controls how quickly a skill stops being
+sampled, by deriving a scaled `LadderPreset` from whichever base preset is selected:
+`derivePreset(CHART_LADDERS[analysisPreset], pruning)`. Let `t = (pruning-50)/50`, so `t` ranges
+-1 (most aggressive) to +1 (most lenient) and is exactly 0 at the default:
+
+| Field | Derivation | @0 (Aggressive) | @50 (Standard) | @100 (Lenient) |
+|---|---|---|---|---|
+| `screenZ` | `base + t * 1.0` | 2.5 | 3.5 | 4.5 |
+| `targetPool` | `max(4, round(base * 2**t))` | ×0.5 | ×1 | ×2 |
+| `rounds[i].cap` (finite only) | `round(base * 2.5**t)` | ×0.4 | ×1 | ×2.5 |
+| `precisionTarget` | `base * 2**(-t)` | ×2 | ×1 | ×0.5 |
+| `minInterestingGain` | `base * 2**(-t)` | ×2 | ×1 | ×0.5 |
+
+`rounds[i].n`, `rounds[0].cap` (always `Infinity`), and `bootstrapSamples` are never touched —
+sample depth stays the Preset selector's job, so the two controls stay independently explainable.
+The ramps are centered so `t = 0` is an exact identity (not a special-cased shortcut at
+`pruning === 50`): `derivePreset(preset, 50)` reproduces `preset` field-for-field, verified by a
+dedicated test in `chartLadder.test.ts`. A round's `cap` is deliberately *not* clamped to
+`targetPool` — `CHART_LADDERS.thorough`'s own last round already caps below its `targetPool` (12
+vs 24) by design, since the budget rule is allowed to narrow past the protected pool on a final
+round, and clamping would break the identity at the default for that preset.
+
+Lower Pruning values finish faster and are more likely to cut a skill that would've turned out
+fine; higher values keep marginal skills sampling longer at the cost of runtime. The estimated-
+runtime hint next to the controls (see below) reflects the derived preset, not just the raw
+Preset selection, so the added cost of a more lenient setting is visible before pressing Run.
 
 ## Statistical summaries (`umalator/statisticalAnalysis.ts`)
 
@@ -301,11 +338,12 @@ two controls fighting over the same flags.
    general skills (`rarity < 3`), and uniques are rarity 4/5 — so this toggle is the only "hide
    uniques" control that does anything. Both filters can be changed after a run without re-running —
    matching rows hide immediately, with the chart marked dirty until you press Run again.
-3. Pick **Model** (Controlled or Full race) and **Preset** (Quick / Balanced / Thorough) in the run-
-   settings row above the table — these are reachable before a run has happened, unlike an earlier
-   implementation where they lived inside the results pane and only rendered once `tableData.size >
-   0`. An estimated-runtime hint next to Run uses the ladder's worst-case scenario count and the
-   last measured ms/scenario rate.
+3. Pick **Model** (Controlled or Full race), **Preset** (Quick / Balanced / Thorough), and
+   **Pruning** (0-100, default 50 — see the Pruning subsection above) in the run-settings row above
+   the table — these are reachable before a run has happened, unlike an earlier implementation
+   where they lived inside the results pane and only rendered once `tableData.size > 0`. An
+   estimated-runtime hint next to Run reflects the current Pruning-derived preset, using the
+   ladder's worst-case scenario count and the last measured ms/scenario rate.
 4. If Skill Wit Check matters to the comparison, set it in the left Settings pane before running.
 5. Press **Run**. The table populates progressively as each round's batches stream back; sort by any
    column. **Stop** halts within a couple of seconds and keeps whatever partial results exist.
@@ -315,15 +353,16 @@ two controls fighting over the same flags.
 7. Double-clicking a row adds that skill to Uma 1's build and marks the chart stale — rerun after
    changing the baseline.
 
-Changing Model or Preset does not automatically rerun existing results — press Run again.
+Changing Model, Preset, or Pruning does not automatically rerun existing results — press Run again.
 
 ## Reproducibility
 
-Same race setup, Uma, Model, Preset, seed, and Skill Wit Check setting reproduce an identical chart
-— the BCa bootstrap is seeded per skill (deterministic given the skill ID and base seed), not just
-the underlying race simulation. `analysisMode` and `analysisPreset` are stored in `localStorage`
-only (work-budget knobs, not part of the race definition); `skillWisdomCheck` is part of the
-serialized race state and shared URLs, same as it already was for Compare mode.
+Same race setup, Uma, Model, Preset, Pruning, seed, and Skill Wit Check setting reproduce an
+identical chart — the BCa bootstrap is seeded per skill (deterministic given the skill ID and base
+seed), not just the underlying race simulation. `analysisMode`, `analysisPreset`, and `chartPruning`
+are stored in `localStorage` only (work-budget knobs, not part of the race definition);
+`skillWisdomCheck` is part of the serialized race state and shared URLs, same as it already was for
+Compare mode.
 
 ## Verification
 

@@ -66,6 +66,22 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-26</summary>
+						<ul>
+							<li>
+								The Skill Chart's run settings now include a{' '}
+								<strong>Pruning</strong> slider, alongside Model and Preset. It
+								controls how quickly the adaptive ladder stops sampling a skill
+								that looks unpromising -- lower finishes faster and is more
+								likely to cut a skill that would've turned out fine; higher
+								keeps marginal skills sampling longer at the cost of runtime.
+								The default (50) reproduces the exact same behavior as before
+								this change; the runtime estimate next to Run reflects the
+								current setting.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-25</summary>
 						<ul>
 							<li>
