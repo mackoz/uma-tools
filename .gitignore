@@ -63,3 +63,7 @@ meta-*
 
 # Python venv for scripts/extract-assets.py (UnityPy) -- see docs/data-pipeline.md.
 /scripts/.venv/
+
+# Scratch notes for in-progress work (e.g. paired-review findings not yet applied) --
+# working notes only, never meant to be committed or shipped.
+/tmp/
