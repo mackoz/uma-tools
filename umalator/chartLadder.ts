@@ -351,11 +351,14 @@ const MIN_SAMPLES_FOR_CI_ELIMINATION = 24;
 // Order of evaluation, matching plans/statistical-skill-analysis.md's design:
 //   1. Inert (exact zero effect, never proc'd) -- dropped unconditionally.
 //   2. Gate = max(preset.minInterestingGain, the targetPool-th largest lower bound in the pool).
-//   3. Protect: the current top targetPool by mean are never eliminated by steps 4-5, regardless
+//   3. Protect: the current top targetPool by mean are never eliminated by step 4, regardless
 //      of how their interval compares to the gate.
 //   4. CI elimination: upper bound below the gate, with enough samples to trust the interval.
 //   5. Converged: interval already narrower than the preset's precision target -- freeze as
-//      final without spending the ladder's remaining rounds on it.
+//      final without spending the ladder's remaining rounds on it. Not gated by protection:
+//      a protected skill whose interval is already this tight isn't being judged unpromising,
+//      it's being judged precisely known, which is exactly when spending no more of the
+//      ladder's budget on it is correct -- including for a top skill.
 //   6. Budget: cap whatever's left to `round.cap`, keeping the most optimistic (highest upper
 ///     bound) survivors so an unlucky-so-far skill isn't dropped on a rough early read.
 //
