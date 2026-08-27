@@ -206,12 +206,14 @@ function formatEstimatedRuntime(ms: number): string {
 // Word for the Pruning slider's current position, plus the raw number so the setting is quotable
 // (e.g. in a bug report) without needing a screenshot of the slider itself.
 function pruningLabel(pruning: number): string {
-	const word =
-		pruning < PRUNING_DEFAULT
-			? 'Aggressive'
-			: pruning > PRUNING_DEFAULT
-				? 'Lenient'
-				: 'Standard';
+	let word: string;
+	if (pruning < PRUNING_DEFAULT) {
+		word = 'Aggressive';
+	} else if (pruning > PRUNING_DEFAULT) {
+		word = 'Lenient';
+	} else {
+		word = 'Standard';
+	}
 	return `${word} · ${pruning}`;
 }
 
