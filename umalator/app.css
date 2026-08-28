@@ -445,10 +445,22 @@ body.splitterDragging {
 
 #chartIconFilter {
 	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-xs);
+	padding: 8px 20px 4px;
+}
+
+.chartFilterRow {
+	display: flex;
 	align-items: center;
 	gap: 4px;
-	padding: 8px 20px 4px;
 	flex-wrap: wrap;
+}
+
+.chartFilterLabel {
+	font-size: var(--font-sm);
+	color: var(--muted-2);
 }
 
 .chart-icon-filter-btn {
@@ -516,12 +528,6 @@ body.splitterDragging {
 	color: var(--muted);
 	font-size: var(--font-xs);
 	margin-left: 12px;
-}
-
-/* Inline variant used in the chart toolbar row (next to the icon filters). */
-.settingsToggleRow.settingsToggleRowInline {
-	margin-left: 12px;
-	padding: 0;
 }
 
 /* Pacemaker selection labels, colored to match the chart line colors. */

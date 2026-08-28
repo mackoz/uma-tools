@@ -4,21 +4,30 @@ import './Tabs.css';
 
 export interface TabItem {
 	key: string;
-	// Text label (underline variant) and/or icon (iconrail variant).
+	// Text label (underline/segmented variants) and/or icon (iconrail variant).
 	label?: ComponentChildren;
 	icon?: ComponentChildren;
-	// iconrail: shown as a CSS-only tooltip and used as the accessible name.
+	// iconrail: shown as a CSS-only tooltip and used as the accessible name (the
+	// item has no visible label there). Other variants get it as a native `title`
+	// instead -- supplementary detail on hover, not a replacement for the visible
+	// label as the accessible name.
 	tooltip?: string;
 	// Overrides the `selected`-key comparison for items whose active state is
 	// independent of the group's single selection (e.g. sidebar panel toggles).
 	active?: boolean;
 	disabled?: boolean;
+	// segmented: per-item color, e.g. {'--seg-bg': ..., '--seg-accent': ...}. Lets a
+	// caller (Skill Chart's rarity row) color each item without teaching this shared
+	// primitive what the colors mean. Not typed as Record<K, V> -- that identifier
+	// collides project-wide with Immutable.js's ambient Record<TProps> (used for
+	// HorseState) once both are in scope.
+	style?: { [key: string]: string };
 }
 
 interface TabsProps {
 	id?: string;
 	class?: string;
-	variant: 'underline' | 'iconrail';
+	variant: 'underline' | 'iconrail' | 'segmented';
 	items: TabItem[];
 	selected?: string | null;
 	onSelect: (key: string) => void;
@@ -27,6 +36,7 @@ interface TabsProps {
 }
 
 export function Tabs(props: TabsProps) {
+	const isIconrail = props.variant === 'iconrail';
 	return (
 		<div
 			id={props.id}
@@ -39,8 +49,11 @@ export function Tabs(props: TabsProps) {
 						key={item.key}
 						type="button"
 						class={`tabsItem${active ? ' active' : ''}${item.disabled ? ' disabled' : ''}`}
-						aria-label={item.tooltip}
-						data-tip={item.tooltip}
+						style={item.style}
+						aria-label={isIconrail ? item.tooltip : undefined}
+						aria-disabled={item.disabled || undefined}
+						title={isIconrail ? undefined : item.tooltip}
+						data-tip={isIconrail ? item.tooltip : undefined}
 						onClick={item.disabled ? undefined : () => props.onSelect(item.key)}
 					>
 						{item.icon}
