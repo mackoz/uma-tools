@@ -66,6 +66,22 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-28</summary>
+						<ul>
+							<li>
+								The Skill Chart's <strong>Hide Inherited Uniques</strong> toggle
+								is now a <strong>Rarity</strong> row: All, Normal, Rare, Unique
+								(inherited uniques -- a character's own uniques are evaluated in
+								the Uma Chart tab instead), and, on JP, Evolved. It's
+								single-select, so narrowing from All to one rarity hides
+								non-matching rows immediately, but switching between rarities or
+								widening back to All needs a re-run -- the one combination the
+								old toggle could express that this can't is "everything except
+								inherited uniques".
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-26</summary>
 						<ul>
 							<li>
