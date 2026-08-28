@@ -445,10 +445,22 @@ body.splitterDragging {
 
 #chartIconFilter {
 	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-xs);
+	padding: 8px 20px 4px;
+}
+
+.chartFilterRow {
+	display: flex;
 	align-items: center;
 	gap: 4px;
-	padding: 8px 20px 4px;
 	flex-wrap: wrap;
+}
+
+.chartFilterLabel {
+	font-size: var(--font-sm);
+	color: var(--muted-2);
 }
 
 .chart-icon-filter-btn {

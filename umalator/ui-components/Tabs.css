@@ -1,7 +1,10 @@
-/* Shared tab primitive (see UI-11). Two variants:
+/* Shared tab primitive (see UI-11). Three variants:
  *   underline — horizontal text tabs with a bottom-border active indicator
  *               (navTabs, modeTabs, umaTabBar)
  *   iconrail  — vertical icon-button rail with CSS-only tooltips (iconSidebar)
+ *   segmented — horizontal wrapping chip group for a same-view choice, not
+ *               navigation (Skill Chart's rarity filter row); an active item
+ *               can carry a caller-supplied color via inline --seg-bg/--seg-accent
  * Layout/placement specific to a site (grid position, borders, heights) stays
  * with that site's container rules in app.css; everything about the tab items
  * themselves lives here, token-driven so dark mode needs no overrides. */
@@ -111,4 +114,32 @@
 	to {
 		opacity: 1;
 	}
+}
+
+/* --- segmented variant --- */
+
+.tabs--segmented {
+	gap: var(--space-xs);
+	flex-wrap: wrap;
+}
+
+.tabs--segmented .tabsItem {
+	padding: 4px 12px;
+	font-size: var(--font-base);
+	font-weight: 500;
+	border-radius: var(--radius-sm);
+	border-bottom: 2px solid transparent;
+	color: var(--muted-2);
+}
+
+.tabs--segmented .tabsItem:hover:not(.active):not(.disabled) {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+.tabs--segmented .tabsItem.active {
+	background: var(--seg-bg, var(--card));
+	border-bottom-color: var(--seg-accent, var(--accent));
+	color: var(--fg);
+	font-weight: 600;
 }

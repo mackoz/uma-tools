@@ -7,6 +7,7 @@ import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
 import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { FormattedCondition } from './SkillList';
+import { matchRarity } from './SkillRarity';
 
 import './SkillPicker.css';
 
@@ -107,25 +108,6 @@ const skillSearchIndex: Record<string, string> = {};
 Object.keys(skilldata).forEach((id) => {
 	skillSearchIndex[id] = getSkillName(id).toUpperCase();
 });
-
-function matchRarity(id: string, testRarity: string): boolean {
-	const r = skilldata[id]?.rarity;
-	if (r == null) return false;
-	switch (testRarity) {
-		case 'white':
-			return r === 1 && id[0] !== '9';
-		case 'gold':
-			return r === 2;
-		case 'pink':
-			return r === 6;
-		case 'unique':
-			return r > 2 && r < 6;
-		case 'inherit':
-			return id[0] === '9';
-		default:
-			return true;
-	}
-}
 
 function matchConditionFilter(id: string, filterKey: string): boolean {
 	const ops = filterOps[filterKey];
