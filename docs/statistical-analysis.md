@@ -337,7 +337,9 @@ two controls fighting over the same flags.
    **Unique** here means the ~250 `9xxxxx` *inherited* unique skills (e.g. "Warning Shot! (inherited)")
    — a character's own (non-inherited) unique skills never enter the candidate pool in the first
    place, since the Skill Chart's candidate list only includes general skills (`rarity < 3`) and
-   uniques are rarity 4/5 — so **Unique** is the only rarity option that reaches them. Both the
+   character uniques are rarity 3/4/5 (see `uma-skill-tools/RaceSolverBuilder.ts:301-302` for why
+   1★/2★ uniques, 1★/2★ upgraded to 3★, and naturally-3★ uniques all carry different raw rarity
+   values) — so **Unique** is the only rarity option that reaches them. Both the
    Rarity and Type filters can be *narrowed* after a run without re-running — matching rows hide
    immediately — but because Rarity is single-select, switching to a different rarity or widening
    back to **All** does mark the chart dirty until you press Run again (Type's icon filters, being

@@ -530,12 +530,6 @@ body.splitterDragging {
 	margin-left: 12px;
 }
 
-/* Inline variant used in the chart toolbar row (next to the icon filters). */
-.settingsToggleRow.settingsToggleRowInline {
-	margin-left: 12px;
-	padding: 0;
-}
-
 /* Pacemaker selection labels, colored to match the chart line colors. */
 .pacemakerName-0 {
 	color: #22c55e;
