@@ -30,13 +30,17 @@ if (!@ARGV) {
 # dat/). Twin implementations: extract_resource.pl (Perl) and
 # scripts/download-game-assets.mjs (JS) -- keep the regex identical in all three if it ever
 # changes. See docs/master-mdb-schema.md.
+#
+# Dies rather than guessing on an unrecognized name (e.g. a leftover pre-convention
+# "master-jp.mdb") -- silently falling back to the unsuffixed (Global) meta/dat/ would
+# misroute into the wrong server's data with nothing louder than a warning (PIPE-17
+# review, 2026-08-28).
 sub server_suffix {
 	my ($basename) = @_;
 	if ($basename =~ /^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/) {
 		return $1 // '';
 	}
-	warn "make_uma_info.pl: couldn't derive a server suffix from '$basename' -- falling back to the unsuffixed (Global) meta/dat/";
-	return '';
+	die "make_uma_info.pl: couldn't derive a server suffix from '$basename' -- rename it to the master_jp.mdb/meta_jp convention (see docs/master-mdb-schema.md) rather than guessing which server's meta/dat to use";
 }
 
 my $mastermdb = shift @ARGV;

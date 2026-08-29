@@ -19,13 +19,17 @@ if (!@ARGV) {
 # suffixed (meta_jp, dat_jp/), Global stays unsuffixed (meta, dat/). Twin implementations:
 # make_uma_info.pl (Perl) and scripts/download-game-assets.mjs (JS) -- keep the regex
 # identical in all three if it ever changes. See docs/master-mdb-schema.md.
+#
+# Dies rather than guessing on an unrecognized name (e.g. a leftover pre-convention
+# "meta-jp") -- silently falling back to the unsuffixed (Global) dat/ would misroute
+# extraction into the wrong server's cache with nothing louder than a warning (PIPE-17
+# review, 2026-08-28).
 sub server_suffix {
 	my ($basename) = @_;
 	if ($basename =~ /^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/) {
 		return $1 // '';
 	}
-	warn "extract_resource.pl: couldn't derive a server suffix from '$basename' -- falling back to the unsuffixed (Global) dat/ directory";
-	return '';
+	die "extract_resource.pl: couldn't derive a server suffix from '$basename' -- rename it to the master_jp.mdb/meta_jp convention (see docs/master-mdb-schema.md) rather than guessing which server's dat/ to use";
 }
 
 my $meta = shift @ARGV;
@@ -64,7 +68,16 @@ $select->bind_columns(\($hash, $enc));
 while ($select->fetch) {
 	$hash =~ /^(..)/;
 	my $hdir = $1;
-	copy("$datadir/$hdir/$hash", "need_unpack/$hash") or die "Failed to copy $datadir/$hdir/$hash: $!";
+	# Warn and skip rather than die: dat/ is often populated incrementally via
+	# download-game-assets.mjs's --like patterns, so a query broader than what's been
+	# downloaded so far is expected to have some misses -- one missing hash shouldn't
+	# abort every subsequent match in the same run (PIPE-17 review, 2026-08-28). The
+	# -d $datadir check above already catches the "wrong directory entirely" case this
+	# was originally meant to guard against.
+	unless (copy("$datadir/$hdir/$hash", "need_unpack/$hash")) {
+		warn "Failed to copy $datadir/$hdir/$hash: $! -- skipping";
+		next;
+	}
 	# write encryption key next to the extracted file if present
 	if (defined $enc && length $enc) {
 		open my $kf, '>', "need_unpack/$hash.key" or die "Unable to write key file: $!";
