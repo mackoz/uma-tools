@@ -1,6 +1,6 @@
 ---
 name: paired-review
-description: Review every open PR across uma-tools, uma-skill-tools, and uma-tools-plans together, in dependency order, then run a cross-repo pass over the combined change. Use when a change spans paired PRs in these sibling repos and a single /code-review run on one PR would miss how it interacts with the others.
+description: Review every open PR across uma-tools, uma-skill-tools, and uma-tools-plans together, in dependency order, then run a cross-repo pass over the combined change. Use whenever the user wants to review or sanity-check a change that spans paired PRs across these three sibling repos before landing it — an engine PR plus its uma-tools gitlink bump, a plans-repo ticket paired with either — even if they phrase it as "review these PRs together," "check these are in sync," "does this match the engine PR," or name a specific ticket's paired PRs without naming this skill. A single /code-review run on one PR alone would miss how it interacts with the others.
 argument-hint: "[low|medium|high|xhigh|max] [--comment] [--fix] [--engine-pr N] [--code-pr N] [--plans-pr N]"
 ---
 
@@ -272,8 +272,11 @@ to both.
 
 ## Step 4 — Consolidated summary
 
-Print, to the terminal only (this skill posts to GitHub only through Steps 2–3, never a
-separate top-level PR comment):
+This step branches on whether `--fix` or `--comment` was passed. The two branches are
+mutually exclusive — run exactly one, not both.
+
+**If `--fix` or `--comment` was passed**, print to the terminal only (this skill posts to
+GitHub only through Steps 2–3, never a separate top-level PR comment):
 
 - One section per repo slot: PR number/title/link and posted-review link, or
   "no open PR — skipped." Include that slot's `FAN-OUT` line from its HANDOFF verbatim —
@@ -285,8 +288,9 @@ separate top-level PR comment):
   found nothing actionable.
 
 **If neither `--fix` nor `--comment` was passed** (the bare/default invocation — the
-common case, since most runs are a first look before deciding what to do about it), do one
-more thing after the above, before ending your turn:
+common case, since most runs are a first look before deciding what to do about it), skip
+the per-repo/cross-repo prose above entirely — a table that already carries every finding
+makes it redundant, not complementary — and instead:
 
 1. **Form your own recommendation for every finding** — every per-repo finding from every
    slot's HANDOFF, plus everything Step 3 surfaced. Unlike the `code-review` sub-reviews
@@ -299,9 +303,8 @@ more thing after the above, before ending your turn:
    badly, if this ships as-is), and effort (rough size of the fix), and land on one
    recommendation per finding: fix it, defer it, or skip it, with a one-clause reason.
 
-2. **Present one consolidated table**, not the loose per-repo prose above it — every
-   finding across every repo and the cross-repo pass as its own row, columns in this exact
-   order:
+2. **Present one consolidated table** — every finding across every repo and the
+   cross-repo pass as its own row, columns in this exact order:
 
    | Finding | Confidence | Impact | Effort | Recommendation |
    |---|---|---|---|---|
