@@ -999,6 +999,7 @@ export function RaceTrack(props) {
 						</svg>
 						{props.children}
 					</svg>
+					{/* ANCHOR: stat-thresholds-length-check */}
 					{course.courseSetStatus.length > 0 && (
 						<div class="racetrackStatThresholds">
 							<Text id="racetrack.thresholds" />

@@ -92,6 +92,7 @@ function stripDeep(v, dropKeys) {
 // fork's files, and so the diverged-value report below isn't 100% false positives
 // from schema alone.
 const SKILL_META_DROP = new Set(['score']);
+// ANCHOR: skill-data-drop-set
 const SKILL_DATA_DROP = new Set(['tags', 'wisdomCheck', 'durationScaling', 'scaling']);
 
 let totalAdded = 0;

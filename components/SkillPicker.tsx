@@ -118,6 +118,7 @@ function matchConditionFilter(id: string, filterKey: string): boolean {
 
 // ── Icon type filter ──────────────────────────────────────────────────────────
 
+// ANCHOR: skill-picker-icontype-table
 const ICON_TYPE_FILTERS = [
 	'1001',
 	'1002',
