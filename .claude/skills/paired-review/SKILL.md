@@ -97,8 +97,10 @@ of trusting the table's per-repo guess.)
 
 - **Zero results** → skip that slot. Note it in the final summary as "no open PR — skipped."
 - **Exactly one** → that's the slot's PR.
-- **More than one** → this violates the repos' own "one open PR per repo" rule. Stop and
-  ask the user which one they mean rather than guessing.
+- **More than one** → the repos' own "one open PR per repo" convention is soft guidance now,
+  not a hard rule (a second PR can be legitimate, e.g. two genuinely unrelated efforts
+  in flight at once), so this isn't necessarily wrong — but this skill still can't guess
+  which one the user means. Stop and ask.
 
 For a slot resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override instead
 of discovery, look up the same fields with
