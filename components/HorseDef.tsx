@@ -214,6 +214,7 @@ export function Stat(props) {
 				class="horseStatRank"
 				src={`/uma-tools/icons/statusrank/ui_statusrank_${(100 + rankForStat(props.value)).toString().slice(1)}.png`}
 			/>
+			{/* ANCHOR: stat-input-max-2000 */}
 			<input
 				type="number"
 				min="1"
