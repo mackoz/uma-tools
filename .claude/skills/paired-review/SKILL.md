@@ -16,12 +16,14 @@ on, a doc claim in `uma-tools-plans` a code change makes stale.
 each per-repo `code-review` call in Step 2 is fully independent — it does not receive the
 prior slots' findings, and nothing you say in your own turn before calling it reaches its
 context. `code-review`'s forked run is seeded *only* from the `args` string (level, flags,
-target), constructed entirely by its own template; a Skill call does not carry the calling
-turn's surrounding conversation into the fork the way an `Agent` call's `prompt` does. So
-"in dependency order" here means only that *you* review them in a sensible reading order
-and use what you learn along the way when composing Step 3's synthesis prompt — it does
-not mean each sub-review is aware of what came before it. Don't describe a per-repo review
-to the user as having been informed by a prior slot's findings; it wasn't.
+target, plus the context clause Step 2 now appends — see below), constructed entirely by
+its own template; a Skill call does not carry the calling turn's surrounding conversation
+into the fork the way an `Agent` call's `prompt` does. So "in dependency order" here means
+only that *you* review them in a sensible reading order and use what you learn along the
+way when composing Step 3's synthesis prompt — it does not mean each sub-review is aware
+of what came before it. Don't describe a per-repo review to the user as having been
+informed by a prior slot's findings; it wasn't — the context clause tells it *what kind of
+change this is*, not what a sibling slot's review already found.
 
 This is the review-side counterpart to `uma-tools-plans/scripts/wq.py land`, which
 automates the paired *merge*. `/paired-review` never merges, pushes, or lands anything —
@@ -104,11 +106,17 @@ of discovery, look up the same fields with
 so the printed plan (below) and the rest of this skill have real title/URL/branch data to
 work with, not just a bare number.
 
-**Relatedness check (warn, don't block).** Paired PRs share an identical head branch name
-in practice, though nothing enforces it and `wq.py` never reads it. If two or more
-discovered PRs' `headRefName`s differ, print a warning — `"heads differ (<a> vs <b>) —
-these may be unrelated PRs, reviewing anyway"` — and continue. This is a cheap sanity
-check, not a hard gate.
+**Relatedness check (informational only — never gates Step 3).** Paired PRs share an
+identical head branch name in practice, though nothing enforces it and `wq.py` never reads
+it. If two or more discovered PRs' `headRefName`s differ, print a warning —
+`"heads differ (<a> vs <b>) — these may be unrelated PRs, reviewing anyway"` — and
+continue. Print this for the user's own situational awareness only; it does **not** skip
+or otherwise affect Step 3's cross-repo pass (this used to gate Step 3, and stopped — see
+that step for why). A real landing this project did, PIPE-21 on 2026-08-29, had three PRs
+with three different branch names — `pipe-21-replay-parser`/`pipe-21-gitlink-bump`/
+`pipe-21-work` — despite being unambiguously the same paired change, since nothing forces
+one branch name across repos. Branch-name mismatch is too weak a signal to skip the one
+step that could catch a real cross-repo problem.
 
 Print the resolved plan (which slots have a PR, their numbers/titles/URLs, which slots
 are being skipped) before doing anything else, so the user can interrupt if it's wrong.
@@ -130,8 +138,26 @@ understand after seeing what changed underneath it.
 2. Call the skill **directly** — do not wrap this in an `Agent` call:
 
    ```
-   Skill(skill: "code-review", args: "<level, or omit> <--comment/--fix if set> <PR URL>")
+   Skill(skill: "code-review", args: "<level, or omit> <--comment/--fix if set> <PR URL> -- <context clause>")
    ```
+
+   **Context clause**: one short sentence orienting the sub-review, since the args string is
+   its only channel in (see the limitation note above). Include: which slot this is (engine/
+   code/plans), the ticket ID and one-line purpose if inferable from the PR title, and the
+   sibling PR(s) in this same paired landing by `owner/repo#number`. E.g.:
+
+   ```
+   -- this is the engine repo in a paired PIPE-21 landing (replay-comparison spike tooling);
+   sibling PRs: mackoz/uma-tools#39 (code, gitlink bump), mackoz/uma-tools-plans#25 (plans,
+   ticket+corpus); review this repo's own diff, but flag anything that assumes state only
+   visible in a sibling repo
+   ```
+
+   This is best-effort, not a verified contract — `code-review`'s own argument parsing of
+   trailing prose after the target hasn't been independently confirmed by this skill. If a
+   sub-review's result reads as though it ignored, mis-parsed, or choked on the clause,
+   say so when you record that slot's HANDOFF and drop the clause from the remaining calls
+   this run rather than repeating something that isn't working.
 
    Direct is required, not a style choice: `code-review` forks into its own subagent and
    spawns its angle-finder subagents *itself* — that's already the orchestrator → review
@@ -209,12 +235,13 @@ understand after seeing what changed underneath it.
 ## Step 3 — Cross-repo pass
 
 This is the step a single-repo `/code-review` structurally cannot perform, and the reason
-this skill exists rather than three manual `/code-review` calls. Skip this step if fewer
-than two slots had an open PR — there's nothing cross-repo to check with just one — or if
-Step 1's relatedness check warned that the discovered PRs' head branches differ: treat
-that the same as "nothing cross-repo to check," since synthesizing a relationship between
-two PRs already flagged as possibly unrelated risks fabricating a connection that isn't
-there.
+this skill exists rather than three manual `/code-review` calls. Skip this step **only**
+if fewer than two slots had an open PR — there's nothing cross-repo to check with just
+one. Run it regardless of Step 1's relatedness-check warning, even if the discovered PRs'
+head branches differ — see Step 1's note on why that check no longer gates this one.
+Nothing here licenses *inventing* a relationship that isn't backed by evidence, though:
+the "hold cross-repo findings to the same evidence bar" rule below still applies exactly
+as strictly as if the branches had matched.
 
 Launch one `Agent` (fan-out isn't needed here — this is synthesis, not diff-scanning). Give
 it: every HANDOFF block from Step 2, the PR URLs, and the specific things to check, drawn
@@ -257,6 +284,42 @@ separate top-level PR comment):
 - A **Cross-repo** section: the findings from Step 3, or "none found" if the pass ran and
   found nothing actionable.
 
+**If neither `--fix` nor `--comment` was passed** (the bare/default invocation — the
+common case, since most runs are a first look before deciding what to do about it), do one
+more thing after the above, before ending your turn:
+
+1. **Form your own recommendation for every finding** — every per-repo finding from every
+   slot's HANDOFF, plus everything Step 3 surfaced. Unlike the `code-review` sub-reviews
+   (which are isolated forks, per the limitation note at the top of this skill), *you* are
+   not isolated — you're still in the same conversation this run started in, so bring
+   whatever you already know from it: what the change was for, decisions already made
+   earlier in the session, prior findings you've already assessed. Judge confidence (is the
+   finding actually correct, not just plausible-sounding — re-verify a claim yourself
+   against the real file if a HANDOFF's evidence looks thin), impact (what breaks, and how
+   badly, if this ships as-is), and effort (rough size of the fix), and land on one
+   recommendation per finding: fix it, defer it, or skip it, with a one-clause reason.
+
+2. **Present one consolidated table**, not the loose per-repo prose above it — every
+   finding across every repo and the cross-repo pass as its own row, columns in this exact
+   order:
+
+   | Finding | Confidence | Impact | Effort | Recommendation |
+   |---|---|---|---|---|
+
+   "Finding" identifies where it lives (`repo:file:line`, or the repo slot for a
+   process-level finding with no single line) and states the problem in one clause —
+   enough to act on without cross-referencing the HANDOFF blocks again. Sort however makes
+   the table easiest to scan (severity-first is usually right, but use judgment); don't
+   split it into a separate table per repo — one table, every finding.
+
+3. **Do not fix, comment, or otherwise act on anything in the table.** State plainly that
+   you're waiting for the user to say which rows to act on, and stop there — this is a
+   hold point, not a formality; the whole reason this branch exists is that `--fix`/
+   `--comment` weren't passed, meaning the user hasn't yet told you to act. Only proceed
+   once they name specific items (or say "the ones you recommended," "all of them," etc.)
+   — and only touch what they actually asked for, the same discipline `--fix` runs inside
+   Step 2 already have to a single repo's working tree.
+
 ## Step 5 — Cleanup
 
 Run `rm -f <scratchpad dir>/*.diff` again, now that every Step 2 sub-review has finished.
@@ -282,6 +345,11 @@ but cleaning up now means there's nothing left for that sweep to have to catch.
 
 - Never merge, push, or land anything from this skill. `wq.py land` is a separate,
   deliberate step the user runs themselves when ready.
+- If `/paired-review` was invoked with neither `--fix` nor `--comment`, Step 4's
+  consolidated-table branch is a hard stop — do not fix, comment, or otherwise act on any
+  finding until the user names which ones. This is the same rule as the line above,
+  applied one level down: `--fix`/`--comment` are how the user tells this skill it's
+  allowed to act; their absence means it isn't, yet.
 - Before Step 2, if `--fix` was passed, check each target repo's working tree
   (`git status --porcelain`) and warn if it's dirty — `--fix` will write into it.
 - The `uma-skill-tools` submodule sitting in detached HEAD is its normal, healthy state —
