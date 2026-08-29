@@ -119,6 +119,7 @@ Of that 76, 12 umas are **not actually released on Global yet** (every outfit st
 - **What does this app do / how is it built?** → `docs/apps.md`
 - **How does a simulation actually run, file by file?** → `docs/architecture.md`
 - **How do I regenerate the game data (new umas, new skills)?** → `docs/data-pipeline.md`
+- **Which `master.mdb` tables join to which (outfit → unique skill, evolution)?** → `docs/master-mdb-schema.md`
 - **How do I deploy or run this locally?** → `docs/deployment.md`
 - **How does the statistical Skill Chart evaluate skills (ladder, block sampling, detail-on-demand)?** → `docs/statistical-analysis.md`
 - **Why is something designed the way it is (build posture, chart statistics, submodule, format policy)?** → `docs/adr/` — decision records with context, rejected options, and consequences. Engine-level decisions have their own set in `uma-skill-tools/docs/adr/`. When a change settles a question that could have gone another way, add or amend a record (see `docs/adr/README.md`).

@@ -24,10 +24,26 @@ if (!@ARGV) {
 	die 'Usage: make_uma_info.pl master.mdb';
 }
 
+# Derives the per-server suffix (e.g. "_jp") from the master.mdb filename, so the meta/dat
+# lookup below follows whichever server's master.mdb was passed in -- JP-specific files are
+# suffixed (master_jp.mdb, meta_jp, dat_jp/), Global stays unsuffixed (master.mdb, meta,
+# dat/). Twin implementations: extract_resource.pl (Perl) and
+# scripts/download-game-assets.mjs (JS) -- keep the regex identical in all three if it ever
+# changes. See docs/master-mdb-schema.md.
+sub server_suffix {
+	my ($basename) = @_;
+	if ($basename =~ /^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/) {
+		return $1 // '';
+	}
+	warn "make_uma_info.pl: couldn't derive a server suffix from '$basename' -- falling back to the unsuffixed (Global) meta/dat/";
+	return '';
+}
+
 my $mastermdb = shift @ARGV;
 my $root = dirname(dirname(abs_path($mastermdb)));
-my $meta = $root . "/meta";
-my $datadir = $root . "/dat";
+my $suffix = server_suffix(basename($mastermdb));
+my $meta = $root . "/meta" . $suffix;
+my $datadir = $root . "/dat" . $suffix;
 
 my $umas = decode_json(read_binary('umas.json'));
 my $icons = decode_json(read_binary('icons.json'));
