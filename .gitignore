@@ -16,7 +16,11 @@ plans
 # Extracted game client DB used locally to regenerate skill/uma/course data.
 # Large binary, never meant to be committed - see docs/data-pipeline.md.
 # Glob (not just the literal master.mdb) so a differently-named copy -- e.g.
-# master-jp.mdb, kept alongside a hypothetical master-global.mdb -- is caught too.
+# master_jp.mdb, the JP client alongside the unsuffixed Global master.mdb -- is
+# caught too. Naming convention: JP-specific files get an underscore server
+# suffix (master_jp.mdb, meta_jp, dat_jp/); Global stays completely unsuffixed
+# (master.mdb, meta, dat/) -- there is no "_global" variant. See
+# docs/master-mdb-schema.md.
 *.mdb
 
 # esbuild output for every app with a build.mjs. deploy.yml rebuilds these on
@@ -47,18 +51,23 @@ plans
 
 # Encrypted game client asset-manifest DB (meta) and its decrypted-plaintext sibling
 # (scripts/decrypt-meta-db.mjs's output) -- same story as *.mdb above, large binaries
-# never meant to be committed, see docs/data-pipeline.md. "meta-*" catches copies named
-# per-server (meta-jp, a hypothetical meta-global) the way *.mdb does for master DBs;
-# the game ships the unsuffixed file as literally "meta" with no extension, so it isn't
-# caught by *.mdb and needs its own pattern.
+# never meant to be committed, see docs/data-pipeline.md. "meta_*" catches the JP copy
+# (meta_jp) the way *.mdb does for master DBs; the game ships the unsuffixed Global
+# file as literally "meta" with no extension, so it isn't caught by *.mdb and needs
+# its own pattern. "meta-*" (dash) is kept alongside "meta_*" (underscore) so a local
+# file not yet renamed to the current convention doesn't silently become un-ignored
+# (PIPE-17 review, 2026-08-28).
 meta
+meta_*
 meta-*
 *.decrypted
 
 # Local asset-extraction working directories (scripts/download-game-assets.mjs,
 # scripts/extract-assets.py) -- downloaded/decrypted Unity asset bundles and their
-# unpacked contents. Large, regeneratable, never meant to be committed.
+# unpacked contents. Large, regeneratable, never meant to be committed. Glob covers
+# a per-server copy (dat_jp/, a future dat_en/) the way meta_* does above.
 /dat/
+/dat_*/
 /need_unpack/
 
 # Python venv for scripts/extract-assets.py (UnityPy) -- see docs/data-pipeline.md.
