@@ -5,7 +5,14 @@ import { IntlProvider, Localizer, Text } from 'preact-i18n';
 
 import { Skill } from '../components/SkillList';
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
-import { type HorseState, isDebuffSkill, SkillSet } from './HorseDefTypes';
+import {
+	type HorseState,
+	isDebuffSkill,
+	reconcileOonige,
+	SkillSet,
+	withSkillsSynced,
+	withStrategySynced,
+} from './HorseDefTypes';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 
@@ -414,7 +421,9 @@ export function HorseDef(props) {
 	function setter(prop: keyof HorseState) {
 		return (x) => setState(state.set(prop, x));
 	}
-	const setSkills = setter('skills');
+	function setStrategy(value: string) {
+		setState(withStrategySynced(state, value));
+	}
 
 	function setUma(id) {
 		let newSkills = state.skills.filter(isGeneralSkill);
@@ -464,7 +473,7 @@ export function HorseDef(props) {
 		} else {
 			newSkills = state.skills.set(groupId, skillId);
 		}
-		setSkills(newSkills);
+		setState(withSkillsSynced(state, newSkills));
 	}
 
 	function handleSkillClick(e) {
@@ -476,16 +485,14 @@ export function HorseDef(props) {
 		if (se == null) return;
 		if (e.target.classList.contains('skillDismiss')) {
 			const skillId = se.dataset.skillid;
+			const newSkills = state.skills.delete(
+				state.skills.findKey((id) => id == skillId),
+			);
 			setState(
-				state
-					.set(
-						'skills',
-						state.skills.delete(state.skills.findKey((id) => id == skillId)),
-					)
-					.set(
-						'forcedSkillPositions',
-						state.forcedSkillPositions.delete(skillId),
-					),
+				withSkillsSynced(state, newSkills).set(
+					'forcedSkillPositions',
+					state.forcedSkillPositions.delete(skillId),
+				),
 			);
 		} else if (se.classList.contains('expandedSkill')) {
 			setExpanded(expanded.delete(se.dataset.skillid));
@@ -535,12 +542,17 @@ export function HorseDef(props) {
 		}
 	}, [state.skills]);
 
-	const hasRunawaySkill = state.skills.has('202051');
+	// Catches states constructed without going through withSkillsSynced/withStrategySynced (loaded/
+	// imported/shared HorseStates) where 大逃げ (Runaway) and the Oonige strategy have drifted apart.
+	// Every mutation of `skills` or `strategy` -- in this component or elsewhere, e.g. the Skill
+	// Chart's addSkillFromTable in app.tsx -- should go through one of those two helpers, which keep
+	// the two in sync atomically; by the time this effect runs, the only remaining case is state that
+	// didn't. reconcileOonige's skill-wins/strategy-wins rule resolves it in one step with no risk of
+	// fighting a handler that just made the opposite change (UI-25).
 	useEffect(() => {
-		if (hasRunawaySkill && state.strategy !== 'Oonige') {
-			setState(state.set('strategy', 'Oonige'));
-		}
-	}, [hasRunawaySkill, state.strategy]);
+		const reconciled = reconcileOonige(state);
+		if (reconciled !== state) setState(reconciled);
+	}, [state.skills, state.strategy]);
 
 	const skillList = useMemo(() => {
 		const u = uniqueSkillForUma(umaId);
@@ -638,8 +650,7 @@ export function HorseDef(props) {
 					</span>
 					<StrategySelect
 						s={state.strategy}
-						setS={setter('strategy')}
-						disabled={hasRunawaySkill}
+						setS={setStrategy}
 						tabindex={tabnext()}
 					/>
 				</div>
