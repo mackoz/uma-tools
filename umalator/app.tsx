@@ -35,6 +35,7 @@ import {
 	HorseState,
 	reconcileOonige,
 	SkillSet,
+	withSkillsSynced,
 } from '../components/HorseDefTypes';
 import {
 	Language,
@@ -4255,8 +4256,15 @@ function App(props) {
 
 	function addSkillFromTable(skillId) {
 		postEvent('addSkillFromTable', { skillId });
+		// withSkillsSynced, not a bare `.set('skills', ...)` -- adding 大逃げ/Runaway from the Skill
+		// Chart's candidate table must switch strategy to Oonige too, same as the picker (UI-25 code
+		// review: this call site was originally missed, relying on HorseDef's own reconcile effect to
+		// paper over it instead of being atomic here).
 		setUma1(
-			uma1.set('skills', uma1.skills.set(skillmeta[skillId].groupId, skillId)),
+			withSkillsSynced(
+				uma1,
+				uma1.skills.set(skillmeta[skillId].groupId, skillId),
+			),
 		);
 	}
 
