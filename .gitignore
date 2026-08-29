@@ -76,3 +76,8 @@ meta-*
 # Scratch notes for in-progress work (e.g. paired-review findings not yet applied) --
 # working notes only, never meant to be committed or shipped.
 /tmp/
+
+# Working directory for files that might be useful for future work (downloaded game data,
+# decoded saves, HAR captures, etc.) plus temp files while working -- never meant to be
+# committed or shipped.
+/scratchpad/
