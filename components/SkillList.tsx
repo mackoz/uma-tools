@@ -695,6 +695,7 @@ export function ExpandedSkillDetails(props) {
 	);
 }
 
+// ANCHOR: skill-list-icontype-table
 const groups_filters = Object.freeze({
 	rarity: ['white', 'gold', 'pink', 'unique', 'inherit'],
 	icontype: [

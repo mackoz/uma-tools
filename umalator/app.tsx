@@ -2048,6 +2048,7 @@ function racedefToParams(
 		season,
 		time,
 		grade,
+		// ANCHOR: hardcoded-popularity-one
 		popularity: 1,
 		skillId: '',
 		orderRange:
@@ -4127,6 +4128,7 @@ function App(props) {
 			const umaWithoutUniques = removeUniqueSkills(uma1);
 			uma = umaWithoutUniques.toJS();
 		} else {
+			// ANCHOR: chart-inherited-unique-pairing-exclusion
 			skills = getActivateableSkills(
 				baseSkillsToTest.filter((id) => {
 					if (!showUnreleasedUmas && unreleasedSkillIds.has(id)) return false; // keep the Chart's candidate pool in sync with the picker's toggle
