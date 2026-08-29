@@ -2616,6 +2616,7 @@ function decodedUmaToUmaState(uma: DecodedUma): UmaState {
 		strategy: bestStrat.strat,
 		distanceAptitude: aptToLetter(bestDistApt),
 		surfaceAptitude: aptToLetter(bestSurfApt),
+		// ANCHOR: strategy-aptitude-collapse
 		strategyAptitude: aptToLetter(uma[bestStrat.key]),
 		mood: 2,
 		// some skill ids (e.g. Carnival Bonus 1000011-1000014, and ~330 others - inherited-unique
