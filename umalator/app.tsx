@@ -31,7 +31,11 @@ import {
 } from 'preact/hooks';
 import { IntlProvider, Text } from 'preact-i18n';
 import { HorseDef, horseDefTabs, isGeneralSkill } from '../components/HorseDef';
-import { HorseState, SkillSet } from '../components/HorseDefTypes';
+import {
+	HorseState,
+	reconcileOonige,
+	SkillSet,
+} from '../components/HorseDefTypes';
 import {
 	Language,
 	LanguageSelect,
@@ -2152,25 +2156,33 @@ async function deserialize(hash) {
 								? PosKeepMode.Approximate
 								: PosKeepMode.None, // backward compatibility
 					racedef: new RaceParams(o.racedef),
-					uma1: new HorseState(o.uma1)
-						.set('skills', SkillSet(o.uma1.skills))
-						.set(
-							'forcedSkillPositions',
-							ImmMap(o.uma1.forcedSkillPositions || {}),
-						),
-					uma2: new HorseState(o.uma2)
-						.set('skills', SkillSet(o.uma2.skills))
-						.set(
-							'forcedSkillPositions',
-							ImmMap(o.uma2.forcedSkillPositions || {}),
-						),
+					// reconcileOonige here too -- a share link can encode strategy/skills independently,
+					// same as umaStateToHorseState above (UI-25).
+					uma1: reconcileOonige(
+						new HorseState(o.uma1)
+							.set('skills', SkillSet(o.uma1.skills))
+							.set(
+								'forcedSkillPositions',
+								ImmMap(o.uma1.forcedSkillPositions || {}),
+							),
+					),
+					uma2: reconcileOonige(
+						new HorseState(o.uma2)
+							.set('skills', SkillSet(o.uma2.skills))
+							.set(
+								'forcedSkillPositions',
+								ImmMap(o.uma2.forcedSkillPositions || {}),
+							),
+					),
 					pacer: o.pacer
-						? new HorseState(o.pacer)
-								.set('skills', SkillSet(o.pacer.skills || []))
-								.set(
-									'forcedSkillPositions',
-									ImmMap(o.pacer.forcedSkillPositions || {}),
-								)
+						? reconcileOonige(
+								new HorseState(o.pacer)
+									.set('skills', SkillSet(o.pacer.skills || []))
+									.set(
+										'forcedSkillPositions',
+										ImmMap(o.pacer.forcedSkillPositions || {}),
+									),
+							)
 						: new HorseState({ strategy: 'Nige' }),
 					witVarianceSettings: o.witVarianceSettings || {
 						syncRng: false,
@@ -2548,21 +2560,26 @@ function horseStateToUmaState(state: HorseState): UmaState {
 }
 
 function umaStateToHorseState(uma: UmaState): HorseState {
-	return new HorseState({
-		outfitId: uma.outfitId,
-		speed: uma.speed,
-		stamina: uma.stamina,
-		power: uma.power,
-		guts: uma.guts,
-		wisdom: uma.wisdom,
-		strategy: uma.strategy,
-		distanceAptitude: uma.distanceAptitude,
-		surfaceAptitude: uma.surfaceAptitude,
-		strategyAptitude: uma.strategyAptitude,
-		mood: uma.mood as Mood,
-		skills: SkillSet(uma.skills),
-		forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
-	});
+	// reconcileOonige guards against sources that set strategy/skills independently (saved slots,
+	// share links, OCR, roster decode) so a loaded Oonige horse always has 大逃げ/Runaway equipped
+	// and vice versa, matching the in-game constraint (UI-25).
+	return reconcileOonige(
+		new HorseState({
+			outfitId: uma.outfitId,
+			speed: uma.speed,
+			stamina: uma.stamina,
+			power: uma.power,
+			guts: uma.guts,
+			wisdom: uma.wisdom,
+			strategy: uma.strategy,
+			distanceAptitude: uma.distanceAptitude,
+			surfaceAptitude: uma.surfaceAptitude,
+			strategyAptitude: uma.strategyAptitude,
+			mood: uma.mood as Mood,
+			skills: SkillSet(uma.skills),
+			forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+		}),
+	);
 }
 
 function decodedUmaToUmaState(uma: DecodedUma): UmaState {

@@ -5,7 +5,15 @@ import { IntlProvider, Localizer, Text } from 'preact-i18n';
 
 import { Skill } from '../components/SkillList';
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
-import { type HorseState, isDebuffSkill, SkillSet } from './HorseDefTypes';
+import {
+	type HorseState,
+	isDebuffSkill,
+	OONIGE_SKILL_ID,
+	reconcileOonige,
+	SkillSet,
+	withOonigeSkill,
+	withoutOonigeSkill,
+} from './HorseDefTypes';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 
@@ -416,6 +424,17 @@ export function HorseDef(props) {
 	}
 	const setSkills = setter('skills');
 
+	// Mirrors handlePickerSelect/handleSkillClick's atomic sync below: picking Oonige from the
+	// dropdown equips 大逃げ (Runaway), and picking anything else un-equips it, in the same
+	// setState as the strategy change (UI-25).
+	function setStrategy(value: string) {
+		const newSkills =
+			value === 'Oonige'
+				? withOonigeSkill(state.skills)
+				: withoutOonigeSkill(state.skills);
+		setState(state.set('strategy', value).set('skills', newSkills));
+	}
+
 	function setUma(id) {
 		let newSkills = state.skills.filter(isGeneralSkill);
 
@@ -464,7 +483,13 @@ export function HorseDef(props) {
 		} else {
 			newSkills = state.skills.set(groupId, skillId);
 		}
-		setSkills(newSkills);
+		// Equipping 大逃げ (Runaway) unlocks the Oonige running style in game -- keep the strategy
+		// in lockstep, atomically, so the reconcile effect below never has to guess intent (UI-25).
+		if (skillId === OONIGE_SKILL_ID) {
+			setState(state.set('skills', newSkills).set('strategy', 'Oonige'));
+		} else {
+			setSkills(newSkills);
+		}
 	}
 
 	function handleSkillClick(e) {
@@ -476,17 +501,22 @@ export function HorseDef(props) {
 		if (se == null) return;
 		if (e.target.classList.contains('skillDismiss')) {
 			const skillId = se.dataset.skillid;
-			setState(
-				state
-					.set(
-						'skills',
-						state.skills.delete(state.skills.findKey((id) => id == skillId)),
-					)
-					.set(
-						'forcedSkillPositions',
-						state.forcedSkillPositions.delete(skillId),
-					),
-			);
+			let next = state
+				.set(
+					'skills',
+					state.skills.delete(state.skills.findKey((id) => id == skillId)),
+				)
+				.set(
+					'forcedSkillPositions',
+					state.forcedSkillPositions.delete(skillId),
+				);
+			// Removing 大逃げ (Runaway) can no longer run the Oonige style in game -- drop back to
+			// Front Runner atomically, in the same setState as the removal, so the reconcile effect
+			// below sees a consistent state and doesn't re-add the skill the user just deleted (UI-25).
+			if (skillId === OONIGE_SKILL_ID && state.strategy === 'Oonige') {
+				next = next.set('strategy', 'Nige');
+			}
+			setState(next);
 		} else if (se.classList.contains('expandedSkill')) {
 			setExpanded(expanded.delete(se.dataset.skillid));
 		} else {
@@ -535,12 +565,16 @@ export function HorseDef(props) {
 		}
 	}, [state.skills]);
 
-	const hasRunawaySkill = state.skills.has('202051');
+	// Catches states constructed outside this component's own handlers (loaded/imported/shared
+	// HorseStates) where 大逃げ (Runaway) and the Oonige strategy have drifted apart. The
+	// interactive handlers above (picker select, skill dismiss, strategy dropdown) already keep
+	// the two in sync atomically, so by the time this effect runs the only remaining case is
+	// "external state" -- reconcileOonige's skill-wins/strategy-wins rule resolves it in one step
+	// with no risk of fighting a handler that just made the opposite change (UI-25).
 	useEffect(() => {
-		if (hasRunawaySkill && state.strategy !== 'Oonige') {
-			setState(state.set('strategy', 'Oonige'));
-		}
-	}, [hasRunawaySkill, state.strategy]);
+		const reconciled = reconcileOonige(state);
+		if (reconciled !== state) setState(reconciled);
+	}, [state.skills, state.strategy]);
 
 	const skillList = useMemo(() => {
 		const u = uniqueSkillForUma(umaId);
@@ -638,8 +672,7 @@ export function HorseDef(props) {
 					</span>
 					<StrategySelect
 						s={state.strategy}
-						setS={setter('strategy')}
-						disabled={hasRunawaySkill}
+						setS={setStrategy}
 						tabindex={tabnext()}
 					/>
 				</div>

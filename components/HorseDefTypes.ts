@@ -19,6 +19,44 @@ export function isDebuffSkill(id: string) {
 	return skillmeta[id].iconId[0] == '3';
 }
 
+// 大逃げ (Global: "Runaway") -- in game this skill is what unlocks the 大逃げ/Oonige running
+// style, so umalator keeps `strategy` and this skill in lockstep (UI-25). Single id: groupId
+// 20205 has no inherited/evolved/pink variant in either the JP or Global dataset.
+export const OONIGE_SKILL_ID = '202051';
+export const OONIGE_SKILL_GROUP = skillmeta[OONIGE_SKILL_ID].groupId; // '20205'
+
+// `skills` is keyed by groupId, not skill id -- use these instead of `.has(OONIGE_SKILL_ID)`,
+// which tests keys and would silently never match (this was UI-25's actual bug).
+// Typed against HorseState['skills'] (not a plain ImmMap<string,string>) to match SkillSet's
+// literal-keyed return type -- a looser annotation here doesn't round-trip through `.set('skills', ...)`.
+export function hasOonigeSkill(skills: HorseState['skills']): boolean {
+	return skills.get(OONIGE_SKILL_GROUP) === OONIGE_SKILL_ID;
+}
+
+export function withOonigeSkill(skills: HorseState['skills']) {
+	return skills.set(OONIGE_SKILL_GROUP, OONIGE_SKILL_ID);
+}
+
+export function withoutOonigeSkill(skills: HorseState['skills']) {
+	return skills.delete(OONIGE_SKILL_GROUP);
+}
+
+// Reconciles a HorseState built outside the interactive editor (loaded/imported/shared) so the
+// 大逃げ skill and the Oonige strategy always agree, matching the in-game constraint. Interactive
+// edits in HorseDef.tsx keep the two in sync directly (atomically, in one setState) instead of
+// relying on this -- see HorseDef.tsx's strategy/skill handlers and its reconcile effect, which
+// calls this for the same reason: the two states it disambiguates here (skill-present-wins,
+// strategy-Oonige-wins) are exactly the residual cases left after those handlers already resolved
+// the ambiguous ones. Returns `state` unchanged (same reference) when already consistent.
+export function reconcileOonige(state: HorseState): HorseState {
+	const hasSkill = hasOonigeSkill(state.skills);
+	const isOonige = state.strategy === 'Oonige';
+	if (hasSkill === isOonige) return state;
+	return hasSkill
+		? state.set('strategy', 'Oonige')
+		: state.set('skills', withOonigeSkill(state.skills));
+}
+
 export function SkillSet(
 	ids,
 ): ImmMap<(typeof skill_meta)['groupId'], keyof typeof skills> {
