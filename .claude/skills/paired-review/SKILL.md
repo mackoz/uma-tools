@@ -143,14 +143,22 @@ understand after seeing what changed underneath it.
 
    **Context clause**: one short sentence orienting the sub-review, since the args string is
    its only channel in (see the limitation note above). Include: which slot this is (engine/
-   code/plans), the ticket ID and one-line purpose if inferable from the PR title, and the
-   sibling PR(s) in this same paired landing by `owner/repo#number`. E.g.:
+   code/plans), the ticket ID and one-line purpose if inferable from the PR title, the
+   sibling PR(s) in this same paired landing by `owner/repo#number`, and the repo's resolved
+   base branch (the real `baseRefName` Step 1 already looked up — pass that value along
+   rather than making the sub-review re-derive it). That last one earns its place: a
+   sub-review reviewing `uma-tools-plans#28` on 2026-08-29 assumed `master` (the convention
+   in the other two repos, and the wrong one here) and hit two failed git commands —
+   `fatal: couldn't find remote ref master`, then `unknown revision 'origin/master...HEAD'`
+   — before self-recovering via `git branch -a`/`git remote -v` and discovering the real
+   default is `main`. It got there on its own, but only after burning tool calls rediscovering
+   something Step 1 had already resolved and simply never passed along. E.g.:
 
    ```
-   -- this is the engine repo in a paired PIPE-21 landing (replay-comparison spike tooling);
-   sibling PRs: mackoz/uma-tools#39 (code, gitlink bump), mackoz/uma-tools-plans#25 (plans,
-   ticket+corpus); review this repo's own diff, but flag anything that assumes state only
-   visible in a sibling repo
+   -- this is the plans repo (base branch: main) in a paired HP-5 landing (dead-import +
+   orphaned-file cleanup); sibling PRs: mackoz/uma-skill-tools#13 (engine, the actual fix),
+   mackoz/uma-tools#41 (code, gitlink bump); review this repo's own diff, but flag anything
+   that assumes state only visible in a sibling repo
    ```
 
    This is best-effort, not a verified contract — `code-review`'s own argument parsing of
