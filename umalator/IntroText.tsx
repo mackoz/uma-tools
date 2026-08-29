@@ -66,6 +66,21 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-29</summary>
+						<ul>
+							<li>
+								Equipping the <strong>Runaway</strong> skill now switches a
+								horse's <strong>Strategy</strong> to Runaway automatically, and
+								vice versa -- picking Runaway from the Strategy dropdown equips
+								the skill, and unequipping the skill drops the strategy back to
+								Front Runner. This matches the in-game rule that the skill is
+								what unlocks the running style; a horse could previously be set
+								to run Runaway without having the skill, or have the skill
+								without the strategy actually being set to Runaway.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-28</summary>
 						<ul>
 							<li>
