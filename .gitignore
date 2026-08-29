@@ -54,9 +54,12 @@ plans
 # never meant to be committed, see docs/data-pipeline.md. "meta_*" catches the JP copy
 # (meta_jp) the way *.mdb does for master DBs; the game ships the unsuffixed Global
 # file as literally "meta" with no extension, so it isn't caught by *.mdb and needs
-# its own pattern.
+# its own pattern. "meta-*" (dash) is kept alongside "meta_*" (underscore) so a local
+# file not yet renamed to the current convention doesn't silently become un-ignored
+# (PIPE-17 review, 2026-08-28).
 meta
 meta_*
+meta-*
 *.decrypted
 
 # Local asset-extraction working directories (scripts/download-game-assets.mjs,

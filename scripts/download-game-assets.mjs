@@ -73,15 +73,20 @@ const MAX_ROWS_WITHOUT_EXPLICIT_LIMIT = 200;
 // suffixed (meta_jp, dat_jp/), Global stays unsuffixed (meta, dat/). Twin implementations:
 // extract_resource.pl and make_uma_info.pl (Perl) -- keep the regex identical in all three
 // if it ever changes. See docs/master-mdb-schema.md.
+//
+// Exits rather than guessing on an unrecognized name (e.g. a leftover pre-convention
+// "meta-jp.decrypted") -- silently falling back to the unsuffixed (Global) dat/ would
+// misroute a download into the wrong server's cache with nothing louder than a warning
+// (PIPE-17 review, 2026-08-28).
 function serverSuffix(basename) {
 	const m = basename.match(
 		/^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/,
 	);
 	if (m) return m[1] ?? '';
-	console.warn(
-		`download-game-assets.mjs: couldn't derive a server suffix from '${basename}' -- falling back to the unsuffixed (Global) dat/ directory`,
+	console.error(
+		`download-game-assets.mjs: couldn't derive a server suffix from '${basename}' -- rename it to the master_jp.mdb/meta_jp convention (see docs/master-mdb-schema.md) rather than guessing which server's dat/ to use`,
 	);
-	return '';
+	process.exit(1);
 }
 
 // The guard's actual purpose (per its own refusal message) is "don't silently mirror a large
