@@ -3,7 +3,7 @@
 
 PIPE-2. Takes bundles already present in dat/<hash[0:2]>/<hash> (either downloaded via
 download-game-assets.mjs, or copied directly from a game client install alongside
-meta-jp/master-jp.mdb -- both layouts use the same dat/<hash[0:2]>/<hash> convention).
+meta_jp/master_jp.mdb -- both layouts use the same dat/<hash[0:2]>/<hash> convention).
 
 Two independent pieces glued together here:
 

@@ -14,9 +14,23 @@ if (!@ARGV) {
 	die 'Usage: extract_resource.pl meta <query>';
 }
 
+# Derives the per-server suffix (e.g. "_jp") from a meta/meta.decrypted filename, so the
+# dat/ lookup below follows whichever server's meta was passed in -- JP-specific files are
+# suffixed (meta_jp, dat_jp/), Global stays unsuffixed (meta, dat/). Twin implementations:
+# make_uma_info.pl (Perl) and scripts/download-game-assets.mjs (JS) -- keep the regex
+# identical in all three if it ever changes. See docs/master-mdb-schema.md.
+sub server_suffix {
+	my ($basename) = @_;
+	if ($basename =~ /^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/) {
+		return $1 // '';
+	}
+	warn "extract_resource.pl: couldn't derive a server suffix from '$basename' -- falling back to the unsuffixed (Global) dat/ directory";
+	return '';
+}
+
 my $meta = shift @ARGV;
 my $root = dirname(abs_path($meta));
-my $datadir = $root . "/dat";
+my $datadir = $root . "/dat" . server_suffix(basename($meta));
 
 my $query = shift @ARGV;
 
@@ -39,13 +53,18 @@ unless (-d 'need_unpack') {
 	make_path('need_unpack') or die "Failed to create need_unpack: $!";
 }
 
+# Catches a wrong $datadir (e.g. a stale suffix) here instead of failing silently below --
+# File::Copy::copy's return value was previously unchecked, so this used to just leave
+# need_unpack/ empty with no error at all.
+-d $datadir or die "dat directory not found: $datadir (derived from '$meta')";
+
 $select->execute;
 $select->bind_columns(\($hash, $enc));
 
 while ($select->fetch) {
 	$hash =~ /^(..)/;
 	my $hdir = $1;
-	copy("$datadir/$hdir/$hash", "need_unpack/$hash");
+	copy("$datadir/$hdir/$hash", "need_unpack/$hash") or die "Failed to copy $datadir/$hdir/$hash: $!";
 	# write encryption key next to the extracted file if present
 	if (defined $enc && length $enc) {
 		open my $kf, '>', "need_unpack/$hash.key" or die "Unable to write key file: $!";

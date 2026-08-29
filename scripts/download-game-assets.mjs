@@ -47,8 +47,8 @@
 // which is always a sibling of whatever <meta> path it's given, regardless of its own cwd.
 //
 // Usage:
-//   node scripts/download-game-assets.mjs --meta meta-jp.decrypted --like "%chr_icon_1141%"
-//   node scripts/download-game-assets.mjs --meta meta-jp.decrypted --like "..." --run
+//   node scripts/download-game-assets.mjs --meta meta_jp.decrypted --like "%chr_icon_1141%"
+//   node scripts/download-game-assets.mjs --meta meta_jp.decrypted --like "..." --run
 //
 // Without --run this only lists what would be downloaded (a name/size preview) and exits --
 // review the list before actually fetching. A --like pattern that matches an unexpectedly
@@ -67,6 +67,23 @@ const API_PATH = 'dl/resources';
 const USER_AGENT =
 	'UnityPlayer/2022.3.21f1 (UnityWebRequest/1.0, libcurl/8.5.0-DEV)';
 const MAX_ROWS_WITHOUT_EXPLICIT_LIMIT = 200;
+
+// Derives the per-server suffix (e.g. "_jp") from a meta/meta.decrypted filename, so the
+// dat/ default below follows whichever server's meta was passed in -- JP-specific files are
+// suffixed (meta_jp, dat_jp/), Global stays unsuffixed (meta, dat/). Twin implementations:
+// extract_resource.pl and make_uma_info.pl (Perl) -- keep the regex identical in all three
+// if it ever changes. See docs/master-mdb-schema.md.
+function serverSuffix(basename) {
+	const m = basename.match(
+		/^(?:master|meta)(_[A-Za-z0-9]+)?(?:\.mdb|\.decrypted)?$/,
+	);
+	if (m) return m[1] ?? '';
+	console.warn(
+		`download-game-assets.mjs: couldn't derive a server suffix from '${basename}' -- falling back to the unsuffixed (Global) dat/ directory`,
+	);
+	return '';
+}
+
 // The guard's actual purpose (per its own refusal message) is "don't silently mirror a large
 // slice of the manifest" -- a byte-volume concern a row-count cap alone doesn't protect
 // against (a handful of huge `master`/`movie` rows sail through; hundreds of tiny `manifest`
@@ -216,7 +233,10 @@ async function main() {
 	// decompressed sibling output (PIPE-2 review).
 	const outDir = opts.out
 		? path.resolve(opts.out)
-		: path.join(path.dirname(path.resolve(opts.meta)), 'dat');
+		: path.join(
+				path.dirname(path.resolve(opts.meta)),
+				`dat${serverSuffix(path.basename(opts.meta))}`,
+			);
 
 	const totalBytes = rows.reduce((sum, r) => sum + r.l, 0);
 	const rowLimit = opts.limit ?? MAX_ROWS_WITHOUT_EXPLICIT_LIMIT;
