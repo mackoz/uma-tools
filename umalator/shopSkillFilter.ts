@@ -164,6 +164,36 @@ export function removeShopSkill(
 	return ids.filter((x) => !toRemove.has(x));
 }
 
+// Repairs a shortlist that may have been assembled by something other than addShopSkill --
+// today, only umalator/app.tsx's hydration path, which folds a persisted (possibly pre-UI-28)
+// shortlist through addShopSkill one id at a time. addShopSkill's own contract (see its comment)
+// deliberately always keeps the id it's asked to add, even when one of that id's prerequisites
+// gets filtered out by `isEligible` -- correct for an interactive pick (the picker's pool only
+// ever offers ids `isEligible` would accept, so the gap can't occur there), but not safe to lean
+// on during hydration: `isEligible` there is `isKnownShopSkill`, a different and stricter bar
+// (general/non-purple/released) than "can be a chart candidate," so a persisted higher rung can
+// survive while its lower rung gets dropped, leaving a gold shortlisted with no white base --
+// exactly the state the rest of this feature (and the shop itself) says can't happen. Iterates to
+// a fixed point since dropping one id can cascade (a 3-rung chain where only the middle rung fails
+// isKnownShopSkill must drop the top rung too, once the middle is gone).
+export function pruneUnsatisfiedPrerequisites(
+	ids: string[],
+	ladder: LadderIndex,
+): string[] {
+	const kept = new Set(ids);
+	let changed = true;
+	while (changed) {
+		changed = false;
+		for (const id of kept) {
+			if (prerequisitesOf(id, ladder).some((p) => !kept.has(p))) {
+				kept.delete(id);
+				changed = true;
+			}
+		}
+	}
+	return ids.filter((id) => kept.has(id));
+}
+
 // Splits the shortlist into skills the chart can actually evaluate here vs. ones it can't --
 // drives ShopSkillPanel.tsx's "Won't activate here" section (umalator/components/ShopSkillPanel.tsx;
 // originally ShopSkillFilter.tsx's chip strip dimming, UI-27, relocated by UI-28).

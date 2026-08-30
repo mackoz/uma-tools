@@ -66,7 +66,16 @@ shop's own upgrade ladder once queried directly against `master_jp.mdb`/`master.
   `--refresh-staged-meta` mode to that script specifically to restore what a `skill_meta.json`-only
   regeneration drops. That mode is a restore-if-missing operation, not a general fix for the
   still-open, unrelated "stale JP-sourced entry never refreshes" gap the same file documents.
-- Any future consumer of `groupId`+`group_rate` together must repeat the `rarity <= 2` guard — it's
-  a property of the current data (verified, not structural), so a comment at the one call site
-  (`umalator/app.tsx`'s `SKILL_LADDER`) and in `docs/master-mdb-schema.md` carries the warning
-  forward rather than a type system enforcing it.
+- Any future consumer of `groupId`+`group_rate` together must repeat the `rarity <= 2` guard for
+  the `groupId`-remap trap above — it's a property of the current data (verified, not structural),
+  so a comment at the one call site (`umalator/app.tsx`'s `SKILL_LADDER`) and in
+  `docs/master-mdb-schema.md` carries the warning forward rather than a type system enforcing it.
+  **`rarity <= 2` alone is only sufficient for a consumer reading `skill_meta.json`**, not one
+  reading raw `skill_data` directly — the generators' own `WHERE is_general_skill = 1 OR
+  rarity >= 3` filter (`make_skill_meta.pl:33`, `umalator-global/make_global_skill_meta.pl:25`) is
+  doing separate, necessary work: `skill_data.group_id 100001` has 7 members in `master_jp.mdb`
+  (2 in `master.mdb`), all `rarity = 1`/`group_rate = 1`/`is_general_skill = 0` (an obsolete
+  "Carnival Bonus" family), which a raw `rarity <= 2` walk would index as one group with duplicate
+  rank-1 members — never reached here only because `SKILL_LADDER` iterates `skill_meta.json`'s own
+  keys. See `docs/master-mdb-schema.md`'s "Shop skill upgrade ladder" section for the full
+  two-condition statement.

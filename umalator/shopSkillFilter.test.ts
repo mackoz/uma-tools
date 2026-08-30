@@ -8,6 +8,7 @@ import {
 	loadShopSkills,
 	partitionShopSkills,
 	prerequisitesOf,
+	pruneUnsatisfiedPrerequisites,
 	removeShopSkill,
 	shopFilterDirty,
 } from './shopSkillFilter.ts';
@@ -124,6 +125,38 @@ import {
 		removeShopSkill(['unindexed', 'single'], 'unindexed', LADDER),
 		['single'],
 	);
+
+	// pruneUnsatisfiedPrerequisites -- repairs a shortlist assembled some other way than
+	// addShopSkill (today: app.tsx's hydration path). A fully-satisfied chain is untouched;
+	// an id missing any of its prerequisites is dropped, and dropping cascades (removing the
+	// middle rung of a 3-rung chain must drop the top rung too, once the middle is gone).
+	assert.deepEqual(
+		pruneUnsatisfiedPrerequisites(['single', 'circle', 'demon'], LADDER),
+		['single', 'circle', 'demon'],
+		'a fully-satisfied chain is untouched',
+	);
+	assert.deepEqual(
+		pruneUnsatisfiedPrerequisites(['circle'], LADDER),
+		[],
+		"circle's prerequisite (single) is missing -- circle itself is pruned",
+	);
+	assert.deepEqual(
+		pruneUnsatisfiedPrerequisites(['circle', 'demon'], LADDER),
+		[],
+		"single missing -- circle is pruned, which cascades to prune demon too (demon's own " +
+			'prerequisite, circle, is now gone)',
+	);
+	assert.deepEqual(
+		pruneUnsatisfiedPrerequisites(['single', 'demon'], LADDER),
+		['single'],
+		"circle (demon's direct prerequisite) is missing -- demon is pruned, single stays",
+	);
+	assert.deepEqual(
+		pruneUnsatisfiedPrerequisites(['unindexed', 'single'], LADDER),
+		['unindexed', 'single'],
+		'an unindexed id has no prerequisites to fail, so it is never pruned',
+	);
+	assert.deepEqual(pruneUnsatisfiedPrerequisites([], LADDER), []);
 }
 
 // --- applyShopFilter: intersection, candidate order preserved, unreachable ids dropped ---

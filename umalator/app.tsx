@@ -111,6 +111,7 @@ import {
 	type LadderIndex,
 	loadShopSkills,
 	partitionShopSkills,
+	pruneUnsatisfiedPrerequisites,
 	removeShopSkill,
 	shopFilterDirty,
 } from './shopSkillFilter';
@@ -3210,7 +3211,13 @@ function App(props) {
 		for (const id of loaded) {
 			closed = addShopSkill(closed, id, SKILL_LADDER, isKnownShopSkill);
 		}
-		return closed;
+		// addShopSkill always keeps the id it's asked to add even if isEligible rejects one of
+		// its prerequisites (correct for an interactive pick -- see its own comment -- but not
+		// safe to lean on here: isKnownShopSkill is a stricter bar than "can be a chart
+		// candidate," e.g. a persisted higher rung surviving loadShopSkills' filter while its
+		// lower rung was dropped as unreleased). Prune anything left without its full
+		// prerequisite chain so hydration can't produce a gold with no white base.
+		return pruneUnsatisfiedPrerequisites(closed, SKILL_LADDER);
 	});
 	useEffect(() => {
 		localStorage.setItem('chartShopSkills', JSON.stringify(shopSkillIds));
@@ -3551,13 +3558,13 @@ function App(props) {
 		setShopSkillIds((ids) => removeShopSkill(ids, id, SKILL_LADDER));
 	}
 
-	// UI-28: summary count for the filter row's "⚠ N won't activate here" span -- the per-skill
-	// detail lives in ShopSkillPanel's own "Won't activate here" section (same partitionShopSkills
-	// call); this just keeps that diagnostic visible while the picker is closed.
-	const shopWontProcCount = useMemo(
+	// UI-28: computed once and shared by both consumers below -- ShopSkillFilter's filter-row
+	// summary span just needs wontProc.length, ShopSkillPanel needs the full split for its two
+	// sections; passing the same object down avoids partitioning the identical
+	// shopSkillIds/procableSet pair twice per render.
+	const shopSkillPartition = useMemo(
 		() =>
-			partitionShopSkills(shopSkillIds, chartCandidates?.procableSet ?? null)
-				.wontProc.length,
+			partitionShopSkills(shopSkillIds, chartCandidates?.procableSet ?? null),
 		[shopSkillIds, chartCandidates],
 	);
 
@@ -5944,7 +5951,7 @@ function App(props) {
 										skillIds={shopSkillIds}
 										onOpen={() => setShopPickerOpen(true)}
 										onClear={() => setShopSkillIds([])}
-										wontProcCount={shopWontProcCount}
+										wontProcCount={shopSkillPartition.wontProc.length}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
@@ -6004,7 +6011,7 @@ function App(props) {
 												skillIds={shopSkillIds}
 												onRemove={removeShop}
 												onClear={() => setShopSkillIds([])}
-												procable={chartCandidates?.procableSet ?? null}
+												partition={shopSkillPartition}
 												ladder={SKILL_LADDER}
 											/>
 										}

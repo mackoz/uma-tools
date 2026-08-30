@@ -5,21 +5,24 @@ import {
 	getSkillName,
 	getSkillRarityClass,
 } from '../../components/SkillPicker';
-import { type LadderIndex, partitionShopSkills } from '../shopSkillFilter';
+import type { LadderIndex } from '../shopSkillFilter';
 
 import './ShopSkillPanel.css';
 
 // UI-28: the shop-skill picker's side panel -- lives inside components/SkillPicker.tsx's modal
 // (passed as its `sidePanel` prop) as a running view of the shortlist being built in the grid to
 // its left. Two things this panel renders that a flat list wouldn't: the procable/wontProc split
-// (partitionShopSkills -- same diagnostic ShopSkillFilter.tsx's old chip strip carried, relocated
-// here rather than dropped) and the shop's upgrade-ladder structure (a prerequisite pulled in by
-// addShopSkill in umalator/app.tsx renders indented beneath the skill that pulled it in).
+// (same diagnostic ShopSkillFilter.tsx's old chip strip carried, relocated here rather than
+// dropped) and the shop's upgrade-ladder structure (a prerequisite pulled in by addShopSkill in
+// umalator/app.tsx renders indented beneath the skill that pulled it in).
 interface ShopSkillPanelProps {
 	skillIds: string[];
 	onRemove: (skillId: string) => void;
 	onClear: () => void;
-	procable: Set<string> | null;
+	// The partitionShopSkills(skillIds, procable) result -- computed once by the caller (app.tsx
+	// already needs it for the filter row's own wontProc summary) and passed down rather than
+	// recomputed here, so the same shopSkillIds/procable pair isn't partitioned twice per render.
+	partition: { procable: string[]; wontProc: string[] };
 	ladder: LadderIndex;
 }
 
@@ -161,13 +164,10 @@ export function ShopSkillPanel({
 	skillIds,
 	onRemove,
 	onClear,
-	procable,
+	partition,
 	ladder,
 }: ShopSkillPanelProps) {
-	const { procable: inPool, wontProc } = partitionShopSkills(
-		skillIds,
-		procable,
-	);
+	const { procable: inPool, wontProc } = partition;
 	const wontProcSet = new Set(wontProc);
 
 	return (
