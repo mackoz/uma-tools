@@ -69,9 +69,11 @@ undeclared-Perl-module precedent (`DBI`, `File::Slurper`).
 
 - `extract_resource.pl`/`make_uma_info.pl` stay untouched by this decision, but that also
   means neither script *automatically* picks up a decrypted `meta` — `make_uma_info.pl`
-  specifically still hardcodes the literal filename `meta` with no CLI override
-  (`docs/data-pipeline.md`'s "Formerly-known bugs" section documents this residual gap;
-  `File::Slurper` remains a second, separate blocker for that script regardless).
+  specifically has no CLI override to point it at a decrypted copy
+  (`docs/data-pipeline.md`'s "Formerly-known bugs" section documents this residual gap). This
+  no-CLI-override gap is the unconditional blocker regardless of which Perl modules happen to
+  be installed on a given machine — `File::Slurper` is an ordinary prerequisite (see
+  `docs/data-pipeline.md`'s module list), not a separate standing gap.
 - The decryption key is a genuine maintenance liability independent of where the logic lives:
   a future client update can rotate it, and whoever picks that up re-derives the key (the
   script's own header comment records both independent sources used this time) rather than

@@ -28,7 +28,7 @@
 // compressed -- detected here by the frame magic number (bytes 04 22 4D 18) and automatically
 // decompressed via `lz4-napi` (not a package.json dependency, same on-demand-install pattern
 // as decrypt-meta-db.mjs's better-sqlite3-multiple-ciphers -- install it yourself:
-// `npm i -D lz4-napi`). Verified 2026-08-25 against a real `master.mdb.lz4` CDN download:
+// `npm i --no-save lz4-napi`). Verified 2026-08-25 against a real `master.mdb.lz4` CDN download:
 // `lz4-napi`'s `decompressFrameSync` produced a byte-identical copy of the real client's
 // `master.mdb`. (An earlier attempt with the `lz4` package's pure-JS frame decoder failed
 // partway through the same real file with "Invalid data block" -- apparently a block-
@@ -154,7 +154,7 @@ async function maybeDecompressLz4(buf) {
 			'Downloaded content is LZ4-frame-compressed (magic bytes detected) but ' +
 				'lz4-napi is not installed -- the raw compressed bytes are still cached in ' +
 				'dat/, but no decompressed copy was written. Install it and re-run to get ' +
-				'one:\n\n  npm i -D lz4-napi\n',
+				'one:\n\n  npm i --no-save lz4-napi\n',
 		);
 		return null;
 	}
@@ -179,7 +179,7 @@ async function main() {
 	} catch {
 		console.error(
 			"better-sqlite3-multiple-ciphers is not installed -- see decrypt-meta-db.mjs's " +
-				'header comment. Install it first:\n\n  npm i -D better-sqlite3-multiple-ciphers\n',
+				'header comment. Install it first:\n\n  npm i --no-save better-sqlite3-multiple-ciphers\n',
 		);
 		process.exit(1);
 	}
