@@ -1,16 +1,26 @@
 ---
-name: paired-review
-description: Review every open PR across uma-tools, uma-skill-tools, and uma-tools-plans together, in dependency order, then run a cross-repo pass over the combined change. Use whenever the user wants to review or sanity-check a change that spans paired PRs across these three sibling repos before landing it — an engine PR plus its uma-tools gitlink bump, a plans-repo ticket paired with either — even if they phrase it as "review these PRs together," "check these are in sync," "does this match the engine PR," or name a specific ticket's paired PRs without naming this skill. A single /code-review run on one PR alone would miss how it interacts with the others.
-argument-hint: "[low|medium|high|xhigh|max] [--comment] [--fix] [--engine-pr N] [--code-pr N] [--plans-pr N]"
+name: project-review
+description: Review the open PR(s) across uma-tools, uma-skill-tools, and uma-tools-plans — whether that's one PR alone or several that pair up together — in dependency order, then run a cross-repo synthesis pass whenever two or more repos are actually involved. Use whenever the user wants to review or sanity-check a change in this project before landing it: "review this PR," "check this diff before I merge it," a single-repo fix, an engine PR plus its uma-tools gitlink bump, a plans-repo ticket paired with either — even if they phrase it as "review these PRs together," "check these are in sync," "does this match the engine PR," or name a specific ticket's PRs without naming this skill. A bare /code-review run on one PR alone would miss how it interacts with sibling repos when there are any; this skill handles that whether or not there turn out to be any.
+argument-hint: "[low|medium|high|xhigh|max] [--comment] [--fix] [<PR URL>] [--engine-pr N] [--code-pr N] [--plans-pr N]"
 ---
 
-# /paired-review
+# /project-review
 
-Reviews the open PRs across all three repos this project spans, in dependency order,
-recording each repo's findings, then runs a dedicated cross-repo synthesis pass over the
-collected findings to catch what no single-repo review can: an engine PR whose merge
-commit the code PR's gitlink must record, an engine signature change `uma-tools` depends
-on, a doc claim in `uma-tools-plans` a code change makes stale.
+Reviews the open PR(s) across all three repos this project spans — one, two, or three,
+whatever's actually open — in dependency order, recording each repo's findings, then runs a
+dedicated cross-repo synthesis pass over the collected findings whenever two or more repos
+are involved, to catch what no single-repo review can: an engine PR whose merge commit the
+code PR's gitlink must record, an engine signature change `uma-tools` depends on, a doc
+claim in `uma-tools-plans` a code change makes stale.
+
+**A single open PR is a first-class, fully supported case here, not a degenerate one.**
+Step 1's per-slot discovery already skips a repo with nothing open, and Step 3 already
+skips the cross-repo pass when fewer than two repos have a PR — this was true before this
+note was added, it just wasn't said out loud anywhere. Don't hand-roll Step 2 and Step 4
+yourself instead of invoking this skill because only one PR happens to be open right now —
+that's exactly the situation this skill already handles; inventing a manual substitute for
+it (as happened once, reviewing `uma-tools-plans#31` by hand) just duplicates what calling
+this skill directly already does.
 
 **Important limitation, confirmed 2026-08-25 by inspecting raw subagent transcripts:**
 each per-repo `code-review` call in Step 2 is fully independent — it does not receive the
@@ -26,18 +36,30 @@ informed by a prior slot's findings; it wasn't — the context clause tells it *
 change this is*, not what a sibling slot's review already found.
 
 This is the review-side counterpart to `uma-tools-plans/scripts/wq.py land`, which
-automates the paired *merge*. `/paired-review` never merges, pushes, or lands anything —
+automates the paired *merge*. `/project-review` never merges, pushes, or lands anything —
 it only reviews and (optionally) comments.
 
 ## Step 0 — Parse arguments
 
-`args` = everything after `/paired-review`, whitespace-separated, flags position-independent:
+`args` = everything after `/project-review`, whitespace-separated, flags position-independent:
 
 - `--comment` — passed through to every `code-review` call and to the cross-repo pass.
 - `--fix` — passed through to every `code-review` call. Each sub-review fixes only its own
   repo's working tree; this skill never commits on the user's behalf.
 - `--engine-pr N` / `--code-pr N` / `--plans-pr N` — explicit PR numbers that bypass
   discovery (Step 1) for that repo.
+- **A bare GitHub PR URL** (e.g. `https://github.com/mackoz/uma-tools-plans/pull/31`) —
+  resolves to whichever slot's `owner/repo` it exactly matches in Step 1's table (never a
+  substring match: `mackoz/uma-tools` is a literal prefix of `mackoz/uma-tools-plans`, so a
+  loose check would misroute a plans URL into the code slot and hand its sub-review the
+  wrong base branch, exactly what the Step 2 context clause exists to prevent). A URL for a
+  repo outside the three slots is a hard stop, not a guess. This is purely a convenience for
+  not having to know which `--*-pr` flag name applies to which repo — it's equivalent to
+  passing that slot's override flag, **not** a "single-slot" mode: Step 1 still runs full
+  discovery on the other two repos exactly as if the URL hadn't been given, so a sibling PR
+  you didn't know about still gets found. If the URL and an explicit `--*-pr` flag resolve
+  to the *same* slot, stop and ask which one the user means rather than picking one
+  silently; resolving to two *different* slots is fine, that's just two overrides at once.
 - First remaining token, if one of `low|medium|high|xhigh|max` → the level.
 - `ultra` → **stop immediately** and tell the user: ultra is a user-triggered, billed,
   multi-agent cloud review launched only via `/code-review ultra` (or `/ultrareview`)
@@ -53,14 +75,14 @@ silently overwrite the user's own last-used setting the next time they type `/co
 bare. Passing nothing lets it fall back to what they last chose themselves — the same
 contract `/code-review` already offers when invoked with no level.
 
-## Step 1 — Discover the three PRs
+## Step 1 — Discover the PRs
 
 **Defensive sweep first.** Run `rm -f <scratchpad dir>/*.diff` (your scratchpad directory
 is named in your system prompt) before doing anything else. A per-repo `code-review`
 sub-review in Step 2 may dump its PR diff to a scratch file there (observed names:
 `pr<N>.diff`, `pr<N>_v2.diff` — an ad hoc choice each sub-review makes itself, not a fixed
 contract), and the scratchpad directory is scoped to the *session*, not to a single
-`/paired-review` run — so a file left behind by an earlier run (including one that was
+`/project-review` run — so a file left behind by an earlier run (including one that was
 interrupted before reaching Step 5's cleanup) is still there the next time this skill
 runs. See Step 5 for why this matters and the incident that surfaced it.
 
@@ -102,11 +124,11 @@ of trusting the table's per-repo guess.)
   in flight at once), so this isn't necessarily wrong — but this skill still can't guess
   which one the user means. Stop and ask.
 
-For a slot resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override instead
-of discovery, look up the same fields with
+For a slot resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override, or via
+a bare PR URL from Step 0, instead of discovery, look up the same fields with
 `gh pr view <number> --repo <github repo> --json number,title,headRefName,baseRefName,url`
 so the printed plan (below) and the rest of this skill have real title/URL/branch data to
-work with, not just a bare number.
+work with, not just a bare number or URL.
 
 **Relatedness check (informational only — never gates Step 3).** Paired PRs share an
 identical head branch name in practice, though nothing enforces it and `wq.py` never reads
@@ -219,7 +241,7 @@ understand after seeing what changed underneath it.
    whether a given reason was good enough — just capture it accurately.
 
 4. From that call's result, distill and record a HANDOFF block. Use your in-context copy
-   for Step 3 by default; append it to `<scratchpad dir>/paired-review-handoffs.md` (your
+   for Step 3 by default; append it to `<scratchpad dir>/project-review-handoffs.md` (your
    scratchpad directory is named in your system prompt) as well, and re-read that file
    instead only if context compaction has visibly happened since — i.e. the file is a
    fallback for surviving compaction, not a second source Step 3 needs to reconcile
@@ -344,14 +366,14 @@ Run `rm -f <scratchpad dir>/*.diff` again, now that every Step 2 sub-review has 
 Confirmed by inspecting a raw subagent transcript on 2026-08-25: a Step 2 sub-review
 reviewing `uma-tools-plans#15` tried `git diff origin/main...origin/pipe-5-jp-data-refresh
 > <scratchpad>/pr15.diff`, hit a zsh `file exists` (noclobber) error because a 605-line
-`pr15.diff` from an *earlier* `/paired-review` run in the same session was still sitting
+`pr15.diff` from an *earlier* `/project-review` run in the same session was still sitting
 there, read that stale file believing it was current, only caught the mismatch because it
 happened to cross-check one file's presence in the diff against the `--stat` summary, and
 then had to `rm -f` and regenerate (706 lines — confirming the original really was stale)
 before it could proceed. That cost several wasted tool calls and could just as easily have
 produced a wrong finding (or a missed one) on a diff the sub-review never actually saw.
 
-`paired-review-handoffs.md` is the only file in `<scratchpad dir>` this skill's own state
+`project-review-handoffs.md` is the only file in `<scratchpad dir>` this skill's own state
 depends on — every `.diff` file a sub-review wrote there is safe to discard once that
 sub-review has finished, whether or not it found anything to report. Do this even if a
 slot was skipped (no open PR) or a sub-review call failed partway — leftover `.diff` files
@@ -362,7 +384,7 @@ but cleaning up now means there's nothing left for that sweep to have to catch.
 
 - Never merge, push, or land anything from this skill. `wq.py land` is a separate,
   deliberate step the user runs themselves when ready.
-- If `/paired-review` was invoked with neither `--fix` nor `--comment`, Step 4's
+- If `/project-review` was invoked with neither `--fix` nor `--comment`, Step 4's
   consolidated-table branch is a hard stop — do not fix, comment, or otherwise act on any
   finding until the user names which ones. This is the same rule as the line above,
   applied one level down: `--fix`/`--comment` are how the user tells this skill it's
