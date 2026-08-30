@@ -195,10 +195,10 @@ diff, so a one-line comment or similar is enough), open the PR, and pass its num
 ## Step 3 — Always dry-run first
 
 ```
-wq.py land --engine-pr N --code-pr M --plans-pr K [--complete-id ID] --dry-run
+uv run plans/scripts/wq.py land --engine-pr N --code-pr M --plans-pr K [--complete-id ID] --dry-run
 ```
 
-This is read-only — no mutating git/gh calls. Check three things in its output:
+This is read-only — no mutating git/gh calls. Check four things in its output:
 
 - **Merge order** — sanity-check it matches what you expect (engine → code → plans).
 - **Gitlink check** — `OK` means the branch's recorded gitlink already matches engine
@@ -210,6 +210,10 @@ This is read-only — no mutating git/gh calls. Check three things in its output
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
   hand) — go fix it, don't try to work around the refusal.
+- **Pages deploy check** (since PIPE-30) — reads `expected` or `none expected (<reason>)`,
+  predicted from `uma-tools`' own `deploy.yml` trigger config against the code PR's changed
+  files. `none expected` is normal and correct for a docs-only PR (`deploy.yml`'s
+  `paths-ignore` structurally excludes it) — it's not something to "fix" before landing.
 
 If real time passes between this dry-run and Step 4's actual run (you went and did
 something else, waited on the user, whatever), **re-run the dry-run immediately before the
@@ -225,7 +229,7 @@ is the authorization — proceed straight to the real run. If you arrived here o
 initiative rather than a direct ask, confirm with the user first.
 
 ```
-wq.py land --engine-pr N --code-pr M --plans-pr K --complete-id ID
+uv run plans/scripts/wq.py land --engine-pr N --code-pr M --plans-pr K --complete-id ID
 ```
 
 Omit `--engine-pr` if there's no engine PR for this ticket (per Step 1). Omit
@@ -259,10 +263,14 @@ If a run dies:
   submodule update is expected and healthy, not a problem.
 - If `--complete-id` was used, confirm the ticket file actually moved from
   `work-queue/in-progress/<id>.md` to `work-queue/completed/<id>.md`.
-- `wq.py land` itself waits for and reports the GitHub Pages deploy result at the very end —
-  confirm it printed a `success`, not left hanging or reported a failed deploy. This wait is
-  `uma-tools`-specific (it polls that repo's `deploy.yml`), so it only fires when the code
-  repo was actually part of this run.
+- `wq.py land` waits for and reports the GitHub Pages deploy result at the very end, but only
+  if it predicted one would actually fire (since PIPE-30 — it reads `uma-tools`' own
+  `deploy.yml` trigger config against the merge's changed files first, since a docs-only merge
+  structurally can't trigger a run). Confirm the output is one of: it printed `success` after
+  waiting, or it printed `no Pages deploy expected: <reason>` and skipped the wait — both are
+  a normal, complete outcome. A wait that's still hanging, or one that reports a failed
+  deploy, is the real problem to chase. This only fires when the code repo was actually part
+  of this run.
 
 **After either single-repo path from Step 1.5** — only check the *one* repo actually
 touched, not all three (the others were never involved):
