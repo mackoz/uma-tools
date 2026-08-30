@@ -74,11 +74,12 @@ export function IntroText(props) {
 								<strong>Edit…</strong> to open a picker pre-narrowed to skills
 								that can actually activate on this course for this uma's run
 								style, and choose exactly the set your career run's shop screen
-								is offering. Turning it on replaces the Rarity/Type filters
-								entirely (the shortlist is the filter, so those two rows grey
-								out) rather than combining with them. A shortlisted skill that
-								can't activate here shows as a dimmed, struck-through chip
-								instead of silently vanishing from the pool.
+								is offering. Once at least one skill is shortlisted, turning it
+								on replaces the Rarity/Type filters entirely (the shortlist is
+								the filter, so those two rows grey out) rather than combining
+								with them. A shortlisted skill that can't activate here shows as
+								a dimmed, struck-through chip instead of silently vanishing from
+								the pool.
 							</li>
 						</ul>
 					</details>

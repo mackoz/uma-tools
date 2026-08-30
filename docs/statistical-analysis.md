@@ -347,8 +347,10 @@ two controls fighting over the same flags.
 3. Alternatively, click **Edit…** on the **Shop skills** row to open a picker pre-narrowed to
    skills that can actually activate on this course for this uma's run style — check the box to
    see every general skill instead — and pick the exact set your career run's shop screen is
-   offering. Turning the toggle on replaces Rarity/Type entirely (both rows grey out with a note)
-   rather than composing with them: the shortlist *is* the filter. A shortlisted skill that can't
+   offering. Once at least one skill is shortlisted, turning the toggle on replaces Rarity/Type
+   entirely (both rows grey out with a note) rather than composing with them: the shortlist *is*
+   the filter — an empty shortlist leaves Rarity/Type live even with the toggle on, since there's
+   nothing yet to filter by. A shortlisted skill that can't
    activate here renders as a dimmed, struck-through chip with an explanatory tooltip rather than
    silently vanishing from the pool. Like Rarity/Type, removing a skill from the shortlist (or
    turning the filter off) is a free client-side narrow/widen — a re-run is only needed for a

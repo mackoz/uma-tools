@@ -3145,10 +3145,20 @@ function App(props) {
 			// Not `as Record<string, unknown>` -- `Record` is imported from immutable.js in this
 			// file (shadows the TS utility type, used for HorseState); see ui-components/Tabs.tsx
 			// for the same trap on the same identifier.
+			//
+			// Deliberately NOT also checking the inherited-unique-pairing exclusion
+			// computeChartSkillPool applies (ANCHOR: chart-inherited-unique-pairing-exclusion):
+			// that depends on uma1.skills, and uma1's useState isn't declared until below this
+			// point -- pulling it in here would repeat the exact temporal-dead-zone class of bug
+			// already hit once this session for shopFilterActive. It's also moot in practice:
+			// uma1 is always a fresh, skill-less HorseState at the exact moment this initializer
+			// runs (component mount, before any save/load), so that check could never exclude
+			// anything here anyway.
 			(id) =>
 				(skilldata as { [key: string]: unknown })[id] != null &&
 				isGeneralSkill(id) &&
-				!isPurpleSkill(id),
+				!isPurpleSkill(id) &&
+				(showUnreleasedUmas || !unreleasedSkillIds.has(id)),
 		),
 	);
 	useEffect(() => {
@@ -3414,8 +3424,10 @@ function App(props) {
 	// Mode.Chart skills derivation (`all` up through the purple/character-unique/unreleased
 	// gates, `procable` narrowed to what can activate on this course/run style) -- NOT the `uma`
 	// variable doBasinnChart separately builds for Mode.UniquesChart (removeUniqueSkills(uma1)),
-	// which stays exactly where it is; Mode.UniquesChart shares nothing with the shortlist
-	// feature (see the "Deliberately unchanged" note near the shop-filter JSX below).
+	// which stays exactly where it is; with the `mode === Mode.Chart` guard in doBasinnChart
+	// around the shop-filter bookkeeping (setLastRunShopSkills/setLastRunCandidateIds),
+	// Mode.UniquesChart's own run also never touches that state, so it genuinely shares nothing
+	// with the shortlist feature.
 	function computeChartSkillPool(uma: HorseState, courseArg: CourseData) {
 		const all = baseSkillsToTest
 			.filter((id) => {
@@ -4261,25 +4273,29 @@ function App(props) {
 			uma = uma1.toJS();
 		}
 
-		if (shopFilterActive) {
-			skills = applyShopFilter(skills, shopSkillIds);
-			setLastRunShopSkills(shopSkillIds.slice());
-		} else {
-			if (mode === Mode.Chart && chartRarity !== 'all') {
-				skills = skills.filter((id) => matchRarity(id, chartRarity));
-			}
+		// Contained to Mode.Chart -- shopFilterActive already implies it, but lastRunShopSkills/
+		// lastRunCandidateIds must NOT be touched for a Mode.UniquesChart run (UI-27 review): they
+		// previously ran unconditionally here, contradicting computeChartSkillPool's doc comment
+		// ("Mode.UniquesChart shares nothing with the shortlist feature") and the work-queue
+		// ticket's "out of scope" claim -- neither was actually true until this guard.
+		if (mode === Mode.Chart) {
+			if (shopFilterActive) {
+				skills = applyShopFilter(skills, shopSkillIds);
+				setLastRunShopSkills(shopSkillIds.slice());
+			} else {
+				if (chartRarity !== 'all') {
+					skills = skills.filter((id) => matchRarity(id, chartRarity));
+				}
 
-			if (
-				mode === Mode.Chart &&
-				activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
-			) {
-				skills = skills.filter((id) =>
-					matchesAnyIconType(id, activeChartIconTypes),
-				);
+				if (activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length) {
+					skills = skills.filter((id) =>
+						matchesAnyIconType(id, activeChartIconTypes),
+					);
+				}
+				setLastRunShopSkills(null);
 			}
-			setLastRunShopSkills(null);
+			setLastRunCandidateIds(new Set(skills));
 		}
-		setLastRunCandidateIds(new Set(skills));
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
 		setLastRunChartRarity(chartRarity);
 
@@ -4980,7 +4996,7 @@ function App(props) {
 		}
 		const allow = new Set(shopSkillIds);
 		return new Set(Array.from(tableData.keys()).filter((id) => !allow.has(id)));
-	}, [mode, tableData, shopSkillFilterOn, shopSkillIds]);
+	}, [mode, tableData, shopSkillIds, shopFilterActive]);
 
 	let resultsPane: any;
 	if (mode == Mode.Compare) {

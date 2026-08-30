@@ -37,7 +37,17 @@ export function isPurpleSkill(id) {
 	// HorseDefTypes.ts's isDebuffSkill: this is a semantic classification and the resolved id is
 	// only a display guess. Verified a no-op today -- none of the 136 zero-icon skills resolve
 	// to a "...4" icon. See UI-19 for keying this off effect data instead.
-	const iconId = skillmeta[id].iconId;
+	//
+	// Guards the same skilldata/skillmeta id-drift gap components/SkillPicker.tsx:37's
+	// getSkillIcon already guards (UI-27 review): app.tsx's computeChartSkillPool now calls this
+	// on the full candidate pool ahead of getActivateableSkills's try/catch, so it can no longer
+	// rely on that try/catch having already filtered out an id present in skill_data.json but
+	// missing from skill_meta.json. Returning false (not purple) is the safe default -- if the id
+	// isn't a real activateable skill, getActivateableSkills's own try/catch downstream still
+	// excludes it.
+	const meta = skillmeta[id];
+	if (!meta) return false;
+	const iconId = meta.iconId;
 	return iconId[iconId.length - 1] == '4';
 }
 
