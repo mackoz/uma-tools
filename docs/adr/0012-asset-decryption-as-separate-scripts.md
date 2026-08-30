@@ -70,14 +70,10 @@ undeclared-Perl-module precedent (`DBI`, `File::Slurper`).
 - `extract_resource.pl`/`make_uma_info.pl` stay untouched by this decision, but that also
   means neither script *automatically* picks up a decrypted `meta` — `make_uma_info.pl`
   specifically has no CLI override to point it at a decrypted copy
-  (`docs/data-pipeline.md`'s "Formerly-known bugs" section documents this residual gap).
-  **Correction (2026-08-29):** the two clauses above have both drifted. `make_uma_info.pl`
-  no longer hardcodes a bare literal `meta` — since PIPE-17 it derives
-  `$root . "/meta" . $suffix` (a per-server suffix from `master.mdb`'s own filename), though
-  the no-CLI-override gap this bullet describes is otherwise unchanged. And `File::Slurper`
-  is no longer a live blocker on this machine (installed 2026-08-29) — it was always an
-  ordinary prerequisite, not a standing gap, and the encrypted-`meta`-DB/no-CLI-override issue
-  above is the sole remaining reason `make_uma_info.pl` can't run end to end.
+  (`docs/data-pipeline.md`'s "Formerly-known bugs" section documents this residual gap). This
+  no-CLI-override gap is the unconditional blocker regardless of which Perl modules happen to
+  be installed on a given machine — `File::Slurper` is an ordinary prerequisite (see
+  `docs/data-pipeline.md`'s module list), not a separate standing gap.
 - The decryption key is a genuine maintenance liability independent of where the logic lives:
   a future client update can rotate it, and whoever picks that up re-derives the key (the
   script's own header comment records both independent sources used this time) rather than
