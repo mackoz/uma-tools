@@ -23,11 +23,13 @@ function C(s: string) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function getSkillName(skillId: string): string {
+// Exported for umalator/components/ShopSkillFilter.tsx's chip strip (UI-27) -- otherwise
+// module-private, used only inside this file.
+export function getSkillName(skillId: string): string {
 	return skillnames[skillId]?.[0] || `Skill ${skillId}`;
 }
 
-function getSkillIcon(skillId: string): string {
+export function getSkillIcon(skillId: string): string {
 	// No meta entry at all (distinct from iconId "0", which getSkillIconSrc already handles via
 	// the shared rarity/effect-type-aware guess in components/SkillIcons.ts -- PIPE-2 review:
 	// this file previously had its own separate flat-placeholder fallback here, which showed a
@@ -37,7 +39,7 @@ function getSkillIcon(skillId: string): string {
 }
 
 // rarity 1=white, 2=gold, 3-5=unique (purple in this app), 6=pink (evolved)
-function getSkillRarityClass(skillId: string): string {
+export function getSkillRarityClass(skillId: string): string {
 	const skill = skilldata[skillId];
 	if (!skill) return 'skill-white';
 	const r = skill.rarity;
@@ -184,6 +186,20 @@ interface SkillPickerModalProps {
 	onSelect: (skillId: string) => void;
 	selectedSkills: string[];
 	availableSkillIds: string[];
+	// UI-27 additions, all optional and backwards-compatible -- HorseDef's own call site
+	// (the only one before UI-27) passes none of these and is unaffected.
+	//
+	// When supplied, a selected item is no longer `disabled` -- clicking it (or Enter on it)
+	// calls onDeselect instead of being a no-op, so the picker becomes usable for a "pick an
+	// arbitrary set, toggle freely" flow rather than HorseDef's "equip one, keep it equipped"
+	// flow. Absent, behavior is identical to before this change.
+	onDeselect?: (skillId: string) => void;
+	// Defaults to today's "Search skills..." placeholder.
+	searchPlaceholder?: string;
+	// Rendered between the filter rows and the skill list -- lets a caller (the Skill Chart's
+	// shop-skill picker) show its own "show all skills" escape hatch and pool-size copy without
+	// this modal needing to know anything about the chart.
+	notice?: any;
 }
 
 const SORT_LABELS: Record<SortOption, string> = {
@@ -265,6 +281,9 @@ export function SkillPickerModal({
 	onSelect,
 	selectedSkills,
 	availableSkillIds,
+	onDeselect,
+	searchPlaceholder,
+	notice,
 }: SkillPickerModalProps) {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [sortOption, setSortOption] = useState<SortOption>('rarity');
@@ -390,7 +409,11 @@ export function SkillPickerModal({
 				case 'Enter':
 					if (activeIdx >= 0 && activeIdx < filteredIds.length) {
 						const id = filteredIds[activeIdx];
-						if (!selectedSkills.includes(id)) onSelect(id);
+						if (selectedSkills.includes(id)) {
+							onDeselect?.(id);
+						} else {
+							onSelect(id);
+						}
 					}
 					break;
 				case 'Escape':
@@ -400,7 +423,15 @@ export function SkillPickerModal({
 		}
 		document.addEventListener('keydown', handler);
 		return () => document.removeEventListener('keydown', handler);
-	}, [isOpen, activeIdx, filteredIds, selectedSkills, onSelect, onClose]);
+	}, [
+		isOpen,
+		activeIdx,
+		filteredIds,
+		selectedSkills,
+		onSelect,
+		onDeselect,
+		onClose,
+	]);
 
 	useEffect(() => {
 		if (activeIdx < 0 || !listRef.current) return;
@@ -429,14 +460,14 @@ export function SkillPickerModal({
 						<input
 							ref={searchInputRef}
 							type="text"
-							placeholder="Search skills..."
+							placeholder={searchPlaceholder ?? 'Search skills...'}
 							value={searchQuery}
 							onInput={(e) =>
 								setSearchQuery((e.target as HTMLInputElement).value)
 							}
 						/>
 						<span class="skill-picker-key-hint">
-							↑↓←→ navigate · ⏎ add · ` search
+							↑↓←→ navigate · ⏎ {onDeselect ? 'add/remove' : 'add'} · ` search
 						</span>
 					</div>
 					<div class="skill-picker-sort-group">
@@ -528,20 +559,30 @@ export function SkillPickerModal({
 					</div>
 				</div>
 
+				{notice}
+
 				<div class="skill-picker-list" ref={listRef}>
 					{filteredIds.length === 0 ? (
 						<div class="skill-picker-empty">No skills found</div>
 					) : (
 						filteredIds.map((id, idx) => {
 							const isSelected = selectedSkills.includes(id);
+							// With onDeselect supplied, a selected item stays clickable (to remove it)
+							// instead of being disabled -- UI-27's shop-skill picker needs free
+							// toggling; HorseDef's own picker (no onDeselect) keeps today's
+							// add-only, disabled-when-equipped behavior unchanged.
+							const removable = isSelected && !!onDeselect;
 							return (
 								<button
 									key={id}
-									class={`skill-picker-item ${getSkillRarityClass(id)}${idx === activeIdx ? ' active' : ''}${isSelected ? ' selected' : ''}`}
+									class={`skill-picker-item ${getSkillRarityClass(id)}${idx === activeIdx ? ' active' : ''}${isSelected ? ' selected' : ''}${removable ? ' removable' : ''}`}
 									type="button"
-									disabled={isSelected}
+									disabled={isSelected && !onDeselect}
 									onMouseDown={(e) => e.preventDefault()}
-									onClick={() => !isSelected && onSelect(id)}
+									onClick={() => {
+										if (removable) onDeselect?.(id);
+										else if (!isSelected) onSelect(id);
+									}}
 								>
 									<img
 										class="skill-picker-item-icon"
@@ -549,7 +590,17 @@ export function SkillPickerModal({
 										loading="lazy"
 									/>
 									<span class="skill-picker-item-name">{getSkillName(id)}</span>
-									{isSelected && <span class="skill-picker-item-check">✓</span>}
+									{isSelected &&
+										(removable ? (
+											<span
+												class="skill-picker-item-remove"
+												aria-label="Remove"
+											>
+												×
+											</span>
+										) : (
+											<span class="skill-picker-item-check">✓</span>
+										))}
 								</button>
 							);
 						})

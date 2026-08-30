@@ -403,6 +403,32 @@
 	font-weight: 700;
 }
 
+/* UI-27: shown instead of .skill-picker-item-check when the caller supplies onDeselect --
+   a selected row stays clickable (to remove it) rather than disabled, so it needs a removal
+   affordance instead of a static checkmark. */
+.skill-picker-item.removable {
+	cursor: pointer;
+}
+.skill-picker-item-remove {
+	color: var(--sp-error);
+	font-weight: 700;
+	font-size: 15px;
+	line-height: 1;
+}
+
+/* UI-27: optional slot between the filter rows and the skill list (e.g. the shop-skill picker's
+   "show all skills" escape hatch + pool-size copy). Matches .skill-picker-filters' own chrome. */
+.skill-picker-notice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	background: var(--sp-elevated);
+	border-bottom: 1px solid var(--sp-border);
+	font-size: 12px;
+	color: var(--sp-text-muted);
+}
+
 /* Rarity accents — unique=purple in this app, pink=evolved.
    Subtle left-to-right gradient tint + border accent. */
 .skill-picker-item.skill-white {

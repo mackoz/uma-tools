@@ -344,19 +344,31 @@ two controls fighting over the same flags.
    immediately — but because Rarity is single-select, switching to a different rarity or widening
    back to **All** does mark the chart dirty until you press Run again (Type's icon filters, being
    multi-select checkboxes, only ever need a re-run when you add a type back in).
-3. Pick **Model** (Controlled or Full race), **Preset** (Quick / Balanced / Thorough), and
+3. Alternatively, click **Edit…** on the **Shop skills** row to open a picker pre-narrowed to
+   skills that can actually activate on this course for this uma's run style — check the box to
+   see every general skill instead — and pick the exact set your career run's shop screen is
+   offering. Once at least one skill is shortlisted, turning the toggle on replaces Rarity/Type
+   entirely (both rows grey out with a note) rather than composing with them: the shortlist *is*
+   the filter — an empty shortlist leaves Rarity/Type live even with the toggle on, since there's
+   nothing yet to filter by. A shortlisted skill that can't
+   activate here renders as a dimmed, struck-through chip with an explanatory tooltip rather than
+   silently vanishing from the pool. Like Rarity/Type, removing a skill from the shortlist (or
+   turning the filter off) is a free client-side narrow/widen — a re-run is only needed for a
+   *new*, viable addition. The shortlist is a work-scoping knob (`localStorage` only, like Rarity/
+   Type below), not part of the race definition, so it doesn't ride along in a shared link.
+4. Pick **Model** (Controlled or Full race), **Preset** (Quick / Balanced / Thorough), and
    **Pruning** (0-100, default 50 — see the Pruning subsection above) in the run-settings row above
    the table — these are reachable before a run has happened, unlike an earlier implementation
    where they lived inside the results pane and only rendered once `tableData.size > 0`. An
    estimated-runtime hint next to Run reflects the current Pruning-derived preset, using the
    ladder's worst-case scenario count and the last measured ms/scenario rate.
-4. If Skill Wit Check matters to the comparison, set it in the left Settings pane before running.
-5. Press **Run**. The table populates progressively as each round's batches stream back; sort by any
+5. If Skill Wit Check matters to the comparison, set it in the left Settings pane before running.
+6. Press **Run**. The table populates progressively as each round's batches stream back; sort by any
    column. **Stop** halts within a couple of seconds and keeps whatever partial results exist.
-6. Expand a row for detail: total samples, help/tie/hurt mass, the activation-position effect chart,
+7. Expand a row for detail: total samples, help/tie/hurt mass, the activation-position effect chart,
    and the velocity trace for that skill's min/max/mean/median runs. **Refine** queues one more block
    of samples for just that row.
-7. Double-clicking a row adds that skill to Uma 1's build and marks the chart stale — rerun after
+8. Double-clicking a row adds that skill to Uma 1's build and marks the chart stale — rerun after
    changing the baseline.
 
 Changing Model, Preset, or Pruning does not automatically rerun existing results — press Run again.
@@ -365,20 +377,24 @@ Changing Model, Preset, or Pruning does not automatically rerun existing results
 
 Same race setup, Uma, Model, Preset, Pruning, seed, and Skill Wit Check setting reproduce an
 identical chart — the BCa bootstrap is seeded per skill (deterministic given the skill ID and base
-seed), not just the underlying race simulation. `analysisMode`, `analysisPreset`, and `chartPruning`
-are stored in `localStorage` only (work-budget knobs, not part of the race definition);
+seed), not just the underlying race simulation. `analysisMode`, `analysisPreset`, `chartPruning`,
+`chartRarityFilter`, `chartIconFilter`, `chartShopSkills`, and `chartShopSkillsEnabled` are all
+stored in `localStorage` only (work-budget/candidate-pool knobs, not part of the race definition);
 `skillWisdomCheck` is part of the serialized race state and shared URLs, same as it already was for
 Compare mode.
 
 ## Verification
 
 ```sh
-npm run test:stats                       # statisticalAnalysis.ts and chartLadder.ts unit tests
+npm run test                             # statisticalAnalysis.ts, chartLadder.ts, and shopSkillFilter.ts unit tests
 npm --prefix uma-skill-tools test        # engine tests, including activation-sampling stability
 cd umalator && node build.mjs            # JP app build
 cd umalator-global && node build.mjs     # Global app build
 npm run build                            # all seven maintained apps
 ```
+
+`npm run test:stats` is kept as an alias for `npm run test` for anyone with the older command
+memorized.
 
 ## Deferred to a follow-up branch
 
