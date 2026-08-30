@@ -3147,8 +3147,8 @@ function App(props) {
 			// for the same trap on the same identifier.
 			//
 			// Deliberately NOT also checking the inherited-unique-pairing exclusion
-			// computeChartSkillPool applies (ANCHOR: chart-inherited-unique-pairing-exclusion):
-			// that depends on uma1.skills, and uma1's useState isn't declared until below this
+			// computeChartSkillPool applies (see its own chart-inherited-unique-pairing-exclusion
+			// marker) -- that depends on uma1.skills, and uma1's useState isn't declared until below this
 			// point -- pulling it in here would repeat the exact temporal-dead-zone class of bug
 			// already hit once this session for shopFilterActive. It's also moot in practice:
 			// uma1 is always a fresh, skill-less HorseState at the exact moment this initializer
