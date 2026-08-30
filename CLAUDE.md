@@ -18,10 +18,12 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 - **Log a work-queue ticket before starting.** Bug and feature work is tracked in the sibling
   `uma-tools-plans` repo, symlinked here as `plans/` (gitignored, not part of this repo). File it
-  with `python3 plans/scripts/wq.py file <PREFIX> --type {bug,feature} --title T --effort E
-  --net-gain G --scope S` — mints the next free ID for that prefix, writes the skeleton from
-  `plans/work-queue/TEMPLATE.md`, and wires up the `plans/work-queue/README.md` row and mkdocs nav
-  entry in one step, then `python3 plans/scripts/wq.py claim <id>` to move it to `in-progress/`
+  with `uv run plans/scripts/wq.py file <PREFIX> --type {bug,feature} --title T --effort E
+  --net-gain G --scope S` (run via `uv run`, not a bare `python3` — `wq.py` is no longer
+  stdlib-only since PIPE-30 and declares its PyYAML/`wcmatch` dependencies inline for `uv`
+  to resolve, no venv activation needed) — mints the next free ID for that prefix, writes
+  the skeleton from `plans/work-queue/TEMPLATE.md`, and wires up the `plans/work-queue/README.md`
+  row and mkdocs nav entry in one step, then `uv run plans/scripts/wq.py claim <id>` to move it to `in-progress/`
   and cut the branch — don't do the file, README, or nav edits by hand. Ticket changes go on their
   own PR in `uma-tools-plans`; never commit to its `main` directly. See
   `plans/work-queue/README.md` for the ID scheme and the Category/Type split.
