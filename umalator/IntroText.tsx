@@ -66,6 +66,23 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-08-30</summary>
+						<ul>
+							<li>
+								The Skill Chart's filter row now has a{' '}
+								<strong>Shop skills</strong> option: click{' '}
+								<strong>Edit…</strong> to open a picker pre-narrowed to skills
+								that can actually activate on this course for this uma's run
+								style, and choose exactly the set your career run's shop screen
+								is offering. Turning it on replaces the Rarity/Type filters
+								entirely (the shortlist is the filter, so those two rows grey
+								out) rather than combining with them. A shortlisted skill that
+								can't activate here shows as a dimmed, struck-through chip
+								instead of silently vanishing from the pool.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-29</summary>
 						<ul>
 							<li>

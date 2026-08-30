@@ -530,6 +530,13 @@ body.splitterDragging {
 	margin-left: 12px;
 }
 
+/* UI-27: shown under the Rarity/Type rows while the Shop skills shortlist is applied -- those
+   two rows are disabled (the shortlist is the filter) rather than composing with it. */
+.chartFilterNote {
+	color: var(--muted);
+	font-size: var(--font-xs);
+}
+
 /* Pacemaker selection labels, colored to match the chart line colors. */
 .pacemakerName-0 {
 	color: #22c55e;
