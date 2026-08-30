@@ -4,7 +4,7 @@ node_modules
 # choice, not because they're generic — some override built-ins (Explore, Plan) and some
 # are wholly project-specific (cross-repo-synthesis, doc-sync-auditor, wq-ticket-writer,
 # engine-mechanics-researcher), several of which reference the private uma-tools-plans repo.
-# Anything tracked that depends on one of these existing (e.g. .claude/skills/paired-review/
+# Anything tracked that depends on one of these existing (e.g. .claude/skills/project-review/
 # SKILL.md's cross-repo-synthesis call) must degrade gracefully when it's absent, since a
 # fresh clone won't have this directory.
 .claude/agents/
@@ -78,7 +78,7 @@ meta-*
 # Python venv for scripts/extract-assets.py (UnityPy) -- see docs/data-pipeline.md.
 /scripts/.venv/
 
-# Scratch notes for in-progress work (e.g. paired-review findings not yet applied) --
+# Scratch notes for in-progress work (e.g. project-review findings not yet applied) --
 # working notes only, never meant to be committed or shipped.
 /tmp/
 
