@@ -21,10 +21,12 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   with `uv run plans/scripts/wq.py file <PREFIX> --type {bug,feature} --title T --effort E
   --net-gain G --scope S` (run via `uv run`, not a bare `python3` — `wq.py` is no longer
   stdlib-only since PIPE-30 and declares its PyYAML/`wcmatch` dependencies inline for `uv`
-  to resolve, no venv activation needed) — mints the next free ID for that prefix, writes
-  the skeleton from `plans/work-queue/TEMPLATE.md`, and wires up the `plans/work-queue/README.md`
-  row and mkdocs nav entry in one step, then `uv run plans/scripts/wq.py claim <id>` to move it to `in-progress/`
-  and cut the branch — don't do the file, README, or nav edits by hand. Ticket changes go on their
+  to resolve, no venv activation needed; install `uv` itself via `brew install uv` or
+  [astral.sh/uv](https://docs.astral.sh/uv)) — mints the next free ID for that prefix,
+  writes the skeleton from `plans/work-queue/TEMPLATE.md`, and wires up the
+  `plans/work-queue/README.md` row and mkdocs nav entry in one step, then `uv run
+  plans/scripts/wq.py claim <id>` to move it to `in-progress/` and cut the branch — don't
+  do the file, README, or nav edits by hand. Ticket changes go on their
   own PR in `uma-tools-plans`; never commit to its `main` directly. See
   `plans/work-queue/README.md` for the ID scheme and the Category/Type split.
 - **Prefer one open PR per repo at a time — soft guidance, not a hard rule.** Before creating a branch, check for an existing open PR/branch covering the same area (`gh pr list`) and push to that branch instead of branching off `master` again, when the new work is genuinely the same thread. If it isn't (a second, unrelated PR is really warranted), that's fine — just flag it and confirm with the user before opening it, rather than opening a second PR silently.

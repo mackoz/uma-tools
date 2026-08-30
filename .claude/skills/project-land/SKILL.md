@@ -130,7 +130,9 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    ```
    The `(this PR)` self-reference form matches what `wq.py land` itself generates for a
    plans-repo citing its own not-yet-merged PR (`cmd_land`'s `pr_parts` construction).
-3. `wq.py complete <id> --refs "[uma-tools-plans#N](url) (this PR)"` — commits and pushes
+3. `uv run scripts/wq.py complete <id> --refs "[uma-tools-plans#N](url) (this PR)"` (run from
+   `../uma-tools-plans` — step 1 already put you there, so this is repo-relative, not the
+   `plans/scripts/wq.py` form Steps 3/4 of the normal path use below) — commits and pushes
    the completion to this still-open branch, so the PR's own merge is what lands it, same
    principle as `land --complete-id` (just done by hand since that flag requires
    `wq.py land` to be running at all).
@@ -210,10 +212,13 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
   hand) — go fix it, don't try to work around the refusal.
-- **Pages deploy check** (since PIPE-30) — reads `expected` or `none expected (<reason>)`,
-  predicted from `uma-tools`' own `deploy.yml` trigger config against the code PR's changed
-  files. `none expected` is normal and correct for a docs-only PR (`deploy.yml`'s
-  `paths-ignore` structurally excludes it) — it's not something to "fix" before landing.
+- **Pages deploy check** (since PIPE-30) — a line starting `Pages deploy check:` predicting
+  whether the merge will trigger a Pages deploy, from `uma-tools`' own `deploy.yml` trigger
+  config against the code PR's changed files. `none expected` is normal and correct for a
+  docs-only PR (`deploy.yml`'s `paths-ignore` structurally excludes it); a `>=100 changed
+  files` note means gh's file list may be truncated and the check couldn't evaluate with
+  confidence (also normal — treated as `expected` to be safe). Neither outcome is something
+  to "fix" before landing.
 
 If real time passes between this dry-run and Step 4's actual run (you went and did
 something else, waited on the user, whatever), **re-run the dry-run immediately before the
@@ -266,10 +271,12 @@ If a run dies:
 - `wq.py land` waits for and reports the GitHub Pages deploy result at the very end, but only
   if it predicted one would actually fire (since PIPE-30 — it reads `uma-tools`' own
   `deploy.yml` trigger config against the merge's changed files first, since a docs-only merge
-  structurally can't trigger a run). Confirm the output is one of: it printed `success` after
-  waiting, or it printed `no Pages deploy expected: <reason>` and skipped the wait — both are
-  a normal, complete outcome. A wait that's still hanging, or one that reports a failed
-  deploy, is the real problem to chase. This only fires when the code repo was actually part
+  structurally can't trigger a run). Confirm the output is a normal, complete outcome: either
+  it printed `success` after waiting, or a line starting `no Pages deploy expected` and skipped
+  the wait (whether because `deploy.yml`'s own filters ruled it out, or because `uma-tools` has
+  no `.github/workflows/deploy.yml` at all — both print that same prefix). A wait that's still
+  hanging, or one that reports a failed deploy, is the real problem to chase. This only fires
+  when the code repo was actually part
   of this run.
 
 **After either single-repo path from Step 1.5** — only check the *one* repo actually
