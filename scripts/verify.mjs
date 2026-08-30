@@ -1,17 +1,19 @@
 // One-shot build + metrics check for the umalator apps.
 //
-//   npm run verify            build both apps, typecheck, CSS metrics, browser smoke, docs; one diff line vs baseline
+//   npm run verify            build both apps, run unit tests, typecheck, CSS metrics, browser smoke, docs; one diff line vs baseline
 //   npm run verify:baseline   re-record scripts/verify-baseline.json (run on master after a merge)
 //   node scripts/verify.mjs --skip-build   metrics only (fast inner loop while editing CSS)
+//   node scripts/verify.mjs --skip-tests   skip the unit test stage
 //   node scripts/verify.mjs --skip-smoke   skip the browser smoke stage
 //   node scripts/verify.mjs --skip-gitlink   skip the gitlink-drift check (e.g. on a flaky/offline connection)
 //
-// The smoke stage runs scripts/smoke.mjs (Playwright chromium against the
-// umalator-global dev server, light + dark); it reports SKIPPED when playwright
-// isn't installed. The docs stage runs a strict build of the optional local
-// docs site under plans/ and is skipped when absent.
+// The tests stage runs `npm run test` (statisticalAnalysis.ts, chartLadder.ts,
+// shopSkillFilter.ts -- plain node:assert scripts, no test runner). The smoke stage runs
+// scripts/smoke.mjs (Playwright chromium against the umalator-global dev server, light + dark);
+// it reports SKIPPED when playwright isn't installed. The docs stage runs a strict build of the
+// optional local docs site under plans/ and is skipped when absent.
 //
-// Exits non-zero if a build fails, the typecheck error count rises above the
+// Exits non-zero if a build fails, a unit test fails, the typecheck error count rises above the
 // baseline, the smoke fails, the docs build fails, or (when HEAD matches
 // origin/master's tip) the uma-skill-tools gitlink doesn't point at the
 // submodule's origin/master tip.
@@ -27,6 +29,7 @@ const writeBaseline = process.argv.includes('--baseline');
 const skipBuild = process.argv.includes('--skip-build');
 const skipSmoke = process.argv.includes('--skip-smoke');
 const skipGitlink = process.argv.includes('--skip-gitlink');
+const skipTests = process.argv.includes('--skip-tests');
 
 // tokens.css is deliberately excluded: it is the one place colors belong.
 const CSS_FILES = [
@@ -36,6 +39,7 @@ const CSS_FILES = [
 	'umalator/components/InfoModal.css',
 	'umalator/components/OCRModal.css',
 	'umalator/components/ResultsPane.css',
+	'umalator/components/ShopSkillFilter.css',
 	'umalator/components/UmasTab.css',
 	'umalator/ui-components/Dropdown.css',
 	'umalator/ui-components/Tabs.css',
@@ -82,7 +86,9 @@ function build(app) {
 	});
 	if (r.status !== 0) {
 		console.error(`build FAILED: ${app}`);
-		console.error((r.stderr || r.stdout || '').split('\n').slice(-15).join('\n'));
+		console.error(
+			(r.stderr || r.stdout || '').split('\n').slice(-15).join('\n'),
+		);
 		return false;
 	}
 	return true;
@@ -112,14 +118,25 @@ function runSmoke() {
 		timeout: 180_000,
 	});
 	if (r.status === 0) return { label: 'smoke OK', ok: true };
-	if (r.status === 2) return { label: 'smoke SKIPPED (not installed)', ok: true };
-	const report = path.join(root, 'scripts', 'smoke-artifacts', 'smoke-report.json');
+	if (r.status === 2)
+		return { label: 'smoke SKIPPED (not installed)', ok: true };
+	const report = path.join(
+		root,
+		'scripts',
+		'smoke-artifacts',
+		'smoke-report.json',
+	);
 	let count = '?';
 	try {
-		count = JSON.parse(fs.readFileSync(report, 'utf8')).checks.filter(c => !c.ok).length;
+		count = JSON.parse(fs.readFileSync(report, 'utf8')).checks.filter(
+			(c) => !c.ok,
+		).length;
 	} catch {}
 	console.error((r.stdout || '').split('\n').slice(-5).join('\n'));
-	return { label: `smoke FAILED (${count}) -> scripts/smoke-artifacts/smoke-report.json`, ok: false };
+	return {
+		label: `smoke FAILED (${count}) -> scripts/smoke-artifacts/smoke-report.json`,
+		ok: false,
+	};
 }
 
 // The gitlink recorded for uma-skill-tools must point at the submodule's
@@ -129,7 +146,8 @@ function runSmoke() {
 // plans/scripts/wq.py's `doctor`.
 function runGitlink() {
 	const submodulePath = path.join(root, 'uma-skill-tools');
-	if (!fs.existsSync(path.join(submodulePath, '.git'))) return { label: 'gitlink -', ok: true };
+	if (!fs.existsSync(path.join(submodulePath, '.git')))
+		return { label: 'gitlink -', ok: true };
 
 	// spawnSync itself can fail (missing git binary, permissions, ...) --
 	// distinguish that from a clean non-zero exit so a broken environment can't
@@ -137,10 +155,16 @@ function runGitlink() {
 	// A bounded timeout keeps a hung/offline fetch from hanging the whole
 	// `npm run verify` invocation (PR #29 review, round 2).
 	function git(args, cwd) {
-		const r = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: 10_000 });
+		const r = spawnSync('git', args, {
+			cwd,
+			encoding: 'utf8',
+			timeout: 10_000,
+		});
 		if (r.error) return { ok: false, out: '', err: r.error.message };
-		if (r.signal) return { ok: false, out: '', err: `killed by ${r.signal} (timeout?)` };
-		if (r.status !== 0) return { ok: false, out: '', err: (r.stderr || r.stdout || '').trim() };
+		if (r.signal)
+			return { ok: false, out: '', err: `killed by ${r.signal} (timeout?)` };
+		if (r.status !== 0)
+			return { ok: false, out: '', err: (r.stderr || r.stdout || '').trim() };
 		return { ok: true, out: r.stdout.trim(), err: '' };
 	}
 
@@ -157,7 +181,10 @@ function runGitlink() {
 	const head = git(['rev-parse', 'HEAD'], root);
 	const rootUpstream = git(['rev-parse', 'origin/master'], root);
 	if (!head.ok || !rootUpstream.ok) {
-		return { label: `gitlink UNKNOWN (${head.err || rootUpstream.err})`, ok: false };
+		return {
+			label: `gitlink UNKNOWN (${head.err || rootUpstream.err})`,
+			ok: false,
+		};
 	}
 	// Applicability is commit identity, not the local branch name -- a branch
 	// literally named "master" can be ahead of origin/master (unpushed
@@ -181,7 +208,10 @@ function runGitlink() {
 	const recorded = git(['rev-parse', 'HEAD:uma-skill-tools'], root);
 	const upstream = git(['rev-parse', 'origin/master'], submodulePath);
 	if (!recorded.ok || !upstream.ok) {
-		return { label: `gitlink UNKNOWN (${recorded.err || upstream.err})`, ok: false };
+		return {
+			label: `gitlink UNKNOWN (${recorded.err || upstream.err})`,
+			ok: false,
+		};
 	}
 	if (recorded.out === upstream.out) return { label: 'gitlink OK', ok: true };
 	return {
@@ -190,10 +220,27 @@ function runGitlink() {
 	};
 }
 
+// The unit test suite (statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts). `npm run
+// test` was, until this stage existed, defined in package.json but never invoked by verify --
+// a broken test could pass CI silently. Each file is a plain `node --experimental-strip-types`
+// script that exits non-zero on assertion failure; npm run test chains them with `&&`, so a
+// non-zero exit here means whichever one failed. Both known-good runs also print a
+// MODULE_TYPELESS_PACKAGE_JSON warning to stderr while still exiting 0, so this keys off
+// `status` only, never off stderr being non-empty.
+function runTests() {
+	const r = spawnSync('npm', ['run', 'test'], { cwd: root, encoding: 'utf8' });
+	if (r.status === 0) return { label: 'tests OK', ok: true };
+	console.error((r.stdout || '').split('\n').slice(-15).join('\n'));
+	return { label: 'tests FAILED', ok: false };
+}
+
 // Optional local docs site: strict-build it when present, skip silently when not.
 function runDocs() {
 	const mkdocsBin = path.join(root, 'plans', '.venv', 'bin', 'mkdocs');
-	if (!fs.existsSync(path.join(root, 'plans', 'mkdocs.yml')) || !fs.existsSync(mkdocsBin)) {
+	if (
+		!fs.existsSync(path.join(root, 'plans', 'mkdocs.yml')) ||
+		!fs.existsSync(mkdocsBin)
+	) {
 		return { label: 'docs -', ok: true };
 	}
 	const r = spawnSync(mkdocsBin, ['build', '--strict'], {
@@ -239,14 +286,18 @@ if (fs.existsSync(baselinePath)) {
 	base = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
 }
 
+const tests = skipTests ? { label: 'tests SKIPPED', ok: true } : runTests();
 const smoke = skipSmoke ? { label: 'smoke -', ok: true } : runSmoke();
 const docs = runDocs();
-const gitlink = skipGitlink ? { label: 'gitlink SKIPPED', ok: true } : runGitlink();
+const gitlink = skipGitlink
+	? { label: 'gitlink SKIPPED', ok: true }
+	: runGitlink();
 
 const tscLabel =
 	tsc >= TSC_CAP ? `>=${TSC_CAP} (capped)` : `${tsc}${delta(tsc, base?.tsc)}`;
 const parts = [
 	skipBuild ? 'builds SKIPPED' : buildsOk ? 'builds OK' : 'builds FAILED',
+	tests.label,
 	`tsc ${tscLabel}`,
 	`.dark ${sum(dark)}${delta(sum(dark), base ? sum(base.dark) : null)}`,
 	`literals ${sum(literals)}${delta(sum(literals), base ? sum(base.literals) : null)}`,
@@ -260,9 +311,18 @@ console.log(parts.join(' | '));
 const details = [];
 for (const [name, n] of Object.entries(dark)) {
 	const b = base?.dark?.[name];
-	if (n !== 0 || (b != null && b !== n)) details.push(`${name}:${n}${delta(n, b)}`);
+	if (n !== 0 || (b != null && b !== n))
+		details.push(`${name}:${n}${delta(n, b)}`);
 }
 if (details.length) console.log(`.dark by file: ${details.join(' ')}`);
 
 const tscRegressed = base != null && base.tsc < TSC_CAP && tsc > base.tsc;
-if (!buildsOk || tscRegressed || !smoke.ok || !docs.ok || !gitlink.ok) process.exit(1);
+if (
+	!buildsOk ||
+	!tests.ok ||
+	tscRegressed ||
+	!smoke.ok ||
+	!docs.ok ||
+	!gitlink.ok
+)
+	process.exit(1);

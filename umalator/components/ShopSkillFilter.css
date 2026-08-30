@@ -1,0 +1,139 @@
+/* UI-27: Skill Chart "Shop skills" shortlist row. Tokens only, no literal fallbacks -- this
+   file's job is to prove out at 0 color literals in scripts/verify.mjs's CSS metrics, since
+   umalator/tokens.css is always the first import in this app and every token used here is
+   already defined there. */
+
+.shopSkillFilterRow {
+	width: 100%;
+}
+
+.shopSkillFilterToggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+}
+
+.shopSkillFilterToggle input[type="checkbox"] {
+	margin: 0;
+}
+
+.shopSkillFilterToggleLabel {
+	font-size: var(--font-sm);
+	color: var(--muted-2);
+}
+
+.shopSkillFilterBtn {
+	padding: 3px 10px;
+	background-color: var(--surface);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	color: var(--fg);
+	font-size: var(--font-sm);
+	cursor: pointer;
+	transition:
+		background-color 0.12s ease,
+		border-color 0.12s ease;
+}
+.shopSkillFilterBtn:hover:not(:disabled) {
+	background-color: var(--hover);
+	border-color: var(--input-border-hover);
+}
+.shopSkillFilterBtn:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+/* Chip strip: same pill treatment as HorseDef's equipped-skill pills
+   (.horseSkillPills .skill-*), since a shortlist chip is conceptually the same object -- a
+   skill being considered for the build. Capped height so a long shortlist can't push the
+   results table off-screen; the strip scrolls internally instead. */
+.shopSkillChipStrip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+	width: 100%;
+	max-height: 88px;
+	overflow-y: auto;
+	margin-top: var(--space-xs);
+}
+
+.shopSkillChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 6px 3px 8px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border);
+	border-left-width: 3px;
+	font-size: var(--font-xs);
+	line-height: 1.4;
+	max-width: 220px;
+}
+
+.shopSkillChip.skill-white {
+	background: var(--skill-white-bg);
+	border-left-color: var(--skill-white-accent);
+}
+.shopSkillChip.skill-gold {
+	background: var(--skill-gold-bg);
+	border-left-color: var(--skill-gold-accent);
+}
+.shopSkillChip.skill-pink {
+	background: var(--skill-pink-bg);
+	border-left-color: var(--skill-pink-accent);
+}
+.shopSkillChip.skill-unique {
+	background: var(--skill-unique-bg);
+	border-left-color: var(--skill-unique-accent);
+}
+
+.shopSkillChipDimmed {
+	opacity: 0.5;
+}
+.shopSkillChipDimmed .shopSkillChipName {
+	text-decoration: line-through;
+}
+
+.shopSkillChipIcon {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	border-radius: 3px;
+}
+
+.shopSkillChipName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.shopSkillChipRemove {
+	flex-shrink: 0;
+	padding: 0 2px;
+	background: none;
+	border: none;
+	color: var(--muted-2);
+	font-size: var(--font-sm);
+	line-height: 1;
+	cursor: pointer;
+}
+.shopSkillChipRemove:hover:not(:disabled) {
+	color: var(--negative);
+}
+.shopSkillChipRemove:disabled {
+	cursor: not-allowed;
+}
+
+.shopSkillFilterBtn:focus-visible,
+.shopSkillChipRemove:focus-visible,
+.shopSkillFilterToggle input:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+@media (max-width: 768px) {
+	.shopSkillChipStrip {
+		max-height: 60px;
+	}
+}
