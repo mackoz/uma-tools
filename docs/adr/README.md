@@ -34,3 +34,5 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0010](0010-design-tokens.md) | Umalator styles resolve through a single token file; dark mode is token redefinition | Accepted |
 | [0011](0011-gitlink-drift-guard.md) | Gitlink-drift guard checks commit identity, and exists twice on purpose | Accepted |
 | [0012](0012-asset-decryption-as-separate-scripts.md) | Asset decryption/extraction is a separate script layer, not a patch to the Perl pipeline | Accepted |
+| [0013](0013-shop-skill-prerequisite-encoding.md) | Shop skill prerequisites are encoded as `skill_data.group_id`/`group_rate`, gated by `rarity <= 2` | Accepted |
+| [0014](0014-shop-skill-picker-side-panel.md) | The shop skill shortlist lives in a picker side panel, not an always-visible chip strip | Accepted |

@@ -64,6 +64,11 @@
 	overflow: hidden;
 	animation: sp-slide-in 0.25s ease-out;
 }
+/* UI-28: only a caller that supplies sidePanel (the Skill Chart's shop-skill picker) widens --
+   HorseDef's own picker never sets this class and keeps today's 1080px cap. */
+.skill-picker-modal.has-side-panel {
+	max-width: 1340px;
+}
 
 /* ── Header (search + sort + close) ──────────────────────────────────────── */
 .skill-picker-header {
@@ -351,8 +356,16 @@
 }
 
 /* ── Skill list ───────────────────────────────────────────────────────────── */
+/* UI-28: wraps .skill-picker-list so an optional sidePanel can render as its sibling, to its
+   right. A layout no-op when no sidePanel is supplied (HorseDef's own picker never renders it). */
+.skill-picker-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+}
 .skill-picker-list {
 	flex: 1;
+	min-width: 0; /* lets the grid actually shrink for a side panel instead of forcing the row wider */
 	min-height: 0;
 	overflow-y: auto;
 	padding: 6px;
@@ -360,6 +373,15 @@
 	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
 	gap: 2px;
 	align-content: start;
+}
+
+/* First breakpoint in this file -- it had none before UI-28's side panel. The .shopSkillPanel
+   override itself lives in ShopSkillPanel.css, not here -- see that file's own comment for why
+   cross-file equal-specificity rules are a trap that bit this exact case during development. */
+@media (max-width: 900px) {
+	.skill-picker-body {
+		flex-direction: column;
+	}
 }
 .skill-picker-item {
 	width: 100%;

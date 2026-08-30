@@ -70,16 +70,22 @@ export function IntroText(props) {
 						<ul>
 							<li>
 								The Skill Chart's filter row now has a{' '}
-								<strong>Shop skills</strong> option: click{' '}
-								<strong>Edit…</strong> to open a picker pre-narrowed to skills
-								that can actually activate on this course for this uma's run
-								style, and choose exactly the set your career run's shop screen
-								is offering. Once at least one skill is shortlisted, turning it
-								on replaces the Rarity/Type filters entirely (the shortlist is
-								the filter, so those two rows grey out) rather than combining
-								with them. A shortlisted skill that can't activate here shows as
-								a dimmed, struck-through chip instead of silently vanishing from
-								the pool.
+								<strong>Shop Skills</strong> button: click it to open a picker
+								pre-narrowed to skills that can actually activate on this course
+								for this uma's run style, and choose exactly the set your career
+								run's shop screen is offering — the button then reads "Shop
+								Skills — N Selected". A running view of the shortlist sits in a
+								panel to the picker's right, split into what's in the pool
+								versus what can't activate here (shown dimmed and struck-through
+								with an explanatory tooltip instead of silently vanishing).
+								Picking a skill that has a shop prerequisite — a gold built on
+								top of a white, say — automatically adds that prerequisite too,
+								shown indented beneath it; removing a prerequisite removes
+								everything shortlisted on top of it, since the shop itself never
+								lets you hold one without the other. Any non-empty shortlist
+								replaces the Rarity/Type filters entirely (the shortlist is the
+								filter, so those two rows grey out) rather than combining with
+								them.
 							</li>
 						</ul>
 					</details>

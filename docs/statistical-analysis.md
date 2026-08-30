@@ -344,18 +344,23 @@ two controls fighting over the same flags.
    immediately — but because Rarity is single-select, switching to a different rarity or widening
    back to **All** does mark the chart dirty until you press Run again (Type's icon filters, being
    multi-select checkboxes, only ever need a re-run when you add a type back in).
-3. Alternatively, click **Edit…** on the **Shop skills** row to open a picker pre-narrowed to
-   skills that can actually activate on this course for this uma's run style — check the box to
-   see every general skill instead — and pick the exact set your career run's shop screen is
-   offering. Once at least one skill is shortlisted, turning the toggle on replaces Rarity/Type
-   entirely (both rows grey out with a note) rather than composing with them: the shortlist *is*
-   the filter — an empty shortlist leaves Rarity/Type live even with the toggle on, since there's
-   nothing yet to filter by. A shortlisted skill that can't
-   activate here renders as a dimmed, struck-through chip with an explanatory tooltip rather than
-   silently vanishing from the pool. Like Rarity/Type, removing a skill from the shortlist (or
-   turning the filter off) is a free client-side narrow/widen — a re-run is only needed for a
-   *new*, viable addition. The shortlist is a work-scoping knob (`localStorage` only, like Rarity/
-   Type below), not part of the race definition, so it doesn't ride along in a shared link.
+3. Alternatively, click the **Shop Skills** button on the **Shop skills** row to open a picker
+   pre-narrowed to skills that can actually activate on this course for this uma's run style —
+   check "Show all skills" to see every general skill instead — and pick the exact set your career
+   run's shop screen is offering; the button itself reads "Shop Skills — N Selected" once you've
+   picked any. A running view of the shortlist lives in a panel to the picker's right, split into
+   "In the pool" and "Won't activate here" sections — a skill in the latter renders dimmed and
+   struck through with an explanatory tooltip rather than silently vanishing from the pool. Any
+   non-empty shortlist replaces Rarity/Type entirely (both rows grey out with a note) rather than
+   composing with them: the shortlist *is* the filter, and clearing it (the row's own **Clear**
+   button, or the panel's **Clear all**) returns Rarity/Type to normal. Picking a skill that has a
+   shop prerequisite — e.g. a gold skill built on top of a white one — automatically adds that
+   prerequisite too, shown indented beneath it in the panel; removing a prerequisite cascades up
+   and removes everything shortlisted on top of it, since the shop itself never lets you hold the
+   one without the other. Like Rarity/Type, removing a skill from the shortlist is a free
+   client-side narrow — a re-run is only needed for a *new*, viable addition. The shortlist is a
+   work-scoping knob (`localStorage` only, like Rarity/Type below), not part of the race
+   definition, so it doesn't ride along in a shared link.
 4. Pick **Model** (Controlled or Full race), **Preset** (Quick / Balanced / Thorough), and
    **Pruning** (0-100, default 50 — see the Pruning subsection above) in the run-settings row above
    the table — these are reachable before a run has happened, unlike an earlier implementation
@@ -378,8 +383,9 @@ Changing Model, Preset, or Pruning does not automatically rerun existing results
 Same race setup, Uma, Model, Preset, Pruning, seed, and Skill Wit Check setting reproduce an
 identical chart — the BCa bootstrap is seeded per skill (deterministic given the skill ID and base
 seed), not just the underlying race simulation. `analysisMode`, `analysisPreset`, `chartPruning`,
-`chartRarityFilter`, `chartIconFilter`, `chartShopSkills`, and `chartShopSkillsEnabled` are all
-stored in `localStorage` only (work-budget/candidate-pool knobs, not part of the race definition);
+`chartRarityFilter`, `chartIconFilter`, and `chartShopSkills` are all stored in `localStorage`
+only (work-budget/candidate-pool knobs, not part of the race definition) -- `chartShopSkills` is
+active whenever it's non-empty (UI-28 dropped the separate `chartShopSkillsEnabled` toggle key);
 `skillWisdomCheck` is part of the serialized race state and shared URLs, same as it already was for
 Compare mode.
 
