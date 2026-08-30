@@ -93,18 +93,33 @@ group 20033 (Corner Adept family)     group 20001 (Right-Handed family)
 `group_rate = -1` is always the debuff/"×" variant (verified: its `icon_id` ends in `4`, the same
 convention `isPurpleSkill` already uses to exclude it from the Skill Chart's candidate pool).
 `group_rate >= 2` occurs **only** at `rarity` 1 or 2 in both databases — zero rows above rarity 2
-— so a plain `rarity <= 2` guard is sufficient to keep character-unique and evolved skills out of
-any code that walks this ladder.
+— so a `rarity <= 2` guard keeps character-unique and evolved skills out of a ladder walk. **But
+that guard alone is not sufficient for a consumer reading raw `skill_data`** — see the two-part
+requirement below.
 
 **The `group_id` trap**: §5's `make_skill_meta.pl` `COALESCE`s a *different* `group_id` for
 skills reached through the §4 evolution join — e.g. skill `409061` (an evolved, rarity-6 skill)
 carries a raw `skill_data.group_id` of `40906` but is emitted in `skill_meta.json` with `groupId`
 `"20033"`, the same family as Corner Adept / Professor of Curvature above, purely because of how
 that remap resolves. Every remapped id verified is rarity 6, so the `rarity <= 2` guard above
-also happens to fully exclude every remapped id — but this is a property of the current data, not
-a structural guarantee, so any future consumer of `groupId`+`group_rate` together (as
-`umalator/app.tsx`'s `SKILL_LADDER` does, UI-28) needs the same rarity guard to stay correct, not
-just a bare "is this id shaped like a general skill" check.
+fully excludes every remapped id — but this is a property of the current data, not a structural
+guarantee, so any future consumer of `groupId`+`group_rate` together (as `umalator/app.tsx`'s
+`SKILL_LADDER` does, UI-28) needs the same rarity guard to stay correct.
+
+**A second, independent requirement — `is_general_skill = 1` (or `rarity >= 3`)**: the `rarity <=
+2` guard by itself is not enough for a consumer walking raw `skill_data` directly, only for one
+reading `skill_meta.json`. Verified counterexample: `group_id 100001` has 7 members in
+`master_jp.mdb` (2 in `master.mdb`) — all `rarity = 1`, `group_rate = 1`, `is_general_skill = 0`,
+an obsolete "Carnival Bonus" family (`skill_category 101`) never surfaced anywhere in the game. A
+raw-`skill_data` walk gated only on `rarity <= 2` indexes all of them into one group with
+duplicate rank-1 members, which is exactly the ambiguity the safety argument above (`706 JP / 348
+Global groups, zero duplicate rates`, per `docs/adr/0013`) depends on not existing.
+`SKILL_LADDER` never sees this group because it iterates `skill_meta.json`'s own
+keys, and both generators already filter with `WHERE is_general_skill = 1 OR rarity >= 3`
+(`make_skill_meta.pl:33`, `umalator-global/make_global_skill_meta.pl:25`) — that filter is doing
+real, necessary work here, not just incidentally narrowing the id set. **A future consumer
+starting from raw `skill_data` needs both conditions — `rarity <= 2` for the remap trap above,
+`is_general_skill = 1 OR rarity >= 3` for this one — not `rarity <= 2` alone.**
 
 `group_rate` exists as a plain column in both `master_jp.mdb` and `master.mdb` independently of
 the JP-only remap-chain tables in §4/§6 — Global has the ladder concept even though it lacks the
