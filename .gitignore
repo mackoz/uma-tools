@@ -1,7 +1,12 @@
 node_modules
 
-# Stock built-in agent definitions Claude Code writes to disk; not project-customized,
-# so they don't need to travel with .claude/skills/ when that gets committed.
+# Project-customized agent definitions (subagent system prompts). Kept machine-local by
+# choice, not because they're generic — some override built-ins (Explore, Plan) and some
+# are wholly project-specific (cross-repo-synthesis, doc-sync-auditor, wq-ticket-writer,
+# engine-mechanics-researcher), several of which reference the private uma-tools-plans repo.
+# Anything tracked that depends on one of these existing (e.g. .claude/skills/paired-review/
+# SKILL.md's cross-repo-synthesis call) must degrade gracefully when it's absent, since a
+# fresh clone won't have this directory.
 .claude/agents/
 
 # Local alias to CLAUDE.md for tools that discover AGENTS.md. The symlink is
