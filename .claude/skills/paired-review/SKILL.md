@@ -253,17 +253,21 @@ Nothing here licenses *inventing* a relationship that isn't backed by evidence, 
 the "hold cross-repo findings to the same evidence bar" rule below still applies exactly
 as strictly as if the branches had matched.
 
-Launch one `Agent` (fan-out isn't needed here — this is synthesis, not diff-scanning). Give
-it: every HANDOFF block from Step 2, the PR URLs, and the specific things to check, drawn
-from the "cross-repo invariants at risk" list above plus:
+Launch one `Agent` with `subagent_type: "cross-repo-synthesis"` (fan-out isn't needed here
+— this is synthesis, not diff-scanning). Give it: every HANDOFF block from Step 2, the PR
+URLs, and the specific things to check, drawn from the "cross-repo invariants at risk" list
+above plus:
 
 - Do findings in one repo contradict findings or assumptions recorded in another?
 - Is a change to the paired-merge machinery (`wq.py`, `verify.mjs`) landing in the same
   batch as PRs that machinery is meant to land?
 
-If the `Agent` tool isn't available in this session at all, don't skip this step silently
-— do the synthesis yourself, in this same turn, against the same HANDOFF blocks and checks
-above.
+If that agent type isn't defined in this session (its definition lives in the gitignored
+`.claude/agents/`, so a fresh clone won't have it), fall back to a `general-purpose` Agent
+and put the same context — including the gitlink-false-positive rule and evidence bar below
+— into the prompt inline. If the `Agent` tool isn't available in this session at all, don't
+skip this step silently — do the synthesis yourself, in this same turn, against the same
+HANDOFF blocks and checks above.
 
 Hold cross-repo findings to the same evidence bar `uma-tools-plans/CLAUDE.md` sets
 generally: cite `file:line` from an actual read of the file, **on every repo/side being
