@@ -106,9 +106,13 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    for you here. In `../uma-tools-plans`: confirm `git status --porcelain` is empty, then
    `git fetch origin <head> && git checkout <head>` for the plans PR's branch. Skipping this
    is not a shortcut — `wq.py complete` (step 3 below) calls `commit_push`, which pushes to
-   *whatever branch is currently checked out* after a `git add -A`; landing straight on
-   `main` if that's what happens to be checked out is exactly the violation `cmd_land`'s own
-   code exists to prevent for the normal path.
+   *whatever branch is currently checked out*; landing straight on `main` if that's what
+   happens to be checked out is exactly the violation `cmd_land`'s own code exists to
+   prevent for the normal path. (Since PIPE-19, `commit_push` stages/commits only the
+   specific files `cmd_complete` itself wrote, not the whole tree with `git add -A` — that
+   closes a different failure mode, an unrelated staged/dirty file riding along into the
+   commit, but doesn't help with the wrong-branch risk here; the pre-check above is still
+   the only thing preventing it.)
 2. Write the ticket's `## Outcome` narrative — same content bar as Step 2.2 (what was
    implemented, what review found and how it was fixed, what verification ran) — but
    **include the mechanical bullets yourself this time**, inverting Step 2.2's instruction
