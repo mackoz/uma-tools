@@ -1,68 +1,46 @@
 import { h } from 'preact';
 
-import {
-	getSkillIcon,
-	getSkillName,
-	getSkillRarityClass,
-} from '../../components/SkillPicker';
-import { partitionShopSkills } from '../shopSkillFilter';
-
 import './ShopSkillFilter.css';
 
-// UI-27: the Skill Chart's "Shop skills" shortlist row -- lets a career run's actual shop
-// offering narrow the chart's candidate pool instead of ranking the whole activateable pool.
-// Pure presentation; all state lives in umalator/app.tsx (see doBasinnChart/chartCandidates
-// there) and the pure predicates live in umalator/shopSkillFilter.ts.
+// UI-27/UI-28: the Skill Chart's "Shop skills" shortlist row -- lets a career run's actual shop
+// offering narrow the chart's candidate pool instead of ranking the whole activateable pool. Pure
+// presentation; all state lives in umalator/app.tsx (see doBasinnChart/chartCandidates there) and
+// the pure predicates live in umalator/shopSkillFilter.ts.
+//
+// UI-28 collapsed this from four controls (checkbox + Edit... + Clear + an always-visible chip
+// strip) to two: one combined button that opens the picker (umalator/components/ShopSkillPanel.tsx
+// now owns the shortlist view, rendered inside that picker) plus Clear. There's no more
+// enabled/disabled toggle -- a non-empty shortlist is always active.
 interface ShopSkillFilterProps {
-	enabled: boolean;
-	onToggleEnabled: (enabled: boolean) => void;
 	skillIds: string[];
-	onRemove: (skillId: string) => void;
+	onOpen: () => void;
 	onClear: () => void;
-	onEdit: () => void;
-	// null = the candidate pool hasn't been computed yet (picker never opened this session) --
-	// every chip renders as provisionally procable rather than flagged, same convention as
-	// partitionShopSkills itself.
-	procable: Set<string> | null;
+	// Count of shortlisted skills that can't activate on this course/run style -- surfaced here so
+	// the diagnostic ShopSkillPanel's "Won't activate here" section carries isn't lost entirely
+	// while the picker is closed. Per-skill detail lives in the panel; this is just the summary.
+	wontProcCount: number;
 	disabled?: boolean;
 }
 
 export function ShopSkillFilter({
-	enabled,
-	onToggleEnabled,
 	skillIds,
-	onRemove,
+	onOpen,
 	onClear,
-	onEdit,
-	procable,
+	wontProcCount,
 	disabled,
 }: ShopSkillFilterProps) {
-	const { wontProc } = partitionShopSkills(skillIds, procable);
-	const wontProcSet = new Set(wontProc);
-
 	return (
 		<div class="chartFilterRow shopSkillFilterRow">
 			<span class="chartFilterLabel">Shop skills</span>
-			<label class="shopSkillFilterToggle">
-				<input
-					type="checkbox"
-					checked={enabled}
-					disabled={disabled}
-					onInput={(e) =>
-						onToggleEnabled((e.target as HTMLInputElement).checked)
-					}
-				/>
-				<span class="shopSkillFilterToggleLabel">
-					{skillIds.length === 0 ? 'off' : `${skillIds.length} selected`}
-				</span>
-			</label>
 			<button
 				type="button"
 				class="shopSkillFilterBtn"
-				onClick={onEdit}
+				onClick={onOpen}
 				disabled={disabled}
 			>
-				Edit…
+				{skillIds.length === 0
+					? 'Shop Skills'
+					: `Shop Skills — ${skillIds.length} Selected`}
 			</button>
 			{skillIds.length > 0 && (
 				<button
@@ -74,39 +52,10 @@ export function ShopSkillFilter({
 					Clear
 				</button>
 			)}
-			{skillIds.length > 0 && (
-				<div class="shopSkillChipStrip">
-					{skillIds.map((id) => {
-						const wontProcHere = wontProcSet.has(id);
-						return (
-							<span
-								key={id}
-								class={`shopSkillChip ${getSkillRarityClass(id)}${wontProcHere ? ' shopSkillChipDimmed' : ''}`}
-								title={
-									wontProcHere
-										? "Can't activate on this course for this run style — it won't appear in the chart."
-										: undefined
-								}
-							>
-								<img
-									class="shopSkillChipIcon"
-									src={getSkillIcon(id)}
-									loading="lazy"
-								/>
-								<span class="shopSkillChipName">{getSkillName(id)}</span>
-								<button
-									type="button"
-									class="shopSkillChipRemove"
-									aria-label={`Remove ${getSkillName(id)} from shop skills`}
-									disabled={disabled}
-									onClick={() => onRemove(id)}
-								>
-									×
-								</button>
-							</span>
-						);
-					})}
-				</div>
+			{wontProcCount > 0 && (
+				<span class="shopSkillFilterWontProc">
+					⚠ {wontProcCount} won't activate here
+				</span>
 			)}
 		</div>
 	);

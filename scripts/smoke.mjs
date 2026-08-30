@@ -499,19 +499,16 @@ async function runTheme(browser, url, theme) {
 			return { selector: '#chartIconFilter, #run' };
 		});
 
-		// Shop skills shortlist filter (UI-27). None of this depends on a completed chart run --
-		// it only exercises the filter UI, which renders before Run is ever pressed. Opening the
-		// picker triggers a getActivateableSkills pass (measured ~10ms server-side, but budget a
-		// longer explicit timeout here for this one wait rather than risk a flake against the
-		// page's 5s default).
+		// Shop skills shortlist filter (UI-27, redesigned UI-28: one combined button + Clear, the
+		// shortlist itself lives in the picker's side panel rather than an always-visible chip
+		// strip). None of this depends on a completed chart run -- it only exercises the filter
+		// UI, which renders before Run is ever pressed. Opening the picker triggers a
+		// getActivateableSkills pass (measured ~10ms server-side, but budget a longer explicit
+		// timeout here for this one wait rather than risk a flake against the page's 5s default).
 		const shopFilterPicked = await check(
 			'chart.shopfilter.controls',
 			async () => {
-				for (const sel of [
-					'.shopSkillFilterRow',
-					'.shopSkillFilterToggle input[type="checkbox"]',
-					'.shopSkillFilterBtn',
-				]) {
+				for (const sel of ['.shopSkillFilterRow', '.shopSkillFilterBtn']) {
 					if (!(await page.locator(sel).first().isVisible()))
 						fail(`${sel} not visible in the Shop skills row`);
 				}
@@ -521,53 +518,160 @@ async function runTheme(browser, url, theme) {
 
 		if (shopFilterPicked) {
 			await check('chart.shopfilter.pick', async () => {
-				await page.locator('.shopSkillFilterBtn', { hasText: 'Edit' }).click();
+				await page
+					.locator('.shopSkillFilterBtn', { hasText: 'Shop Skills' })
+					.click();
 				await page.waitForSelector('.skill-picker-overlay', {
 					state: 'visible',
 					timeout: 10_000,
 				});
 				await page.locator('.skill-picker-item').first().click();
-				await page.locator('.skill-picker-close').click();
-				await page.waitForSelector('.skill-picker-overlay', {
-					state: 'detached',
-				});
-				const chips = await page.locator('.shopSkillChip').count();
-				if (chips !== 1)
-					fail(`expected 1 shop-skill chip after picking one, got ${chips}`);
-				const label = await page
-					.locator('.shopSkillFilterToggleLabel')
-					.textContent();
-				if (!/1 selected/.test(label || ''))
-					fail(`toggle label reads "${label}", expected "1 selected"`);
-				return { selector: '.shopSkillChip', expected: 1, actual: chips };
+				// Not asserting exactly 1: the default rarity-sorted list's first item can itself
+				// be a skill with a ladder prerequisite (a gold auto-adding its white base), which
+				// would make this 2 -- that's UI-28's own feature firing, not a bug. >= 1 is the
+				// real invariant; chart.shopfilter.prereq below is the deterministic check on a
+				// specific, known family.
+				const items = await page.locator('.shopSkillPanelItem').count();
+				if (items < 1)
+					fail(
+						`expected >= 1 shortlist panel item after picking one, got ${items}`,
+					);
+				return {
+					selector: '.shopSkillPanelItem',
+					expected: '>= 1',
+					actual: items,
+				};
 			});
 
 			await check('clip.shopfilter', async () => {
 				const r = await page.evaluate(
 					(sel) => window.__smoke.rect(sel),
-					'.shopSkillChipStrip',
+					'.shopSkillPanel',
 				);
-				if (!r) fail('.shopSkillChipStrip not found');
+				if (!r) fail('.shopSkillPanel not found');
 				if (r.x < 0 || r.right > 1280)
 					fail(
-						`chip strip overflows viewport (x ${Math.round(r.x)}..${Math.round(r.right)})`,
+						`shop skill panel overflows viewport (x ${Math.round(r.x)}..${Math.round(r.right)})`,
 					);
-				return { selector: '.shopSkillChipStrip' };
+				return { selector: '.shopSkillPanel' };
 			});
 
 			await assertContrast(
 				page,
 				'contrast.shopchip',
-				'.shopSkillChip .shopSkillChipName',
+				'.shopSkillPanelItem .shopSkillChipName',
 			);
 
-			// Turning the toggle on (with the one chip already present) is what actually makes
-			// shopFilterActive true -- required before the disables check below.
-			await check('chart.shopfilter.toggle', async () => {
+			await check('chart.shopfilter.remove', async () => {
+				// Target the top-level (non-indented) item specifically: if the prior pick auto-
+				// added a prerequisite, `.shopSkillChipRemove` alone would match more than one
+				// element. Removal only cascades UP (removing a base removes what's built on top
+				// of it, not the reverse -- see chart.shopfilter.prereq below), so removing the
+				// top-level item leaves its own prerequisite(s), if any, behind -- which then
+				// re-render as a new flat top-level entry, since nothing above them remains in the
+				// shortlist. So this asserts the total count drops by exactly 1, not that the
+				// panel empties.
+				const before = await page.locator('.shopSkillPanelItem').count();
 				await page
-					.locator('.shopSkillFilterToggle input[type="checkbox"]')
+					.locator(
+						'.shopSkillPanelItem:not(.shopSkillPanelItemChild) .shopSkillChipRemove',
+					)
+					.first()
+					.click();
+				const after = await page.locator('.shopSkillPanelItem').count();
+				if (after !== before - 1)
+					fail(
+						`expected ${before - 1} panel items after removing one, got ${after}`,
+					);
+				return {
+					selector: '.shopSkillPanelItem',
+					expected: before - 1,
+					actual: after,
+				};
+			});
+
+			await check('chart.shopfilter.clearall', async () => {
+				// .shopSkillPanelClear ("Clear all") lives inside the panel itself, so it's
+				// reachable without closing the picker -- resets to a known-empty state regardless
+				// of what the prior steps' auto-adds left behind, ahead of the deterministic
+				// prereq check below.
+				const items = await page.locator('.shopSkillPanelItem').count();
+				if (items === 0)
+					return { selector: '.shopSkillPanelClear', skipped: true };
+				await page.locator('.shopSkillPanelClear').click();
+				const after = await page.locator('.shopSkillPanelItem').count();
+				if (after !== 0)
+					fail(`expected 0 panel items after Clear all, got ${after}`);
+				return { selector: '.shopSkillPanelClear', expected: 0, actual: after };
+			});
+
+			// Prerequisite auto-add/cascade-removal (UI-28): picking a gold skill also adds its
+			// white prerequisite, indented beneath it; removing that prerequisite cascades the
+			// gold away too. "Show all skills" first so the pick can't be dropped by course
+			// procability -- Professor of Curvature/Corner Adept are ordinary Global skills
+			// (verified present in umalator-global/skillnames.json and skill_data.json), not tied
+			// to any particular course.
+			await check('chart.shopfilter.prereq', async () => {
+				await page
+					.locator('.skill-picker-notice input[type="checkbox"]')
 					.check();
-				return { selector: '.shopSkillFilterToggle input[type="checkbox"]' };
+				await page
+					.locator('.skill-picker-search input')
+					.fill('Professor of Curvature');
+				await page.locator('.skill-picker-item').first().click();
+				const items = await page.locator('.shopSkillPanelItem').count();
+				if (items !== 2)
+					fail(`expected 2 panel items (parent + prerequisite), got ${items}`);
+				const child = page.locator('.shopSkillPanelItemChild');
+				if ((await child.count()) !== 1)
+					fail('expected exactly 1 indented (prerequisite) panel item');
+				const childName = await child
+					.locator('.shopSkillChipName')
+					.textContent();
+				if (!/Corner Adept/.test(childName || ''))
+					fail(
+						`indented prerequisite reads "${childName}", expected "Corner Adept ..."`,
+					);
+				// Removal cascades UP -- clicking the prerequisite's x must also remove the parent
+				// that depends on it (clicking the parent's x, which has no dependents, would prove
+				// nothing about the cascade).
+				await child.locator('.shopSkillChipRemove').click();
+				const afterCascade = await page.locator('.shopSkillPanelItem').count();
+				if (afterCascade !== 0)
+					fail(
+						`expected 0 panel items after removing the prerequisite (cascade-up), got ${afterCascade}`,
+					);
+				return { selector: '.shopSkillPanelItemChild' };
+			});
+
+			await check('chart.shopfilter.readd', async () => {
+				// Leave the shortlist non-empty (search cleared, back to the default course-
+				// filtered pool) so the disables check below has something to work with. Not
+				// asserting an exact count -- see chart.shopfilter.pick above for why the default
+				// list's first item can itself pull in a prerequisite.
+				await page.locator('.skill-picker-search input').fill('');
+				await page
+					.locator('.skill-picker-notice input[type="checkbox"]')
+					.uncheck();
+				await page.locator('.skill-picker-item').first().click();
+				const items = await page.locator('.shopSkillPanelItem').count();
+				if (items < 1)
+					fail(`expected >= 1 panel item after re-adding, got ${items}`);
+				return {
+					selector: '.shopSkillPanelItem',
+					expected: '>= 1',
+					actual: items,
+				};
+			});
+
+			await shoot(page, 'chart');
+
+			await check('chart.shopfilter.close', async () => {
+				await page.locator('.skill-picker-close').click();
+				await page.waitForSelector('.skill-picker-overlay', {
+					state: 'detached',
+				});
+				return { selector: '.skill-picker-overlay' };
 			});
 
 			await check('chart.shopfilter.disables', async () => {
@@ -599,19 +703,21 @@ async function runTheme(browser, url, theme) {
 				};
 			});
 
-			await shoot(page, 'chart');
-
-			await check('chart.shopfilter.remove', async () => {
-				await page.locator('.shopSkillChipRemove').click();
-				const chips = await page.locator('.shopSkillChip').count();
-				if (chips !== 0)
-					fail(`expected 0 chips after removing the only one, got ${chips}`);
+			await check('chart.shopfilter.clear', async () => {
+				await page.locator('.shopSkillFilterBtn', { hasText: 'Clear' }).click();
+				const label = await page
+					.locator('.shopSkillFilterBtn', { hasText: 'Shop Skills' })
+					.textContent();
+				if ((label || '').trim() !== 'Shop Skills')
+					fail(
+						`button reads "${label}" after Clear, expected exactly "Shop Skills"`,
+					);
 				const rarityDisabled = await page
 					.locator('#chartIconFilter .tabsItem[aria-disabled="true"]')
 					.count();
 				if (rarityDisabled !== 0)
-					fail(`rarity tabs still aria-disabled after clearing the shortlist`);
-				return { selector: '.shopSkillChip', expected: 0, actual: chips };
+					fail('rarity tabs still aria-disabled after clearing the shortlist');
+				return { selector: '.shopSkillFilterBtn' };
 			});
 		}
 

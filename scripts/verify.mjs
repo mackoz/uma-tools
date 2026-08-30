@@ -40,6 +40,7 @@ const CSS_FILES = [
 	'umalator/components/OCRModal.css',
 	'umalator/components/ResultsPane.css',
 	'umalator/components/ShopSkillFilter.css',
+	'umalator/components/ShopSkillPanel.css',
 	'umalator/components/UmasTab.css',
 	'umalator/ui-components/Dropdown.css',
 	'umalator/ui-components/Tabs.css',

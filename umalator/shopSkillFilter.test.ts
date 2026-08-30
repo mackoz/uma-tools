@@ -1,17 +1,129 @@
 import assert from 'node:assert/strict';
 import {
+	addShopSkill,
 	applyShopFilter,
+	dependentsOf,
 	isShopFilterActive,
+	type LadderIndex,
 	loadShopSkills,
 	partitionShopSkills,
+	prerequisitesOf,
+	removeShopSkill,
 	shopFilterDirty,
 } from './shopSkillFilter.ts';
 
-// --- isShopFilterActive: enabled AND non-empty ---
+// --- isShopFilterActive: non-empty ---
 {
-	assert.equal(isShopFilterActive(false, ['a']), false);
-	assert.equal(isShopFilterActive(true, []), false);
-	assert.equal(isShopFilterActive(true, ['a']), true);
+	assert.equal(isShopFilterActive([]), false);
+	assert.equal(isShopFilterActive(['a']), true);
+}
+
+// --- prerequisitesOf / dependentsOf / addShopSkill / removeShopSkill: the ladder ---
+// Fixture modelled on real group 20001 (Right-Handed): a three-rung white/gold ladder plus a
+// debuff variant that must never be swept up. 'other' is a same-named-but-different, unrelated
+// ladder (group 'g2') to make sure a group match is what gates everything, not id shape.
+{
+	const LADDER: LadderIndex = {
+		demon: { group: 'g1', rate: 3 }, // Clockwise Demon (gold)
+		circle: { group: 'g1', rate: 2 }, // Right-Handed ◎
+		single: { group: 'g1', rate: 1 }, // Right-Handed ○
+		debuff: { group: 'g1', rate: -1 }, // Right-Handed × -- must never be a prerequisite
+		otherTop: { group: 'g2', rate: 2 },
+		otherBase: { group: 'g2', rate: 1 },
+	};
+	const alwaysEligible = () => true;
+
+	// prerequisitesOf
+	assert.deepEqual(
+		new Set(prerequisitesOf('demon', LADDER)),
+		new Set(['circle', 'single']),
+	);
+	assert.deepEqual(
+		prerequisitesOf('single', LADDER),
+		[],
+		'rate-1 id has no prerequisites',
+	);
+	assert.deepEqual(
+		prerequisitesOf('unindexed', LADDER),
+		[],
+		'unindexed id -> []',
+	);
+	assert.deepEqual(
+		prerequisitesOf('otherTop', LADDER),
+		['otherBase'],
+		"a different group's ladder must not leak in",
+	);
+	assert.ok(
+		!prerequisitesOf('demon', LADDER).includes('debuff'),
+		'the -1 debuff variant must never be treated as a prerequisite',
+	);
+
+	// dependentsOf -- restricted to what's actually in the shortlist
+	assert.deepEqual(
+		dependentsOf('single', ['single', 'circle', 'demon'], LADDER),
+		['circle', 'demon'],
+	);
+	assert.deepEqual(
+		dependentsOf('demon', ['single', 'circle', 'demon'], LADDER),
+		[],
+		'top rung has no dependents',
+	);
+	assert.deepEqual(
+		dependentsOf('single', ['single'], LADDER),
+		[],
+		'dependents restricted to ids actually shortlisted',
+	);
+
+	// addShopSkill -- full-chain add from the top rung
+	assert.deepEqual(
+		addShopSkill([], 'demon', LADDER, alwaysEligible),
+		['single', 'circle', 'demon'],
+		'adding the top rung pulls in the whole chain below it, ascending by rate',
+	);
+	// no-op add at rate 1
+	assert.deepEqual(
+		addShopSkill([], 'single', LADDER, alwaysEligible),
+		['single'],
+		'rate-1 id adds nothing extra',
+	);
+	// already-present prerequisite isn't duplicated
+	assert.deepEqual(addShopSkill(['single'], 'demon', LADDER, alwaysEligible), [
+		'single',
+		'circle',
+		'demon',
+	]);
+	// ineligible prerequisite is skipped, not injected as a dead entry
+	assert.deepEqual(
+		addShopSkill([], 'demon', LADDER, (id) => id !== 'single'),
+		['circle', 'demon'],
+		'an ineligible prerequisite is left out entirely',
+	);
+	// re-adding an id already in the list is a no-op
+	assert.deepEqual(addShopSkill(['single'], 'single', LADDER, alwaysEligible), [
+		'single',
+	]);
+	// unindexed id round-trips untouched
+	assert.deepEqual(addShopSkill([], 'unindexed', LADDER, alwaysEligible), [
+		'unindexed',
+	]);
+
+	// removeShopSkill -- cascade-up removal from the bottom rung
+	assert.deepEqual(
+		removeShopSkill(['single', 'circle', 'demon'], 'single', LADDER),
+		[],
+		'removing the base cascades away everything built on top of it',
+	);
+	// non-cascading removal of a top rung
+	assert.deepEqual(
+		removeShopSkill(['single', 'circle', 'demon'], 'demon', LADDER),
+		['single', 'circle'],
+		'removing the top rung leaves its prerequisites alone',
+	);
+	// unindexed id round-trips untouched
+	assert.deepEqual(
+		removeShopSkill(['unindexed', 'single'], 'unindexed', LADDER),
+		['single'],
+	);
 }
 
 // --- applyShopFilter: intersection, candidate order preserved, unreachable ids dropped ---
