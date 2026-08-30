@@ -30,7 +30,7 @@
 // plain `npm install` on every push, and this is a deliberately-run, native-binding data
 // tool, not part of any built app (same reasoning as the pipeline's undeclared Perl module
 // requirements, DBI/File::Slurper/etc., documented in docs/data-pipeline.md). Install it
-// yourself before running this script: npm i -D better-sqlite3-multiple-ciphers
+// yourself before running this script: npm i --no-save better-sqlite3-multiple-ciphers
 //
 // Usage:
 //   node scripts/decrypt-meta-db.mjs <path-to-encrypted-meta> [output-path]
@@ -82,7 +82,7 @@ async function main() {
 			'better-sqlite3-multiple-ciphers is not installed. This is a deliberately-run ' +
 				"data-pipeline tool, not a package.json dependency (see this file's header " +
 				'comment). Install it first:\n\n' +
-				'  npm i -D better-sqlite3-multiple-ciphers\n',
+				'  npm i --no-save better-sqlite3-multiple-ciphers\n',
 		);
 		process.exit(1);
 	}
