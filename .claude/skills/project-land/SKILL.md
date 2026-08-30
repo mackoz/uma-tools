@@ -108,11 +108,15 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    is not a shortcut — `wq.py complete` (step 3 below) calls `commit_push`, which pushes to
    *whatever branch is currently checked out*; landing straight on `main` if that's what
    happens to be checked out is exactly the violation `cmd_land`'s own code exists to
-   prevent for the normal path. (Since PIPE-19, `commit_push` stages/commits only the
-   specific files `cmd_complete` itself wrote, not the whole tree with `git add -A` — that
-   closes a different failure mode, an unrelated staged/dirty file riding along into the
-   commit, but doesn't help with the wrong-branch risk here; the pre-check above is still
-   the only thing preventing it.)
+   prevent for the normal path. (Since PIPE-19, two separate mechanisms close a different
+   failure mode — content riding into this commit that `wq.py complete` itself didn't
+   write: `commit_push` stages/commits only the specific files `cmd_complete` wrote, not
+   the whole tree with `git add -A`, closing the case of a wholly unrelated file already
+   staged; and `cmd_complete`'s underlying `finish_completion` separately refuses outright
+   if README.md/mkdocs.yml *themselves* already have a staged change at entry, closing the
+   case `commit_push` structurally can't — those two files are legitimately part of what
+   this step writes, so they can never be "foreign" to it. Neither helps with the
+   wrong-branch risk here; the pre-check above is still the only thing preventing that.)
 2. Write the ticket's `## Outcome` narrative — same content bar as Step 2.2 (what was
    implemented, what review found and how it was fixed, what verification ran) — but
    **include the mechanical bullets yourself this time**, inverting Step 2.2's instruction
