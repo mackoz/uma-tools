@@ -72,11 +72,47 @@ A costume's evolved unique-flavor skills are evolved *awakening* skills wearing 
 
 ## What the generators do with this today
 
-`make_skill_meta.pl` performs the §4 join, but only to `COALESCE` a `group_id` for the UI's mutual-exclusivity logic — `card_id`/`rank` are computed and discarded before anything reaches `skill_meta.json`. `card_data`, `card_rarity_data`, and `skill_set` (the §2 join's tables) are read by nothing in this repo's generators today. `skill_upgrade_speciality` (scenario-linked upgrades, has an explicit `base_skill_id` column) is already joined by `make_skill_meta.pl`; `skill_upgrade_succession_skill` (3 rows, inherited-unique renames) is not.
+`make_skill_meta.pl` performs the §4 join, but only to `COALESCE` a `group_id` for the UI's mutual-exclusivity logic — `card_id`/`rank` are computed and discarded before anything reaches `skill_meta.json`. `card_data`, `card_rarity_data`, and `skill_set` (the §2 join's tables) are read by nothing in this repo's generators today. `skill_upgrade_speciality` (scenario-linked upgrades, has an explicit `base_skill_id` column) is already joined by `make_skill_meta.pl`; `skill_upgrade_succession_skill` (3 rows, inherited-unique renames) is not. `make_skill_meta.pl` also emits `skill_data.group_rate` verbatim as `groupRate` (UI-28) — unlike `group_id`, this is read straight off the skill's own row, not through the remap join, since the remap answers "which family" while `group_rate` answers "which rung"; see the dedicated section above.
+
+## Shop skill upgrade ladder (`group_rate`)
+
+Separately from §4's unique-skill evolution (JP-only, costume-specific), general skills have their
+own upgrade ladder — the career shop's white→gold progression — encoded directly on `skill_data`,
+no join required: `skill_data.group_id` groups a skill's whole upgrade family, and
+`skill_data.group_rate` is the rank within it. Verified against both `master_jp.mdb` and
+`master.mdb`:
+
+```
+group 20033 (Corner Adept family)     group 20001 (Right-Handed family)
+ group_rate  2  200331 Professor of Curvature   group_rate  3  200014 Clockwise Demon
+ group_rate  1  200332 Corner Adept ○           group_rate  2  200011 Right-Handed ◎
+ group_rate -1  200333 Corner Adept ×           group_rate  1  200012 Right-Handed ○
+                                                 group_rate -1  200013 Right-Handed ×
+```
+
+`group_rate = -1` is always the debuff/"×" variant (verified: its `icon_id` ends in `4`, the same
+convention `isPurpleSkill` already uses to exclude it from the Skill Chart's candidate pool).
+`group_rate >= 2` occurs **only** at `rarity` 1 or 2 in both databases — zero rows above rarity 2
+— so a plain `rarity <= 2` guard is sufficient to keep character-unique and evolved skills out of
+any code that walks this ladder.
+
+**The `group_id` trap**: §5's `make_skill_meta.pl` `COALESCE`s a *different* `group_id` for
+skills reached through the §4 evolution join — e.g. skill `409061` (an evolved, rarity-6 skill)
+carries a raw `skill_data.group_id` of `40906` but is emitted in `skill_meta.json` with `groupId`
+`"20033"`, the same family as Corner Adept / Professor of Curvature above, purely because of how
+that remap resolves. Every remapped id verified is rarity 6, so the `rarity <= 2` guard above
+also happens to fully exclude every remapped id — but this is a property of the current data, not
+a structural guarantee, so any future consumer of `groupId`+`group_rate` together (as
+`umalator/app.tsx`'s `SKILL_LADDER` does, UI-28) needs the same rarity guard to stay correct, not
+just a bare "is this id shaped like a general skill" check.
+
+`group_rate` exists as a plain column in both `master_jp.mdb` and `master.mdb` independently of
+the JP-only remap-chain tables in §4/§6 — Global has the ladder concept even though it lacks the
+unique-skill evolution mechanic entirely (see below).
 
 ## Global vs JP
 
-Global's `skill_upgrade_description` and `skill_upgrade_condition` tables exist but are **empty**; `skill_upgrade_speciality` and `skill_upgrade_succession_skill` don't exist in the Global schema at all. The unique-skill evolution mechanic described in §4 is JP-only in this data — there is nothing to port for Global today.
+Global's `skill_upgrade_description` and `skill_upgrade_condition` tables exist but are **empty**; `skill_upgrade_speciality` and `skill_upgrade_succession_skill` don't exist in the Global schema at all. The unique-skill evolution mechanic described in §4 is JP-only in this data — there is nothing to port for Global today. The shop skill upgrade ladder above is unaffected by this — it's a plain column on `skill_data`, present and populated in both databases.
 
 ## Open questions (explicitly unverified)
 

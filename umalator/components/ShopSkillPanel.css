@@ -1,0 +1,180 @@
+/* UI-28: the shop-skill picker's side panel. Lives INSIDE components/SkillPicker.tsx's modal, so
+   its chrome deliberately speaks the modal's own --sp-* token layer (SkillPicker.css), not
+   umalator's outer --surface/--border tokens -- chrome belongs to the modal, rarity belongs to
+   the skill (the per-row rarity accent below is the one place --skill-* tokens apply instead).
+   Tokens only, no literal fallbacks -- matches ShopSkillFilter.css's own discipline. */
+
+.shopSkillPanel {
+	width: 280px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	border-left: 1px solid var(--sp-border);
+	background: var(--sp-elevated);
+	overflow: hidden;
+}
+
+/* Mirrors SkillPicker.css's `.skill-picker-body { flex-direction: column }` breakpoint at the
+   same 900px threshold -- kept HERE rather than there deliberately, and verified the hard way:
+   an earlier draft put this override in SkillPicker.css's own media query, right next to the
+   `.skill-picker-body` rule it's meant to pair with. Both `.shopSkillPanel` rules (that one's
+   media-gated override and this file's unconditional base rule above) have equal specificity
+   (a single class each), so which one wins is decided purely by bundle order, not by which one
+   is actually inside @media -- and since ShopSkillPanel.tsx imports after SkillPicker.tsx in
+   umalator/app.tsx, this file's unconditional `width: 280px` bundles LAST and silently beat the
+   media query at every viewport width, confirmed via a real Playwright run at 700px (the panel
+   stayed pinned at 281px instead of going full-width). Keeping the override in the same file as
+   the rule it overrides is what actually guarantees correct cascade order -- don't move it back. */
+@media (max-width: 900px) {
+	.shopSkillPanel {
+		width: auto;
+		flex: 0 0 auto;
+		max-height: 160px;
+		border-left: none;
+		border-top: 1px solid var(--sp-border);
+	}
+}
+
+/* Same idiom as SkillPicker.css's .filter-label -- this panel is a third section label in the
+   same system as "Rarity"/"Strategy"/etc. above the grid, not a new visual language. */
+.shopSkillPanelHeader {
+	flex-shrink: 0;
+	padding: 8px 10px;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--sp-text-faint);
+	border-bottom: 1px solid var(--sp-border);
+}
+
+.shopSkillPanelEmpty {
+	padding: 14px 10px;
+	font-size: 12px;
+	color: var(--sp-text-muted);
+}
+
+.shopSkillPanelList {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 8px 8px 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.shopSkillPanelSection:empty {
+	display: none;
+}
+
+.shopSkillPanelSectionLabel {
+	padding: 0 2px 4px;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--sp-text-faint);
+}
+
+.shopSkillPanelFamily {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.shopSkillPanelFamily + .shopSkillPanelFamily {
+	margin-top: 4px;
+}
+
+/* .shopSkillChip* base rules -- moved here from ShopSkillFilter.css (UI-28): that file's chip
+   strip is gone (the shortlist now only ever renders in this panel), so these have no other
+   consumer. Rarity tint + accent mapping (.skill-white/.skill-gold/.skill-pink/.skill-unique)
+   stays in components/HorseDef.css, shared with .horseSkillPills' equipped-skill pills -- this
+   panel's rows pick it up for free via the `getSkillRarityClass(id)` class already on each row. */
+/* border/text colors below use the modal's --sp-* layer (this panel lives inside SkillPicker's
+   modal now, unlike the old filter-row chip strip) -- radius/font-size stay on umalator's
+   --radius-sm/--font-* tokens since SkillPicker.css itself has no semantic equivalent for those
+   (it predates the token scale and uses raw literals throughout). */
+.shopSkillChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 6px 3px 8px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--sp-border);
+	border-left-width: 3px;
+	font-size: var(--font-xs);
+	line-height: 1.4;
+	max-width: 220px;
+}
+.shopSkillChipDimmed {
+	opacity: 0.5;
+}
+.shopSkillChipDimmed .shopSkillChipName {
+	text-decoration: line-through;
+}
+.shopSkillChipIcon {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	border-radius: 3px;
+}
+.shopSkillChipName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.shopSkillChipRemove {
+	flex-shrink: 0;
+	padding: 0 2px;
+	background: none;
+	border: none;
+	color: var(--sp-text-muted);
+	font-size: var(--font-sm);
+	line-height: 1;
+	cursor: pointer;
+}
+.shopSkillChipRemove:hover {
+	color: var(--sp-error);
+}
+
+/* Panel rows reuse .shopSkillChip's icon/name/remove layout and rarity mapping (shared with
+   .horseSkillPills in components/HorseDef.css) but read as a list, not a wrapping chip cloud --
+   override the chip's inline-flex/max-width with a full-width row. */
+.shopSkillPanelItem.shopSkillChip {
+	display: flex;
+	width: 100%;
+	max-width: none;
+}
+
+/* A prerequisite pulled in automatically (umalator/shopSkillFilter.ts's addShopSkill) renders
+   indented beneath the skill that pulled it in -- a single level regardless of chain depth, since
+   the shop's own ladder never nests more than one "this requires that" relationship deep at a
+   time. Connector kept subtle: a rule, not an arrow, so it doesn't compete with the rarity accent
+   for attention. */
+.shopSkillPanelItemChild {
+	margin-left: 18px;
+	padding-left: 8px;
+	border-left: 2px solid var(--sp-border);
+}
+
+.shopSkillPanelClear {
+	flex-shrink: 0;
+	margin: 4px 8px 8px;
+	padding: 4px 0;
+	background: none;
+	border: none;
+	color: var(--sp-text-muted);
+	font-size: 12px;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.shopSkillPanelClear:hover {
+	color: var(--sp-error);
+}
+.shopSkillPanelClear:focus-visible,
+.shopSkillPanelItem .shopSkillChipRemove:focus-visible {
+	outline: 2px solid var(--sp-primary);
+	outline-offset: 1px;
+}

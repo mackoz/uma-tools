@@ -539,11 +539,12 @@
 	opacity: 0.85;
 }
 
-/* Shared with umalator/components/ShopSkillFilter.css's .shopSkillChip rarity chips (UI-27
-   review) -- a shortlist chip is conceptually the same object as an equipped-skill pill (a skill
-   being considered for the build), so they share the same tint+accent mapping instead of each
-   file defining its own copy. This file also serves apps that don't render .shopSkillChip (e.g.
-   build-planner); the extra selector there is simply inert. */
+/* Shared with umalator/components/ShopSkillPanel.css's .shopSkillChip rarity chips (originally
+   ShopSkillFilter.css, UI-27 review; the chip strip moved into the shop-skill picker's side panel
+   under UI-28, this shared mapping did not) -- a shortlist chip is conceptually the same object
+   as an equipped-skill pill (a skill being considered for the build), so they share the same
+   tint+accent mapping instead of each file defining its own copy. This file also serves apps that
+   don't render .shopSkillChip (e.g. build-planner); the extra selector there is simply inert. */
 .horseSkillPills .skill-white,
 .shopSkillChip.skill-white {
 	background: var(--skill-white-bg, hsl(220 10% 97%));

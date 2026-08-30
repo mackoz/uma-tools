@@ -23,8 +23,9 @@ function C(s: string) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-// Exported for umalator/components/ShopSkillFilter.tsx's chip strip (UI-27) -- otherwise
-// module-private, used only inside this file.
+// Exported for umalator/components/ShopSkillPanel.tsx's shortlist rows (UI-28; originally
+// ShopSkillFilter.tsx's chip strip, UI-27) -- otherwise module-private, used only inside this
+// file.
 export function getSkillName(skillId: string): string {
 	return skillnames[skillId]?.[0] || `Skill ${skillId}`;
 }
@@ -200,6 +201,11 @@ interface SkillPickerModalProps {
 	// shop-skill picker) show its own "show all skills" escape hatch and pool-size copy without
 	// this modal needing to know anything about the chart.
 	notice?: any;
+	// UI-28: rendered as a sibling of .skill-picker-list, to its right, always visible while the
+	// modal is open -- lets a caller (the Skill Chart's shop-skill picker) keep a running view of
+	// what it has selected without this modal knowing anything about the chart. Optional and
+	// backwards-compatible like the three props above; HorseDef's call site passes none of them.
+	sidePanel?: any;
 }
 
 const SORT_LABELS: Record<SortOption, string> = {
@@ -284,6 +290,7 @@ export function SkillPickerModal({
 	onDeselect,
 	searchPlaceholder,
 	notice,
+	sidePanel,
 }: SkillPickerModalProps) {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [sortOption, setSortOption] = useState<SortOption>('rarity');
@@ -453,7 +460,10 @@ export function SkillPickerModal({
 
 	const modal = (
 		<div class="skill-picker-overlay" onClick={onClose}>
-			<div class="skill-picker-modal" onClick={(e) => e.stopPropagation()}>
+			<div
+				class={`skill-picker-modal${sidePanel ? ' has-side-panel' : ''}`}
+				onClick={(e) => e.stopPropagation()}
+			>
 				<div class="skill-picker-header">
 					<div class="skill-picker-search">
 						<Search size={14} class="skill-picker-search-icon" />
@@ -561,50 +571,60 @@ export function SkillPickerModal({
 
 				{notice}
 
-				<div class="skill-picker-list" ref={listRef}>
-					{filteredIds.length === 0 ? (
-						<div class="skill-picker-empty">No skills found</div>
-					) : (
-						filteredIds.map((id, idx) => {
-							const isSelected = selectedSkills.includes(id);
-							// With onDeselect supplied, a selected item stays clickable (to remove it)
-							// instead of being disabled -- UI-27's shop-skill picker needs free
-							// toggling; HorseDef's own picker (no onDeselect) keeps today's
-							// add-only, disabled-when-equipped behavior unchanged.
-							const removable = isSelected && !!onDeselect;
-							return (
-								<button
-									key={id}
-									class={`skill-picker-item ${getSkillRarityClass(id)}${idx === activeIdx ? ' active' : ''}${isSelected ? ' selected' : ''}${removable ? ' removable' : ''}`}
-									type="button"
-									disabled={isSelected && !onDeselect}
-									onMouseDown={(e) => e.preventDefault()}
-									onClick={() => {
-										if (removable) onDeselect?.(id);
-										else if (!isSelected) onSelect(id);
-									}}
-								>
-									<img
-										class="skill-picker-item-icon"
-										src={getSkillIcon(id)}
-										loading="lazy"
-									/>
-									<span class="skill-picker-item-name">{getSkillName(id)}</span>
-									{isSelected &&
-										(removable ? (
-											<span
-												class="skill-picker-item-remove"
-												aria-label="Remove"
-											>
-												×
-											</span>
-										) : (
-											<span class="skill-picker-item-check">✓</span>
-										))}
-								</button>
-							);
-						})
-					)}
+				{/* UI-28: wraps .skill-picker-list so a caller-supplied sidePanel can render as its
+				    sibling. Renders unconditionally (a layout no-op with one child) so there's a
+				    single code path whether or not sidePanel is supplied. listRef stays on
+				    .skill-picker-list itself, so the keyboard-cursor logic above (column count from
+				    its own gridTemplateColumns, children[activeIdx], scrollIntoView) is unaffected. */}
+				<div class="skill-picker-body">
+					<div class="skill-picker-list" ref={listRef}>
+						{filteredIds.length === 0 ? (
+							<div class="skill-picker-empty">No skills found</div>
+						) : (
+							filteredIds.map((id, idx) => {
+								const isSelected = selectedSkills.includes(id);
+								// With onDeselect supplied, a selected item stays clickable (to remove
+								// it) instead of being disabled -- UI-27's shop-skill picker needs
+								// free toggling; HorseDef's own picker (no onDeselect) keeps today's
+								// add-only, disabled-when-equipped behavior unchanged.
+								const removable = isSelected && !!onDeselect;
+								return (
+									<button
+										key={id}
+										class={`skill-picker-item ${getSkillRarityClass(id)}${idx === activeIdx ? ' active' : ''}${isSelected ? ' selected' : ''}${removable ? ' removable' : ''}`}
+										type="button"
+										disabled={isSelected && !onDeselect}
+										onMouseDown={(e) => e.preventDefault()}
+										onClick={() => {
+											if (removable) onDeselect?.(id);
+											else if (!isSelected) onSelect(id);
+										}}
+									>
+										<img
+											class="skill-picker-item-icon"
+											src={getSkillIcon(id)}
+											loading="lazy"
+										/>
+										<span class="skill-picker-item-name">
+											{getSkillName(id)}
+										</span>
+										{isSelected &&
+											(removable ? (
+												<span
+													class="skill-picker-item-remove"
+													aria-label="Remove"
+												>
+													×
+												</span>
+											) : (
+												<span class="skill-picker-item-check">✓</span>
+											))}
+									</button>
+								);
+							})
+						)}
+					</div>
+					{sidePanel}
 				</div>
 			</div>
 		</div>

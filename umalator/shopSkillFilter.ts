@@ -6,10 +6,10 @@
 // chartLadder.ts and statisticalAnalysis.ts. umalator/app.tsx owns all the JSON imports
 // (skill_data.json via getActivateableSkills, etc.) and passes plain values in here.
 
-// Whether the shortlist should actually narrow the candidate pool, vs. being "parked" (kept
-// around, e.g. still shown as chips) without being applied to a run.
-export function isShopFilterActive(enabled: boolean, ids: string[]): boolean {
-	return enabled && ids.length > 0;
+// Whether the shortlist should actually narrow the candidate pool. UI-28 dropped the separate
+// enabled/disabled toggle ("parked" state) -- a non-empty shortlist is now always active.
+export function isShopFilterActive(ids: string[]): boolean {
+	return ids.length > 0;
 }
 
 // Intersects the chart's own candidate pool with the shortlist, preserving the CANDIDATE pool's
@@ -85,8 +85,88 @@ export function loadShopSkills(
 	return result;
 }
 
+// UI-28: the shop shortlist models the career shop's upgrade ladder, not a flat skill set --
+// picking a gold skill (e.g. Professor of Curvature) auto-adds its white prerequisite (Corner
+// Adept o), and removing a prerequisite cascades up to remove everything built on top of it.
+//
+// A skill's rung on its ladder, derived from skill_meta.json's groupId/groupRate joined with
+// skill_data.json's rarity. Built once in umalator/app.tsx (which owns both JSON imports) and
+// passed in here, so this module stays import-free. Only ids with rarity <= 2 and groupRate >= 1
+// belong in this index at all -- see app.tsx's SKILL_LADDER comment for exactly why (in short:
+// make_skill_meta.pl remaps groupId for evolved/rarity-6 skills onto an unrelated white/gold
+// family's group, and the rarity<=2 guard is what keeps those out; group_rate -1 is the debuff/
+// "x" variant and must never be treated as a rung).
+export interface LadderRung {
+	group: string;
+	rate: number;
+}
+export type LadderIndex = { [skillId: string]: LadderRung };
+
+// Every id sharing id's group with a strictly lower rate -- i.e. everything id's ladder requires
+// you to already have. Empty for an unindexed id, a rate-1 id, or a singleton group.
+export function prerequisitesOf(id: string, ladder: LadderIndex): string[] {
+	const rung = ladder[id];
+	if (!rung) return [];
+	const out: string[] = [];
+	for (const other in ladder) {
+		if (other === id) continue;
+		const r = ladder[other];
+		if (r.group === rung.group && r.rate >= 1 && r.rate < rung.rate)
+			out.push(other);
+	}
+	return out;
+}
+
+// The inverse of prerequisitesOf, restricted to ids actually in the shortlist: everything in
+// `ids` that sits above id on the same ladder, i.e. everything that would become invalid if id
+// were removed. Drives the removal cascade.
+export function dependentsOf(
+	id: string,
+	ids: string[],
+	ladder: LadderIndex,
+): string[] {
+	const rung = ladder[id];
+	if (!rung) return [];
+	return ids.filter((other) => {
+		if (other === id) return false;
+		const r = ladder[other];
+		return !!r && r.group === rung.group && r.rate > rung.rate;
+	});
+}
+
+// Adds `id` to the shortlist along with every prerequisite its ladder requires, deduped and
+// insertion-ordered (prerequisites first, then id, matching ascending rate). `isEligible` lets
+// the caller exclude a prerequisite that can't actually be a chart candidate here (unreleased,
+// not in the chart's pool) rather than injecting a dead, unremovable entry -- id itself is always
+// added regardless of isEligible, since the caller only invokes this for an id it already chose
+// to add (e.g. via the picker, which only offers eligible ids in the first place).
+export function addShopSkill(
+	ids: string[],
+	id: string,
+	ladder: LadderIndex,
+	isEligible: (skillId: string) => boolean,
+): string[] {
+	if (ids.includes(id)) return ids;
+	const prereqs = prerequisitesOf(id, ladder)
+		.filter((p) => isEligible(p) && !ids.includes(p))
+		.sort((a, b) => ladder[a].rate - ladder[b].rate);
+	return [...ids, ...prereqs, id];
+}
+
+// Removes `id` from the shortlist along with everything in the shortlist that depends on it
+// (cascade-up: you can't keep Professor of Curvature shortlisted after removing Corner Adept o).
+export function removeShopSkill(
+	ids: string[],
+	id: string,
+	ladder: LadderIndex,
+): string[] {
+	const toRemove = new Set([id, ...dependentsOf(id, ids, ladder)]);
+	return ids.filter((x) => !toRemove.has(x));
+}
+
 // Splits the shortlist into skills the chart can actually evaluate here vs. ones it can't --
-// drives the chip strip's "won't proc here" dimming (umalator/components/ShopSkillFilter.tsx).
+// drives ShopSkillPanel.tsx's "Won't activate here" section (umalator/components/ShopSkillPanel.tsx;
+// originally ShopSkillFilter.tsx's chip strip dimming, UI-27, relocated by UI-28).
 // `procable === null` means the pool hasn't been computed yet (e.g. before the picker has ever
 // been opened for this uma/course) -- everything is provisionally treated as procable rather than
 // flagged as a problem before there's any basis to say so.
