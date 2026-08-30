@@ -71,22 +71,9 @@
 	max-width: 220px;
 }
 
-.shopSkillChip.skill-white {
-	background: var(--skill-white-bg);
-	border-left-color: var(--skill-white-accent);
-}
-.shopSkillChip.skill-gold {
-	background: var(--skill-gold-bg);
-	border-left-color: var(--skill-gold-accent);
-}
-.shopSkillChip.skill-pink {
-	background: var(--skill-pink-bg);
-	border-left-color: var(--skill-pink-accent);
-}
-.shopSkillChip.skill-unique {
-	background: var(--skill-unique-bg);
-	border-left-color: var(--skill-unique-accent);
-}
+/* Rarity tint + accent mapping (.skill-white/.skill-gold/.skill-pink/.skill-unique) lives in
+   components/HorseDef.css now (UI-27 review) -- shared with .horseSkillPills' equipped-skill
+   pills instead of being duplicated here. */
 
 .shopSkillChipDimmed {
 	opacity: 0.5;

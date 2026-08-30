@@ -539,22 +539,31 @@
 	opacity: 0.85;
 }
 
-.horseSkillPills .skill-white {
+/* Shared with umalator/components/ShopSkillFilter.css's .shopSkillChip rarity chips (UI-27
+   review) -- a shortlist chip is conceptually the same object as an equipped-skill pill (a skill
+   being considered for the build), so they share the same tint+accent mapping instead of each
+   file defining its own copy. This file also serves apps that don't render .shopSkillChip (e.g.
+   build-planner); the extra selector there is simply inert. */
+.horseSkillPills .skill-white,
+.shopSkillChip.skill-white {
 	background: var(--skill-white-bg, hsl(220 10% 97%));
 	border-left-color: var(--skill-white-accent, hsl(220 15% 65%));
 }
 
-.horseSkillPills .skill-gold {
+.horseSkillPills .skill-gold,
+.shopSkillChip.skill-gold {
 	background: var(--skill-gold-bg, hsl(44 90% 98%));
 	border-left-color: var(--skill-gold-accent, hsl(43 90% 50%));
 }
 
-.horseSkillPills .skill-pink {
+.horseSkillPills .skill-pink,
+.shopSkillChip.skill-pink {
 	background: var(--skill-pink-bg, hsl(320 60% 98%));
 	border-left-color: var(--skill-pink-accent, hsl(320 70% 60%));
 }
 
-.horseSkillPills .skill-unique {
+.horseSkillPills .skill-unique,
+.shopSkillChip.skill-unique {
 	background: var(--skill-unique-bg, hsl(270 60% 98%));
 	border-left-color: var(--skill-unique-accent, hsl(270 65% 65%));
 }
