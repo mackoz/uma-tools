@@ -52,6 +52,7 @@ import {
 	ExpandedSkillDetails,
 	STRINGS_en as SKILL_STRINGS_en,
 } from '../components/SkillList';
+import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
 import skillmeta from '../skill_meta.json';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
@@ -97,10 +98,18 @@ import type { ChartRunTrace } from './compare';
 import { InfoModal, InfoModalShell } from './components/InfoModal';
 import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
+import { ShopSkillFilter } from './components/ShopSkillFilter';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
+import {
+	applyShopFilter,
+	isShopFilterActive,
+	loadShopSkills,
+	partitionShopSkills,
+	shopFilterDirty,
+} from './shopSkillFilter';
 import { summarizeLengths } from './statisticalAnalysis';
 import {
 	copyHorseToClipboard,
@@ -3123,6 +3132,62 @@ function App(props) {
 		localStorage.setItem('showUnreleasedUmas', String(showUnreleasedUmas));
 	}, [showUnreleasedUmas]);
 
+	// UI-27: the Skill Chart's "Shop skills" shortlist -- narrows the candidate pool to exactly
+	// the skills a career run's shop screen is offering, instead of the whole activateable pool.
+	// A work-scoping knob like chartRarity/activeChartIconTypes above: localStorage-only, kept
+	// out of the umalator-settings share-link blob, and the general/non-purple predicate here
+	// matches the one baseSkillsToTest + doBasinnChart's own purple filter use, so a stale
+	// persisted id that could never be a chart candidate (a character unique, a purple, or one
+	// this build no longer recognizes) doesn't sit in the shortlist as a dead, unremovable entry.
+	const [shopSkillIds, setShopSkillIds] = useState<string[]>(() =>
+		loadShopSkills(
+			localStorage.getItem('chartShopSkills'),
+			// Not `as Record<string, unknown>` -- `Record` is imported from immutable.js in this
+			// file (shadows the TS utility type, used for HorseState); see ui-components/Tabs.tsx
+			// for the same trap on the same identifier.
+			//
+			// Deliberately NOT also checking the inherited-unique-pairing exclusion
+			// computeChartSkillPool applies (see its own chart-inherited-unique-pairing-exclusion
+			// marker) -- that depends on uma1.skills, and uma1's useState isn't declared until below this
+			// point -- pulling it in here would repeat the exact temporal-dead-zone class of bug
+			// already hit once this session for shopFilterActive. It's also moot in practice:
+			// uma1 is always a fresh, skill-less HorseState at the exact moment this initializer
+			// runs (component mount, before any save/load), so that check could never exclude
+			// anything here anyway.
+			(id) =>
+				(skilldata as { [key: string]: unknown })[id] != null &&
+				isGeneralSkill(id) &&
+				!isPurpleSkill(id) &&
+				(showUnreleasedUmas || !unreleasedSkillIds.has(id)),
+		),
+	);
+	useEffect(() => {
+		localStorage.setItem('chartShopSkills', JSON.stringify(shopSkillIds));
+	}, [shopSkillIds]);
+
+	// Lets a shortlist be parked (kept, still shown as chips) without being applied to a run.
+	const [shopSkillFilterOn, setShopSkillFilterOn] = useState<boolean>(
+		() => localStorage.getItem('chartShopSkillsEnabled') === 'true',
+	);
+	useEffect(() => {
+		localStorage.setItem('chartShopSkillsEnabled', String(shopSkillFilterOn));
+	}, [shopSkillFilterOn]);
+
+	const [shopPickerOpen, setShopPickerOpen] = useState(false);
+	const [shopPickerShowAll, setShopPickerShowAll] = useState(false);
+	// null = no shop-filtered run has completed yet; otherwise the exact shortlist that run used.
+	const [lastRunShopSkills, setLastRunShopSkills] = useState<string[] | null>(
+		null,
+	);
+	// The post-filter candidate pool the LAST run was actually dispatched with -- captured once
+	// at dispatch time, not derived from tableData's rows. See shopFilterDirty's own comment in
+	// shopSkillFilter.ts for why comparing against rows is the wrong (and previously considered)
+	// design: a shortlisted skill that can never be a chart candidate never gets a row, which
+	// would read as permanently dirty, and a run halted by Stop would get stuck dirty too.
+	const [lastRunCandidateIds, setLastRunCandidateIds] = useState<Set<string>>(
+		new Set(),
+	);
+
 	function toggleChartIconType(iconType: string) {
 		setActiveChartIconTypes((prev) => {
 			if (prev.has(iconType) && prev.size === 1) return prev;
@@ -3346,6 +3411,72 @@ function App(props) {
 		postEvent('toggleExpand', { expand: !expanded });
 		updateUiState(UiStateMsg.ToggleExpand);
 	}
+
+	// Must be declared after `mode` above -- it was previously declared alongside the other
+	// shop-skill state further up the component body, which referenced `mode` before this
+	// useReducer initializes it (a real temporal-dead-zone bug, not just a tsc nitpick: reachable
+	// on every render, since this function body runs linearly top to bottom).
+	const shopFilterActive =
+		mode == Mode.Chart && isShopFilterActive(shopSkillFilterOn, shopSkillIds);
+
+	// UI-27: the Skill Chart's candidate-pool derivation, shared between doBasinnChart (the actual
+	// run, further down) and chartCandidates below (the shop-skill picker/dirty rule). Only the
+	// Mode.Chart skills derivation (`all` up through the purple/character-unique/unreleased
+	// gates, `procable` narrowed to what can activate on this course/run style) -- NOT the `uma`
+	// variable doBasinnChart separately builds for Mode.UniquesChart (removeUniqueSkills(uma1)),
+	// which stays exactly where it is; with the `mode === Mode.Chart` guard in doBasinnChart
+	// around the shop-filter bookkeeping (setLastRunShopSkills/setLastRunCandidateIds),
+	// Mode.UniquesChart's own run also never touches that state, so it genuinely shares nothing
+	// with the shortlist feature.
+	function computeChartSkillPool(uma: HorseState, courseArg: CourseData) {
+		const all = baseSkillsToTest
+			.filter((id) => {
+				if (!showUnreleasedUmas && unreleasedSkillIds.has(id)) return false;
+				// ANCHOR: chart-inherited-unique-pairing-exclusion
+				return !(
+					(id[0] == '9' && uma.skills.includes('1' + id.slice(1))) ||
+					(id == '92111091' && uma.skills.includes('111091'))
+				);
+			})
+			.filter((id) => !isPurpleSkill(id));
+		const params = racedefToParams(racedef, uma.strategy);
+		const procable = getActivateableSkills(all, uma, courseArg, params);
+		return { all, procable };
+	}
+
+	// The shop-skill candidate pool, computed only when something actually needs it (the picker
+	// is open, or a shortlist is parked) and only in Mode.Chart, where the picker/chip strip
+	// render at all -- otherwise a parked shortlist would keep re-running getActivateableSkills
+	// on every uma1/racedef change while e.g. editing stats in Compare mode. `procableSet` feeds
+	// the dirty rule and the chip strip's "won't proc here" diagnostic; `all`/`procable` feed the
+	// picker's availableSkillIds (default vs. "show all skills") -- computed once here so nothing
+	// downstream rebuilds either array with a fresh identity every render.
+	const chartCandidates = useMemo(() => {
+		if (mode != Mode.Chart) return null;
+		if (!shopPickerOpen && shopSkillIds.length === 0) return null;
+		const { all, procable } = computeChartSkillPool(uma1, course);
+		return { all, procable, procableSet: new Set(procable) };
+	}, [
+		mode,
+		shopPickerOpen,
+		shopSkillIds.length > 0,
+		uma1,
+		courseId,
+		racedef,
+		showUnreleasedUmas,
+	]);
+
+	// The pool actually handed to the shop-skill SkillPickerModal as availableSkillIds -- must be
+	// its own stable memo (not built inline in JSX): that prop feeds both filteredIds' memo deps
+	// and the keyboard-cursor-reset effect's deps inside SkillPicker.tsx, so a fresh array
+	// identity every render would re-filter/re-sort the pool and reset arrow-key navigation
+	// continuously.
+	const shopPickerPool = useMemo(
+		() =>
+			(shopPickerShowAll ? chartCandidates?.all : chartCandidates?.procable) ??
+			[],
+		[shopPickerShowAll, chartCandidates],
+	);
 
 	// --- Skill Chart coordinator state ---
 	// chartRunRef holds every piece of mutable state a chart run needs: which round it's on, the
@@ -4113,6 +4244,10 @@ function App(props) {
 
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
+		postEvent('shopSkillFilter', {
+			count: shopSkillIds.length,
+			enabled: shopFilterActive,
+		});
 		setLastRunChartUma(uma1);
 		setLastRunChartCourseId(courseId);
 		setSimulationError('');
@@ -4124,42 +4259,42 @@ function App(props) {
 		let uma: any;
 		if (mode === Mode.UniquesChart) {
 			const uniqueSkills = getUniqueSkills();
-			skills = getActivateableSkills(uniqueSkills, uma1, course, params);
+			skills = getActivateableSkills(uniqueSkills, uma1, course, params).filter(
+				(id) => !isPurpleSkill(id),
+			);
 			const umaWithoutUniques = removeUniqueSkills(uma1);
 			uma = umaWithoutUniques.toJS();
 		} else {
-			// ANCHOR: chart-inherited-unique-pairing-exclusion
-			skills = getActivateableSkills(
-				baseSkillsToTest.filter((id) => {
-					if (!showUnreleasedUmas && unreleasedSkillIds.has(id)) return false; // keep the Chart's candidate pool in sync with the picker's toggle
-					return !(
-						(
-							(id[0] == '9' && uma1.skills.includes('1' + id.slice(1))) || // reject inherited uniques if we already have the regular version
-							(id == '92111091' && uma1.skills.includes('111091'))
-						) // reject rhein kraft pink inherited unique on her (not covered by the above check since the ID is different)
-					);
-				}),
-				uma1,
-				course,
-				params,
-			);
-
+			// computeChartSkillPool already applies the purple-skill exclusion (folded into its
+			// `all` step, ahead of getActivateableSkills -- order doesn't matter, isPurpleSkill
+			// is independent of activateability) -- unlike the UniquesChart branch above, which
+			// still needs its own explicit filter since it doesn't go through that helper.
+			skills = computeChartSkillPool(uma1, course).procable;
 			uma = uma1.toJS();
 		}
 
-		skills = skills.filter((id) => !isPurpleSkill(id));
+		// Contained to Mode.Chart -- shopFilterActive already implies it, but lastRunShopSkills/
+		// lastRunCandidateIds must NOT be touched for a Mode.UniquesChart run (UI-27 review): they
+		// previously ran unconditionally here, contradicting computeChartSkillPool's doc comment
+		// ("Mode.UniquesChart shares nothing with the shortlist feature") and the work-queue
+		// ticket's "out of scope" claim -- neither was actually true until this guard.
+		if (mode === Mode.Chart) {
+			if (shopFilterActive) {
+				skills = applyShopFilter(skills, shopSkillIds);
+				setLastRunShopSkills(shopSkillIds.slice());
+			} else {
+				if (chartRarity !== 'all') {
+					skills = skills.filter((id) => matchRarity(id, chartRarity));
+				}
 
-		if (mode === Mode.Chart && chartRarity !== 'all') {
-			skills = skills.filter((id) => matchRarity(id, chartRarity));
-		}
-
-		if (
-			mode === Mode.Chart &&
-			activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length
-		) {
-			skills = skills.filter((id) =>
-				matchesAnyIconType(id, activeChartIconTypes),
-			);
+				if (activeChartIconTypes.size < CHART_ICON_TYPE_FILTERS.length) {
+					skills = skills.filter((id) =>
+						matchesAnyIconType(id, activeChartIconTypes),
+					);
+				}
+				setLastRunShopSkills(null);
+			}
+			setLastRunCandidateIds(new Set(skills));
 		}
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
 		setLastRunChartRarity(chartRarity);
@@ -4820,9 +4955,14 @@ function App(props) {
 	// e.g. hovering a chart row -- not just when the filter actually changed. No early return
 	// exists anywhere in this component before this point, so an unconditional hook call here is
 	// safe.
+	// UI-27: Rarity/Type are disabled while the shop-skill shortlist is active (it's the filter
+	// instead), so both hide-sets return empty in that case -- shopFilterActive is included in
+	// both guard clauses AND both dep arrays, so toggling the shortlist actually recomputes these
+	// rather than leaving a stale hide-set in place until some unrelated dep changes.
 	const hiddenByIconFilter = useMemo(() => {
 		if (
 			mode != Mode.Chart ||
+			shopFilterActive ||
 			activeChartIconTypes.size >= CHART_ICON_TYPE_FILTERS.length
 		) {
 			return new Set<string>();
@@ -4832,11 +4972,11 @@ function App(props) {
 				(id) => !matchesAnyIconType(id, activeChartIconTypes),
 			),
 		);
-	}, [mode, tableData, activeChartIconTypes]);
+	}, [mode, tableData, activeChartIconTypes, shopFilterActive]);
 
 	// Same reasoning as hiddenByIconFilter above, for the rarity row instead of the icon-type row.
 	const hiddenByRarityFilter = useMemo(() => {
-		if (mode != Mode.Chart || chartRarity === 'all') {
+		if (mode != Mode.Chart || shopFilterActive || chartRarity === 'all') {
 			return new Set<string>();
 		}
 		return new Set(
@@ -4844,7 +4984,19 @@ function App(props) {
 				(id) => !matchRarity(id, chartRarity),
 			),
 		);
-	}, [mode, tableData, chartRarity]);
+	}, [mode, tableData, chartRarity, shopFilterActive]);
+
+	// The shop-skill shortlist's own row-hiding, mirroring hiddenByRarityFilter above: narrowing
+	// (removing a chip, or turning the filter on) hides non-matching rows immediately with no
+	// re-run; the corresponding dirty case (adding a new, unevaluated skill; turning it off) is
+	// handled separately below.
+	const hiddenByShopFilter = useMemo(() => {
+		if (mode != Mode.Chart || !shopFilterActive) {
+			return new Set<string>();
+		}
+		const allow = new Set(shopSkillIds);
+		return new Set(Array.from(tableData.keys()).filter((id) => !allow.has(id)));
+	}, [mode, tableData, shopSkillIds, shopFilterActive]);
 
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
@@ -4881,11 +5033,26 @@ function App(props) {
 			mode == Mode.Chart &&
 			chartRarity !== lastRunChartRarity &&
 			lastRunChartRarity !== 'all';
+		// Gated on mode == Mode.Chart explicitly (not just via shopFilterActive, which is only
+		// true in that branch): shopFilterDirty's inactive-branch return (lastRunShopSkills !==
+		// null) has no mode awareness of its own, and a Chart-mode run that applied the shortlist
+		// followed by switching to the Uniques Chart tab (without a UniquesChart run yet) must
+		// not read as dirty there just because of state left over from the other tab.
+		const shopDirty =
+			mode == Mode.Chart &&
+			shopFilterDirty(
+				shopFilterActive,
+				shopSkillIds,
+				chartCandidates?.procableSet ?? null,
+				lastRunCandidateIds,
+				lastRunShopSkills,
+			);
 		const dirty =
 			!uma1.equals(lastRunChartUma) ||
 			courseId !== lastRunChartCourseId ||
 			iconTypesDirty ||
-			rarityDirty;
+			rarityDirty ||
+			shopDirty;
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
@@ -4899,6 +5066,7 @@ function App(props) {
 											...uma1.skills,
 											...hiddenByIconFilter,
 											...hiddenByRarityFilter,
+											...hiddenByShopFilter,
 										])
 									: new Set()
 							}
@@ -5689,6 +5857,18 @@ function App(props) {
 							)}
 							{mode == Mode.Chart && (
 								<div id="chartIconFilter">
+									<ShopSkillFilter
+										enabled={shopSkillFilterOn}
+										onToggleEnabled={setShopSkillFilterOn}
+										skillIds={shopSkillIds}
+										onRemove={(id) =>
+											setShopSkillIds((ids) => ids.filter((x) => x !== id))
+										}
+										onClear={() => setShopSkillIds([])}
+										onEdit={() => setShopPickerOpen(true)}
+										procable={chartCandidates?.procableSet ?? null}
+										disabled={isSimulationRunning}
+									/>
 									<div class="chartFilterRow">
 										<span class="chartFilterLabel">Rarity:</span>
 										<Tabs
@@ -5700,7 +5880,7 @@ function App(props) {
 												label: f.label,
 												tooltip: f.tooltip,
 												style: f.style,
-												disabled: isSimulationRunning,
+												disabled: isSimulationRunning || shopFilterActive,
 											}))}
 										/>
 									</div>
@@ -5715,13 +5895,51 @@ function App(props) {
 													backgroundImage: `url(/uma-tools/icons/${iconType}1.png)`,
 												}}
 												onClick={() => toggleChartIconType(iconType)}
-												disabled={isSimulationRunning}
+												disabled={isSimulationRunning || shopFilterActive}
 											/>
 										))}
 										<span class="chartHoverHint">
 											Hover a column heading for what it means
 										</span>
 									</div>
+									{shopFilterActive && (
+										<div class="chartFilterRow">
+											<span class="chartFilterNote">
+												Shop skills is active — Rarity and Type filters don't
+												apply
+											</span>
+										</div>
+									)}
+									<SkillPickerModal
+										isOpen={shopPickerOpen}
+										onClose={() => {
+											setShopPickerOpen(false);
+											setShopPickerShowAll(false);
+										}}
+										onSelect={(id) => setShopSkillIds((ids) => [...ids, id])}
+										onDeselect={(id) =>
+											setShopSkillIds((ids) => ids.filter((x) => x !== id))
+										}
+										selectedSkills={shopSkillIds}
+										availableSkillIds={shopPickerPool}
+										searchPlaceholder="Search skills the shop is offering…"
+										notice={
+											<label class="skill-picker-notice">
+												<input
+													type="checkbox"
+													checked={shopPickerShowAll}
+													onInput={(e) =>
+														setShopPickerShowAll(
+															(e.target as HTMLInputElement).checked,
+														)
+													}
+												/>{' '}
+												Show all skills ({chartCandidates?.procable.length ?? 0}{' '}
+												of {chartCandidates?.all.length ?? 0} can activate on
+												this course)
+											</label>
+										}
+									/>
 								</div>
 							)}
 							{(mode == Mode.Chart || mode == Mode.UniquesChart) &&
