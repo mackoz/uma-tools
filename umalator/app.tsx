@@ -99,15 +99,20 @@ import { InfoModal, InfoModalShell } from './components/InfoModal';
 import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
 import { ShopSkillFilter } from './components/ShopSkillFilter';
+import { ShopSkillPanel } from './components/ShopSkillPanel';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
 import {
+	addShopSkill,
 	applyShopFilter,
 	isShopFilterActive,
+	type LadderIndex,
 	loadShopSkills,
 	partitionShopSkills,
+	pruneUnsatisfiedPrerequisites,
+	removeShopSkill,
 	shopFilterDirty,
 } from './shopSkillFilter';
 import { summarizeLengths } from './statisticalAnalysis';
@@ -2424,6 +2429,41 @@ const baseSkillsToTest = Object.keys(skilldata).filter((id) =>
 	isGeneralSkill(id),
 );
 
+// UI-28: the shop-skill shortlist's upgrade-ladder index (umalator/shopSkillFilter.ts's
+// LadderIndex), joining skill_meta.json's groupId/groupRate with skill_data.json's rarity --
+// neither file alone carries both. Only ids with rarity <= 2 and groupRate >= 1 belong here.
+// That guard is load-bearing, not decoration, verified against master_jp.mdb/master.mdb:
+//  - group_rate is only ever >= 2 at rarity 1 or 2 (0 rows above rarity 2 in either mdb), so no
+//    character-unique or evolved skill can ever sit above something and trigger an auto-add.
+//  - make_skill_meta.pl deliberately REMAPS groupId for rarity-6 (evolved) skills through
+//    skill_upgrade_speciality/skill_upgrade_description (e.g. 409061 "Archline Top Scholar" has
+//    raw group_id 40906 but is emitted under groupId 20033, the same family as Corner Adept /
+//    Professor of Curvature) -- every remapped id is rarity 6, so this guard fully excludes them;
+//    without it, a remapped evolved skill at groupRate 1 would read as a false prerequisite.
+//  - the guard also indexes ~267 inherited-unique (9xxxxx) ids at rate 2 -- every one of those is
+//    a singleton group (verified), so prerequisitesOf is empty for all of them; "rarity <= 2"
+//    isn't literally "white/gold only", it's just what the data happens to contain at that rarity.
+//  - group_rate -1 is the debuff/"x" variant (already excluded from the chart pool upstream by
+//    isPurpleSkill) -- excluded again here by the `>= 1` check, belt-and-braces.
+// Don't "simplify" this to a bare rarity check or drop the guard -- both traps above are real.
+const SKILL_LADDER: LadderIndex = (() => {
+	// Cast like the shopSkillIds initializer below does for the same skilldata/skillmeta pair --
+	// both are big object-literal-shaped JSON imports tsc infers exact per-key types for, which a
+	// plain `string` id (from Object.keys) can't index without this.
+	const meta = skillmeta as {
+		[key: string]: { groupId: string; groupRate: number };
+	};
+	const data = skilldata as { [key: string]: { rarity: number } };
+	const ladder: LadderIndex = {};
+	for (const id of Object.keys(meta)) {
+		const rarity = data[id]?.rarity;
+		const rate = meta[id].groupRate;
+		if (rarity == null || rarity > 2 || rate == null || rate < 1) continue;
+		ladder[id] = { group: meta[id].groupId, rate };
+	}
+	return ladder;
+})();
+
 // See the showUnreleasedUmas toggle above -- both come from unreleased.json (empty on the JP
 // build, since this only ever applies to the Global roster lag).
 const unreleasedOutfitIds = new Set<string>(unreleased.outfits);
@@ -3139,39 +3179,49 @@ function App(props) {
 	// matches the one baseSkillsToTest + doBasinnChart's own purple filter use, so a stale
 	// persisted id that could never be a chart candidate (a character unique, a purple, or one
 	// this build no longer recognizes) doesn't sit in the shortlist as a dead, unremovable entry.
-	const [shopSkillIds, setShopSkillIds] = useState<string[]>(() =>
-		loadShopSkills(
+	const [shopSkillIds, setShopSkillIds] = useState<string[]>(() => {
+		// Not `as Record<string, unknown>` -- `Record` is imported from immutable.js in this file
+		// (shadows the TS utility type, used for HorseState); see ui-components/Tabs.tsx for the
+		// same trap on the same identifier.
+		//
+		// Deliberately NOT also checking the inherited-unique-pairing exclusion
+		// computeChartSkillPool applies (see its own chart-inherited-unique-pairing-exclusion
+		// marker) -- that depends on uma1.skills, and uma1's useState isn't declared until below
+		// this point -- pulling it in here would repeat the exact temporal-dead-zone class of bug
+		// already hit once this session for shopFilterActive. It's also moot in practice: uma1 is
+		// always a fresh, skill-less HorseState at the exact moment this initializer runs
+		// (component mount, before any save/load), so that check could never exclude anything
+		// here anyway.
+		const isKnownShopSkill = (id: string) =>
+			(skilldata as { [key: string]: unknown })[id] != null &&
+			isGeneralSkill(id) &&
+			!isPurpleSkill(id) &&
+			(showUnreleasedUmas || !unreleasedSkillIds.has(id));
+		const loaded = loadShopSkills(
 			localStorage.getItem('chartShopSkills'),
-			// Not `as Record<string, unknown>` -- `Record` is imported from immutable.js in this
-			// file (shadows the TS utility type, used for HorseState); see ui-components/Tabs.tsx
-			// for the same trap on the same identifier.
-			//
-			// Deliberately NOT also checking the inherited-unique-pairing exclusion
-			// computeChartSkillPool applies (see its own chart-inherited-unique-pairing-exclusion
-			// marker) -- that depends on uma1.skills, and uma1's useState isn't declared until below this
-			// point -- pulling it in here would repeat the exact temporal-dead-zone class of bug
-			// already hit once this session for shopFilterActive. It's also moot in practice:
-			// uma1 is always a fresh, skill-less HorseState at the exact moment this initializer
-			// runs (component mount, before any save/load), so that check could never exclude
-			// anything here anyway.
-			(id) =>
-				(skilldata as { [key: string]: unknown })[id] != null &&
-				isGeneralSkill(id) &&
-				!isPurpleSkill(id) &&
-				(showUnreleasedUmas || !unreleasedSkillIds.has(id)),
-		),
-	);
+			isKnownShopSkill,
+		);
+		// UI-28: ladder-close on hydrate. A shortlist persisted by UI-27 (or an older UI-28
+		// session, e.g. one saved right before a prerequisite got excluded for some other reason)
+		// may not satisfy the new "a shortlisted skill's prerequisites are always present too"
+		// invariant -- fold every loaded id through addShopSkill so the very first render already
+		// reflects the ladder rule, rather than only enforcing it from the next add/remove on.
+		// SKILL_LADDER is module-level, initialized well before this component exists -- no TDZ.
+		let closed: string[] = [];
+		for (const id of loaded) {
+			closed = addShopSkill(closed, id, SKILL_LADDER, isKnownShopSkill);
+		}
+		// addShopSkill always keeps the id it's asked to add even if isEligible rejects one of
+		// its prerequisites (correct for an interactive pick -- see its own comment -- but not
+		// safe to lean on here: isKnownShopSkill is a stricter bar than "can be a chart
+		// candidate," e.g. a persisted higher rung surviving loadShopSkills' filter while its
+		// lower rung was dropped as unreleased). Prune anything left without its full
+		// prerequisite chain so hydration can't produce a gold with no white base.
+		return pruneUnsatisfiedPrerequisites(closed, SKILL_LADDER);
+	});
 	useEffect(() => {
 		localStorage.setItem('chartShopSkills', JSON.stringify(shopSkillIds));
 	}, [shopSkillIds]);
-
-	// Lets a shortlist be parked (kept, still shown as chips) without being applied to a run.
-	const [shopSkillFilterOn, setShopSkillFilterOn] = useState<boolean>(
-		() => localStorage.getItem('chartShopSkillsEnabled') === 'true',
-	);
-	useEffect(() => {
-		localStorage.setItem('chartShopSkillsEnabled', String(shopSkillFilterOn));
-	}, [shopSkillFilterOn]);
 
 	const [shopPickerOpen, setShopPickerOpen] = useState(false);
 	const [shopPickerShowAll, setShopPickerShowAll] = useState(false);
@@ -3417,7 +3467,7 @@ function App(props) {
 	// useReducer initializes it (a real temporal-dead-zone bug, not just a tsc nitpick: reachable
 	// on every render, since this function body runs linearly top to bottom).
 	const shopFilterActive =
-		mode == Mode.Chart && isShopFilterActive(shopSkillFilterOn, shopSkillIds);
+		mode == Mode.Chart && isShopFilterActive(shopSkillIds);
 
 	// UI-27: the Skill Chart's candidate-pool derivation, shared between doBasinnChart (the actual
 	// run, further down) and chartCandidates below (the shop-skill picker/dirty rule). Only the
@@ -3445,17 +3495,24 @@ function App(props) {
 	}
 
 	// The shop-skill candidate pool, computed only when something actually needs it (the picker
-	// is open, or a shortlist is parked) and only in Mode.Chart, where the picker/chip strip
-	// render at all -- otherwise a parked shortlist would keep re-running getActivateableSkills
-	// on every uma1/racedef change while e.g. editing stats in Compare mode. `procableSet` feeds
-	// the dirty rule and the chip strip's "won't proc here" diagnostic; `all`/`procable` feed the
-	// picker's availableSkillIds (default vs. "show all skills") -- computed once here so nothing
-	// downstream rebuilds either array with a fresh identity every render.
+	// is open, or a shortlist is non-empty) and only in Mode.Chart, where the picker/shortlist
+	// panel render at all -- otherwise a non-empty shortlist would keep re-running
+	// getActivateableSkills on every uma1/racedef change while e.g. editing stats in Compare mode.
+	// `procableSet` feeds the dirty rule and ShopSkillPanel's "won't activate here" diagnostic;
+	// `allSet` feeds addShopSkill's eligibility check (UI-28, a per-skill membership test, kept as
+	// a Set rather than scanning `all`); `all`/`procable` feed the picker's availableSkillIds
+	// (default vs. "show all skills") -- computed once here so nothing downstream rebuilds either
+	// array with a fresh identity every render.
 	const chartCandidates = useMemo(() => {
 		if (mode != Mode.Chart) return null;
 		if (!shopPickerOpen && shopSkillIds.length === 0) return null;
 		const { all, procable } = computeChartSkillPool(uma1, course);
-		return { all, procable, procableSet: new Set(procable) };
+		return {
+			all,
+			procable,
+			procableSet: new Set(procable),
+			allSet: new Set(all),
+		};
 	}, [
 		mode,
 		shopPickerOpen,
@@ -3476,6 +3533,39 @@ function App(props) {
 			(shopPickerShowAll ? chartCandidates?.all : chartCandidates?.procable) ??
 			[],
 		[shopPickerShowAll, chartCandidates],
+	);
+
+	// UI-28: ladder-aware shortlist mutators -- both the picker's onSelect/onDeselect and the new
+	// side panel's onRemove route through these, so adding-with-prerequisites and cascade-removal
+	// behave identically no matter which UI surface triggered it. Declared after chartCandidates
+	// (not alongside shopSkillIds' own useState further up) on purpose: app.tsx has a documented
+	// history of temporal-dead-zone bugs from referencing later-declared state too early (see
+	// shopFilterActive's own comment above) -- chartCandidates.allSet must exist before this reads
+	// it. The `?? true` fallback is unreachable in practice (the picker/panel only render in
+	// Mode.Chart, where chartCandidates is non-null whenever shopPickerOpen is true) and fails
+	// open rather than silently dropping a pick if that assumption is ever wrong.
+	function addShop(id: string) {
+		setShopSkillIds((ids) =>
+			addShopSkill(
+				ids,
+				id,
+				SKILL_LADDER,
+				(x) => chartCandidates?.allSet.has(x) ?? true,
+			),
+		);
+	}
+	function removeShop(id: string) {
+		setShopSkillIds((ids) => removeShopSkill(ids, id, SKILL_LADDER));
+	}
+
+	// UI-28: computed once and shared by both consumers below -- ShopSkillFilter's filter-row
+	// summary span just needs wontProc.length, ShopSkillPanel needs the full split for its two
+	// sections; passing the same object down avoids partitioning the identical
+	// shopSkillIds/procableSet pair twice per render.
+	const shopSkillPartition = useMemo(
+		() =>
+			partitionShopSkills(shopSkillIds, chartCandidates?.procableSet ?? null),
+		[shopSkillIds, chartCandidates],
 	);
 
 	// --- Skill Chart coordinator state ---
@@ -5858,15 +5948,10 @@ function App(props) {
 							{mode == Mode.Chart && (
 								<div id="chartIconFilter">
 									<ShopSkillFilter
-										enabled={shopSkillFilterOn}
-										onToggleEnabled={setShopSkillFilterOn}
 										skillIds={shopSkillIds}
-										onRemove={(id) =>
-											setShopSkillIds((ids) => ids.filter((x) => x !== id))
-										}
+										onOpen={() => setShopPickerOpen(true)}
 										onClear={() => setShopSkillIds([])}
-										onEdit={() => setShopPickerOpen(true)}
-										procable={chartCandidates?.procableSet ?? null}
+										wontProcCount={shopSkillPartition.wontProc.length}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
@@ -5916,13 +6001,20 @@ function App(props) {
 											setShopPickerOpen(false);
 											setShopPickerShowAll(false);
 										}}
-										onSelect={(id) => setShopSkillIds((ids) => [...ids, id])}
-										onDeselect={(id) =>
-											setShopSkillIds((ids) => ids.filter((x) => x !== id))
-										}
+										onSelect={addShop}
+										onDeselect={removeShop}
 										selectedSkills={shopSkillIds}
 										availableSkillIds={shopPickerPool}
 										searchPlaceholder="Search skills the shop is offering…"
+										sidePanel={
+											<ShopSkillPanel
+												skillIds={shopSkillIds}
+												onRemove={removeShop}
+												onClear={() => setShopSkillIds([])}
+												partition={shopSkillPartition}
+												ladder={SKILL_LADDER}
+											/>
+										}
 										notice={
 											<label class="skill-picker-notice">
 												<input
