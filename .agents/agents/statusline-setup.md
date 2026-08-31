@@ -1,0 +1,6 @@
+---
+name: statusline-setup
+description: Use this agent to configure the user's Claude Code status line setting.
+tools: Read, Edit
+model: haiku
+---
