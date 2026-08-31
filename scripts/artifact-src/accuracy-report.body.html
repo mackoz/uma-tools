@@ -273,6 +273,16 @@
 	.chart .traj-sim { stroke: var(--accent); stroke-dasharray: 5 3; }
 	.chart .guide { stroke: var(--brass); stroke-width: 1; }
 	.chart .hover-overlay { fill: transparent; cursor: crosshair; }
+	.chart .strip-dot { fill: var(--muted); opacity: 0.35; }
+	.chart .strip-actual { fill: var(--accent); stroke: var(--surface); stroke-width: 1; }
+	.chart .strip-divider { stroke: var(--border); stroke-width: 1; }
+	.chart .strip-hit { fill: transparent; }
+	.chart .strip-zero-label { text-anchor: end; fill: var(--muted); font-size: 9px; }
+	.chart .identity-line { stroke: var(--brass); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.75; }
+	.chart .scatter-dot { fill: var(--accent); opacity: 0.85; }
+	.scatter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+	.scatter-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: var(--shadow); }
+	.scatter-cell-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
 	.legend { display: flex; gap: 18px; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
 	.legend span { display: inline-flex; align-items: center; gap: 6px; }
 	.swatch { width: 14px; height: 3px; display: inline-block; }
@@ -344,7 +354,8 @@
 						same simulated race over and over with nothing but different random luck, the
 						result bounced around by almost as much on its own &mdash; see the table below. So a
 						good chunk of that gap isn't the simulator being "wrong," it's just normal
-						race-to-race randomness, same as in the real game.</p>
+						race-to-race randomness, same as in the real game. That's true on average across
+						many races &mdash; race by race it's more one-sided, see the next section.</p>
 					<table style="margin-top:14px">
 						<thead><tr><th>Horse</th><th class="num">Sim's own luck swing</th><th class="num">Real races' luck swing</th><th class="num">Match?</th></tr></thead>
 						<tbody id="ha-build-table"></tbody>
@@ -383,6 +394,41 @@
 	<section class="panel">
 		<div class="post">2</div>
 		<div class="panel-body">
+			<h2>What if we reran one race a hundred times?</h2>
+			<div class="scope-line" id="reseed-scope">&mdash;</div>
+			<div class="eli5">
+				<span class="eli5-label">The simple version</span>
+				<p>Each vertical strip below is one real race. Inside it, 100 tiny dots are the
+					simulator running that <em>exact same race</em> 100 times with nothing but different
+					random luck &mdash; that's the simulator's own natural spread. The bigger dot is what
+					actually happened, and the horizontal line across the middle is "matched reality
+					exactly."</p>
+				<p>If the simulator were only ever off by luck, that bigger dot would land inside the
+					cloud of small dots about as often as not. It doesn't &mdash; see the number below.
+					That tells us the gap in most of these races isn't just noise; it leans the same
+					direction race after race.</p>
+			</div>
+			<div class="card" id="reseed-chart-host"></div>
+			<div class="grid-2" style="margin-top:16px">
+				<div class="card">
+					<div class="stat-label">Reality inside the sim's own 100-try spread</div>
+					<div class="stat-value" id="reseed-full-coverage" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub">of races &mdash; the rest, all 100 reruns landed on the same side of
+						what really happened.</div>
+				</div>
+				<div class="card">
+					<div class="stat-label">Reality inside the middle 90% of tries</div>
+					<div class="stat-value" id="reseed-central-coverage" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub">a stricter version of the same check &mdash; excludes the most
+						extreme-luck 5% on each side.</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">3</div>
+		<div class="panel-body">
 			<h2>How far off, typically?</h2>
 			<div class="scope-line" id="dist-scope">&mdash;</div>
 			<div class="eli5">
@@ -414,7 +460,19 @@
 	</section>
 
 	<section class="panel">
-		<div class="post">3</div>
+		<div class="post">4</div>
+		<div class="panel-body">
+			<h2>Does the sim track each horse's good and bad days?</h2>
+			<div class="scope-line">Our 4 repeat horses, sim vs. real finish time for each of their races.
+				A point sitting right on the dashed line means the simulator called that race almost
+				exactly right.</div>
+			<div class="card" id="scatter-chart-host"></div>
+			<p class="stat-sub" id="scatter-note" style="margin-top:10px">&mdash;</p>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">5</div>
 		<div class="panel-body">
 			<h2>Watch a race, side by side</h2>
 			<div class="scope-line">One real race per repeat horse &mdash; picked as a typical example,
@@ -427,7 +485,7 @@
 	</section>
 
 	<section class="panel">
-		<div class="post">4</div>
+		<div class="post">6</div>
 		<div class="panel-body">
 			<h2>What throws the simulator off?</h2>
 			<div class="scope-line" id="cov-scope">&mdash;</div>
@@ -463,13 +521,14 @@
 	</section>
 
 	<section class="panel">
-		<div class="post">5</div>
+		<div class="post">7</div>
 		<div class="panel-body">
 			<h2>When the last spurt started late</h2>
 			<div class="scope-line" id="m4-scope">&mdash;</div>
 			<p>In almost every race, a horse's Last Spurt kicks in right on schedule, around the
 				two-thirds mark. These races were the exceptions &mdash; the real horse held back
 				longer than usual. Here's how the simulator handled each one:</p>
+			<p class="stat-sub" id="spurt-agreement" style="margin-bottom:10px">&mdash;</p>
 			<div class="card table-scroll">
 				<table>
 					<thead><tr><th>Race</th><th>Horse</th><th class="num">Real spurt started at</th><th>What the sim did</th><th class="num">HP&nbsp;error</th></tr></thead>
@@ -480,7 +539,7 @@
 	</section>
 
 	<section class="panel">
-		<div class="post">6</div>
+		<div class="post">8</div>
 		<div class="panel-body">
 			<h2>Does it get stamina right?</h2>
 			<div class="grid-2">
@@ -499,12 +558,20 @@
 	</section>
 
 	<section class="panel">
-		<div class="post">7</div>
+		<div class="post">9</div>
 		<div class="panel-body">
-			<h2>How often do horses get Rushed?</h2>
-			<div class="card">
-				<div class="stat-value" id="m5-rate" style="font-size:1.4rem">&mdash;</div>
-				<p class="stat-sub" id="m5-note" style="margin-top:10px; max-width: 60ch;"></p>
+			<h2>A couple more facts about these real races</h2>
+			<div class="grid-2">
+				<div class="card">
+					<div class="stat-label">How often do horses get Rushed?</div>
+					<div class="stat-value" id="m5-rate" style="font-size:1.4rem">&mdash;</div>
+					<p class="stat-sub" id="m5-note" style="margin-top:10px; max-width: 60ch;"></p>
+				</div>
+				<div class="card">
+					<div class="stat-label">How many of a build's skills actually fire?</div>
+					<div class="stat-value" id="skr-mean" style="font-size:1.4rem">&mdash;</div>
+					<p class="stat-sub" id="skr-note" style="margin-top:10px; max-width: 60ch;"></p>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -574,6 +641,22 @@
 		{ label: 'own', data: d.histograms.finishPosErrBasinnOwn, n: d.n.own },
 	], {});
 
+	var rs = d.reseedSpread;
+	if (rs) {
+		on('reseed-scope', 'Every one of our 4 repeat horses\' 15 races, re-simulated 100 times each with a different random seed (' + rs.n + ' races total).');
+		on('reseed-full-coverage', rs.fullRangeCoverage + ' / ' + rs.n);
+		on('reseed-central-coverage', rs.centralBandCoverage + ' / ' + rs.n);
+		AccuracyCharts.renderReseedStrip(document.getElementById('reseed-chart-host'), rs, {});
+	}
+
+	var fts = d.finishTimeScatter;
+	var rhoBits = [];
+	if (fts) {
+		AccuracyCharts.renderFinishTimeScatterGrid(document.getElementById('scatter-chart-host'), fts, {});
+		rhoBits = Object.keys(a.rhoByBuild).sort().map((build) => build + ' (' + fmt3(a.rhoByBuild[build][0]) + ')');
+		on('scatter-note', 'How tightly the points hug that line, in one number per horse: ' + rhoBits.join(', ') + '. Closer to +1 means the sim is tracking that horse\'s good and bad races; closer to 0 means it isn\'t.');
+	}
+
 	AccuracyCharts.renderTrajectoryOverlay(document.getElementById('traj-host'), d.trajectoryExamples, {});
 
 	var fo = d.finishOrderAgreement;
@@ -598,6 +681,11 @@
 
 	var m4 = d.measurement4;
 	on('m4-scope', m4.n + ' races out of ' + d.n.all + ' where the real horse\'s Last Spurt kicked in noticeably later than the usual ~' + m4.floorM.toFixed(0) + 'm mark.');
+	var spurt = d.spurtAgreement;
+	if (spurt) {
+		on('spurt-agreement', 'Overall, the simulator\'s full-spurt call matched the replay\'s own in ' + pct(spurt.agreementRate) +
+			' of races (sim called ' + spurt.simFullCount + '/' + spurt.n + ' races a full spurt, reality was ' + spurt.realFullCount + '/' + spurt.n + ').');
+	}
 	var m4Table = document.getElementById('m4-table');
 	m4.cases.forEach((c) => {
 		var tr = document.createElement('tr');
@@ -618,6 +706,12 @@
 	var m5 = d.measurement5;
 	on('m5-rate', m5.rushedCount + ' out of ' + m5.n + ' horses (' + pct(m5.observedRate) + ')');
 	on('m5-note', 'That\'s how often a real horse got Rushed (掛かり) in these races. We also checked this against the simulator\'s own math for how often Rushed should happen, but with so few Rushed horses in this data set, we can\'t say with confidence whether the simulator over- or under-predicts it.');
+
+	var skr = d.skillActivationRate;
+	if (skr) {
+		on('skr-mean', pct(skr.meanRate) + ', on average');
+		on('skr-note', 'Across ' + skr.n + ' horses, anywhere from ' + pct(skr.minRate) + ' to ' + pct(skr.maxRate) + ' of a build\'s equipped skills actually triggered. This is a fact about the real races, not the simulator — it\'s the ceiling on how many skills there ever were to compare against.');
+	}
 
 	on('manifest-line', 'We scanned ' + d.manifest.filesScanned + ' saved races (' + d.manifest.runsAttempted + ' horses total). ' +
 		d.manifest.runsBuildFailed.length + ' horses couldn\'t be loaded into the simulator due to an unrelated, already-known gap in skill support, and ' +
