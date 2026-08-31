@@ -318,9 +318,10 @@
 	<header class="masthead">
 		<div class="eyebrow">Sim vs. Reality</div>
 		<h1>How close does the simulator get to a real race?</h1>
-		<p class="dek">We took 20 real Champions Meeting races, fed the same horses and skills into
-			the simulator, and compared what actually happened to what the simulator predicted.
-			Here's what we found &mdash; in plain terms first, numbers if you want them.</p>
+		<p class="dek">We took <span id="dek-race-count">real Champions Meeting races</span>, fed the same
+			horses and skills into the simulator, and compared what actually happened to what the
+			simulator predicted. Here's what we found &mdash; in plain terms first, numbers if you
+			want them.</p>
 		<div class="scope-strip">
 			<span class="course-id" id="course-id">&mdash;</span>
 			<span id="corpus-desc">&mdash;</span>
@@ -372,10 +373,10 @@
 					<div class="stat-value" id="hb-mean">&mdash;</div>
 					<div class="stat-sub" id="hb-ci">&mdash;</div>
 					<p class="stat-sub" style="margin-top:10px">This is the number that actually matters for
-						umalator's skill comparisons. Our best guess landed close to zero, but with only 20
-						races to work with, the honest range is wide enough that we can't rule out a real
-						gap. We compared it against what a real skill actually looks like in-game &mdash;
-						see below.</p>
+						umalator's skill comparisons. Our best guess landed close to zero, but with only
+						<span id="hb-race-count">so many</span> races to work with, the honest range is wide
+						enough that we can't rule out a real gap. We compared it against what a real skill
+						actually looks like in-game &mdash; see below.</p>
 					<div class="citation" id="hb-citation">&mdash;</div>
 				</div>
 			</div>
@@ -408,7 +409,7 @@
 					That tells us the gap in most of these races isn't just noise; it leans the same
 					direction race after race.</p>
 			</div>
-			<div class="card" id="reseed-chart-host"></div>
+			<div class="card table-scroll" id="reseed-chart-host"></div>
 			<div class="grid-2" style="margin-top:16px">
 				<div class="card">
 					<div class="stat-label">Reality inside the sim's own 100-try spread</div>
@@ -438,7 +439,7 @@
 					finish a little behind where they really finished &mdash; but most results cluster
 					within about a horse or two of correct.</p>
 			</div>
-			<div class="legend"><span><span class="swatch swatch-real" style="background:var(--muted)"></span>every horse we tracked</span><span><span class="swatch" style="background:var(--accent)"></span>our 4 repeat horses only</span></div>
+			<div class="legend"><span><span class="swatch swatch-real" style="background:var(--muted)"></span>every horse we tracked</span><span><span class="swatch" style="background:var(--accent)"></span><span id="legend-own-count">our repeat horses only</span></span></div>
 			<div class="card" id="dist-chart-host"></div>
 			<div class="grid-2" style="margin-top:16px">
 				<div class="card">
@@ -463,9 +464,7 @@
 		<div class="post">4</div>
 		<div class="panel-body">
 			<h2>Does the sim track each horse's good and bad days?</h2>
-			<div class="scope-line">Our 4 repeat horses, sim vs. real finish time for each of their races.
-				A point sitting right on the dashed line means the simulator called that race almost
-				exactly right.</div>
+			<div class="scope-line" id="scatter-scope">&mdash;</div>
 			<div class="card" id="scatter-chart-host"></div>
 			<p class="stat-sub" id="scatter-note" style="margin-top:10px">&mdash;</p>
 		</div>
@@ -590,10 +589,13 @@
 	var on = (id, text) => { document.getElementById(id).textContent = text; };
 	var lengths = (x) => Math.abs(x).toFixed(1) + (Math.abs(x) === 1 ? ' length' : ' lengths');
 
-	on('course-id', 'Hanshin, 1600m (outer track)');
-	on('corpus-desc', '20 real races · ' + d.n.all + ' horses we could simulate (' + d.n.own + ' of them run 15 times each)');
-
 	var a = d.headlineA, b = d.headlineB;
+	var ownBuildCount = Object.keys(a.rhoByBuild).length;
+
+	on('course-id', 'Hanshin, 1600m (outer track)');
+	on('dek-race-count', d.manifest.filesScanned + ' real Champions Meeting races');
+	on('corpus-desc', d.manifest.filesScanned + ' real races · ' + d.n.all + ' horses we could simulate (' + d.n.own + ' of them from ' + ownBuildCount + ' horses we tracked across many races each)');
+
 	on('ha-sd', lengths(a.sdEpsilonBasinn) + ' off, typically');
 	on('ha-ci', 'Based on ' + a.n + ' races. Could reasonably be anywhere from ' + lengths(a.ci95[0]) + ' to ' + lengths(a.ci95[1]) + '.');
 	var haTable = document.getElementById('ha-build-table');
@@ -607,6 +609,7 @@
 	});
 
 	on('hb-mean', fmt2(b.meanBasinn) + ' lengths, on average');
+	on('hb-race-count', d.manifest.filesScanned);
 	on('hb-ci', 'Honest range: ' + fmt2(b.ci95[0]) + ' to ' + fmt2(b.ci95[1]) + ' lengths (based on ' + b.n + ' head-to-head comparisons).');
 	var verdictEl = document.getElementById('hb-verdict');
 	var verdictKey = b.verdict.split(' -- ')[0];
@@ -634,7 +637,8 @@
 		tr.innerHTML = '<td>' + (phaseNiceNames[phase] || phase) + '</td><td class="num">' + s.meanM.toFixed(1) + 'm</td>';
 		phaseTable.appendChild(tr);
 	});
-	on('phase-scope', 'From our 4 repeat horses only (' + m1.phaseBreakdownNOwnRuns + ' races, ' + m1.phaseBreakdownNSamples + ' data points)');
+	on('phase-scope', 'From our ' + ownBuildCount + ' repeat horses only (' + m1.phaseBreakdownNOwnRuns + ' races, ' + m1.phaseBreakdownNSamples + ' data points)');
+	on('legend-own-count', 'our ' + ownBuildCount + ' repeat horses only');
 
 	AccuracyCharts.renderHistogramCompare(document.getElementById('dist-chart-host'), [
 		{ label: 'all', data: d.histograms.finishPosErrBasinnAll, n: d.n.all },
@@ -643,7 +647,7 @@
 
 	var rs = d.reseedSpread;
 	if (rs) {
-		on('reseed-scope', 'Every one of our 4 repeat horses\' 15 races, re-simulated 100 times each with a different random seed (' + rs.n + ' races total).');
+		on('reseed-scope', 'Every one of our ' + ownBuildCount + ' repeat horses\' races, re-simulated 100 times each with a different random seed (' + rs.n + ' races total).');
 		on('reseed-full-coverage', rs.fullRangeCoverage + ' / ' + rs.n);
 		on('reseed-central-coverage', rs.centralBandCoverage + ' / ' + rs.n);
 		AccuracyCharts.renderReseedStrip(document.getElementById('reseed-chart-host'), rs, {});
@@ -652,6 +656,7 @@
 	var fts = d.finishTimeScatter;
 	var rhoBits = [];
 	if (fts) {
+		on('scatter-scope', 'Our ' + ownBuildCount + ' repeat horses, sim vs. real finish time for each of their races. A point sitting right on the dashed line means the simulator called that race almost exactly right.');
 		AccuracyCharts.renderFinishTimeScatterGrid(document.getElementById('scatter-chart-host'), fts, {});
 		rhoBits = Object.keys(a.rhoByBuild).sort().map((build) => build + ' (' + fmt3(a.rhoByBuild[build][0]) + ')');
 		on('scatter-note', 'How tightly the points hug that line, in one number per horse: ' + rhoBits.join(', ') + '. Closer to +1 means the sim is tracking that horse\'s good and bad races; closer to 0 means it isn\'t.');
