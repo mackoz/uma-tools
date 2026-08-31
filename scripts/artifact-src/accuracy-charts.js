@@ -252,14 +252,20 @@ export function renderTrajectoryOverlay(container, examples, opts) {
 // line (zero == the real result, since finishPosErrBasinn already is the sim-vs-real
 // error). Own runs only -- reseedSpread.perRun is built that way upstream.
 export function renderReseedStrip(container, data, opts) {
-	const width = opts.width || 880;
-	const height = opts.height || 340;
-	const margin = { top: 16, right: 16, bottom: 40, left: 48 };
-	const innerW = width - margin.left - margin.right;
-	const innerH = height - margin.top - margin.bottom;
-
 	const runs = data.perRun;
 	const n = runs.length;
+	const minLaneW = opts.minLaneW || 13; // below this a jittered 100-dot lane stops reading as a cloud
+	const margin = { top: 16, right: 16, bottom: 40, left: 48 };
+	// Below ~65 lanes, 880px total already clears minLaneW -- keep the compact, responsive
+	// (width:100%) sizing those runs already had. Past that, grow the SVG's own pixel
+	// width instead of letting lanes compress further, and let the .table-scroll parent
+	// (see the panel markup) carry the overflow -- same pattern this template already uses
+	// for wide tables.
+	const width =
+		opts.width || Math.max(880, n * minLaneW + margin.left + margin.right);
+	const height = opts.height || 340;
+	const innerW = width - margin.left - margin.right;
+	const innerH = height - margin.top - margin.bottom;
 	const laneW = innerW / n;
 
 	const allVals = runs.flatMap((r) => r.values.concat([r.actualErrBasinn]));
@@ -268,6 +274,7 @@ export function renderReseedStrip(container, data, opts) {
 	const svg = svgEl('svg', {
 		viewBox: `0 0 ${width} ${height}`,
 		class: 'chart',
+		...(width > 880 ? { style: `width:${width}px; max-width:none;` } : {}),
 	});
 	const g = svgEl('g', {
 		transform: `translate(${margin.left},${margin.top})`,
