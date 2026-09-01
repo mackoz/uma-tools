@@ -128,8 +128,12 @@ async function runTheme(browser, colorScheme) {
 }
 
 const browser = await chromium.launch();
-await runTheme(browser, 'light');
-await runTheme(browser, 'dark');
+// Each call opens its own browser context (runTheme's first line) -- independent of each
+// other, so run them concurrently instead of paying for two full page loads back to back.
+// Both push into the shared `checks` array via check(), but every id is already
+// colorScheme-qualified (e.g. `contrast.light.h1` vs `contrast.dark.h1`), so interleaved
+// push order across the two calls is harmless.
+await Promise.all([runTheme(browser, 'light'), runTheme(browser, 'dark')]);
 await browser.close();
 
 const failed = checks.filter((c) => !c.ok);

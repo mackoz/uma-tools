@@ -29,14 +29,32 @@ function textEl(x, y, text, cls) {
 	return el;
 }
 
+// Shared setup every render* function below needs: an inner plot area sized by margin,
+// and the <svg>/<g> pair its ticks/marks get appended to. `svgAttrs` lets a caller add
+// extra attributes to the <svg> itself (renderReseedStrip's conditional inline width for
+// its horizontal-scroll case) without this helper needing to know about that case.
+function chartShell({ width, height, margin, svgAttrs }) {
+	const innerW = width - margin.left - margin.right;
+	const innerH = height - margin.top - margin.bottom;
+	const svg = svgEl('svg', {
+		viewBox: `0 0 ${width} ${height}`,
+		class: 'chart',
+		...(svgAttrs || {}),
+	});
+	const g = svgEl('g', {
+		transform: `translate(${margin.left},${margin.top})`,
+	});
+	svg.appendChild(g);
+	return { svg, g, innerW, innerH };
+}
+
 // Bar histogram from {edges, counts} (np.histogram shape). Draws two overlaid series if
 // `series` has two entries, for the "all runs vs own-trainer runs" comparison panel.
 export function renderHistogramCompare(container, series, opts) {
 	const width = opts.width || 640;
 	const height = opts.height || 260;
 	const margin = { top: 16, right: 16, bottom: 32, left: 16 };
-	const innerW = width - margin.left - margin.right;
-	const innerH = height - margin.top - margin.bottom;
+	const { svg, g, innerW, innerH } = chartShell({ width, height, margin });
 
 	const allEdges = series.flatMap((s) => s.data.edges);
 	const xExtent = extent(allEdges);
@@ -46,15 +64,6 @@ export function renderHistogramCompare(container, series, opts) {
 		...series.flatMap((s) => s.data.counts.map((c) => c / Math.max(1, s.n))),
 	);
 	const y = scaleLinear().domain([0, maxCount]).range([innerH, 0]);
-
-	const svg = svgEl('svg', {
-		viewBox: `0 0 ${width} ${height}`,
-		class: 'chart',
-	});
-	const g = svgEl('g', {
-		transform: `translate(${margin.left},${margin.top})`,
-	});
-	svg.appendChild(g);
 
 	// zero line + x-axis ticks (hand-emitted, per the d3-axis skip above)
 	g.appendChild(
@@ -110,8 +119,6 @@ export function renderTrajectoryOverlay(container, examples, opts) {
 	const width = opts.width || 720;
 	const height = opts.height || 320;
 	const margin = { top: 16, right: 16, bottom: 32, left: 44 };
-	const innerW = width - margin.left - margin.right;
-	const innerH = height - margin.top - margin.bottom;
 
 	const tabs = document.createElement('div');
 	tabs.className = 'traj-tabs';
@@ -129,6 +136,8 @@ export function renderTrajectoryOverlay(container, examples, opts) {
 		chartHost.textContent = '';
 		readout.textContent = 'Hover the chart to inspect a moment in the race.';
 
+		const { svg, g, innerW, innerH } = chartShell({ width, height, margin });
+
 		const samples = example.samples;
 		const x = scaleLinear()
 			.domain(extent(samples, (d) => d.time))
@@ -137,15 +146,6 @@ export function renderTrajectoryOverlay(container, examples, opts) {
 			...samples.map((d) => Math.max(d.simDist, d.realDist)),
 		);
 		const y = scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);
-
-		const svg = svgEl('svg', {
-			viewBox: `0 0 ${width} ${height}`,
-			class: 'chart',
-		});
-		const g = svgEl('g', {
-			transform: `translate(${margin.left},${margin.top})`,
-		});
-		svg.appendChild(g);
 
 		for (const t of y.ticks(5)) {
 			g.appendChild(
@@ -254,6 +254,13 @@ export function renderTrajectoryOverlay(container, examples, opts) {
 export function renderReseedStrip(container, data, opts) {
 	const runs = data.perRun;
 	const n = runs.length;
+	if (n === 0) {
+		const empty = document.createElement('p');
+		empty.className = 'stat-sub';
+		empty.textContent = 'No reseed runs in this corpus.';
+		container.appendChild(empty);
+		return;
+	}
 	const minLaneW = opts.minLaneW || 13; // below this a jittered 100-dot lane stops reading as a cloud
 	const margin = { top: 16, right: 16, bottom: 40, left: 48 };
 	// Below ~65 lanes, 880px total already clears minLaneW -- keep the compact, responsive
@@ -264,22 +271,18 @@ export function renderReseedStrip(container, data, opts) {
 	const width =
 		opts.width || Math.max(880, n * minLaneW + margin.left + margin.right);
 	const height = opts.height || 340;
-	const innerW = width - margin.left - margin.right;
-	const innerH = height - margin.top - margin.bottom;
+	const svgAttrs =
+		width > 880 ? { style: `width:${width}px; max-width:none;` } : {};
+	const { svg, g, innerW, innerH } = chartShell({
+		width,
+		height,
+		margin,
+		svgAttrs,
+	});
 	const laneW = innerW / n;
 
 	const allVals = runs.flatMap((r) => r.values.concat([r.actualErrBasinn]));
 	const y = scaleLinear().domain(extent(allVals)).nice().range([innerH, 0]);
-
-	const svg = svgEl('svg', {
-		viewBox: `0 0 ${width} ${height}`,
-		class: 'chart',
-		...(width > 880 ? { style: `width:${width}px; max-width:none;` } : {}),
-	});
-	const g = svgEl('g', {
-		transform: `translate(${margin.left},${margin.top})`,
-	});
-	svg.appendChild(g);
 
 	for (const t of y.ticks(6)) {
 		g.appendChild(
@@ -387,8 +390,6 @@ export function renderFinishTimeScatterGrid(container, dataByBuild, opts) {
 	const width = opts.width || 260;
 	const height = opts.height || 220;
 	const margin = { top: 10, right: 10, bottom: 30, left: 36 };
-	const innerW = width - margin.left - margin.right;
-	const innerH = height - margin.top - margin.bottom;
 
 	const grid = document.createElement('div');
 	grid.className = 'scatter-grid';
@@ -408,21 +409,21 @@ export function renderFinishTimeScatterGrid(container, dataByBuild, opts) {
 			const allT = points.flatMap((p) => [p.realFinishTime, p.simFinishTime]);
 			const domain = extent(allT);
 			const pad = (domain[1] - domain[0]) * 0.1 || 0.5;
-			const scale = scaleLinear()
-				.domain([domain[0] - pad, domain[1] + pad])
-				.range([0, innerW]);
-
-			const svg = svgEl('svg', {
-				viewBox: `0 0 ${width} ${height}`,
-				class: 'chart',
-			});
-			const g = svgEl('g', {
-				transform: `translate(${margin.left},${margin.top})`,
-			});
-			svg.appendChild(g);
+			const paddedDomain = [domain[0] - pad, domain[1] + pad];
+			const { svg, g, innerW, innerH } = chartShell({ width, height, margin });
+			// Two scales sharing one domain but each with its own panel-pixel range: a
+			// data value v lands at the SAME fraction of its own axis's length either way
+			// (x-fraction = frac, y-fraction from top = 1-frac), which is exactly what
+			// makes the identity-line's literal (0,innerH)-(innerW,0) pixel coordinates
+			// correct regardless of whether innerW equals innerH. Reusing one scale's
+			// range for both axes (the previous bug here) only lines up when the panel
+			// happens to be square.
+			const scale = scaleLinear().domain(paddedDomain).range([0, innerW]);
+			const yScale = scaleLinear().domain(paddedDomain).range([0, innerH]);
 
 			for (const t of scale.ticks(4)) {
 				const sx = scale(t);
+				const sy = innerH - yScale(t);
 				g.appendChild(
 					svgEl('line', {
 						x1: sx,
@@ -432,10 +433,17 @@ export function renderFinishTimeScatterGrid(container, dataByBuild, opts) {
 						class: 'gridline',
 					}),
 				);
-				g.appendChild(textEl(sx, innerH + 14, fmtT(t), 'tick-label'));
 				g.appendChild(
-					textEl(-6, innerH - sx + 3, fmtT(t), 'tick-label tick-label-y'),
+					svgEl('line', {
+						x1: 0,
+						x2: innerW,
+						y1: sy,
+						y2: sy,
+						class: 'gridline',
+					}),
 				);
+				g.appendChild(textEl(sx, innerH + 14, fmtT(t), 'tick-label'));
+				g.appendChild(textEl(-6, sy + 3, fmtT(t), 'tick-label tick-label-y'));
 			}
 			g.appendChild(
 				svgEl('line', {
@@ -449,7 +457,7 @@ export function renderFinishTimeScatterGrid(container, dataByBuild, opts) {
 
 			points.forEach((p) => {
 				const cx = scale(p.realFinishTime);
-				const cy = innerH - scale(p.simFinishTime);
+				const cy = innerH - yScale(p.simFinishTime);
 				const dot = svgEl('circle', { cx, cy, r: 3.5, class: 'scatter-dot' });
 				const title = svgEl('title');
 				title.textContent =
