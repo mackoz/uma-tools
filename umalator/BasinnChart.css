@@ -81,6 +81,17 @@
 	transform: rotate(45deg);
 }
 
+/* UI-16 chunk 3: a row whose skill is in the Buy list card's currently-selected purchase set
+   (SpOptimizerCard.tsx). Declared BEFORE tr.expanded on purpose -- same-specificity single-class
+   selectors cascade by source order, so an expanded+highlighted row falls back to the expanded
+   row's --highlight-green (that rule means "expanded," not "not highlighted too"; deliberately
+   not stacking a second background on top of it). Uses the same --accent color-mix recipe as
+   #runOnce's selected state (app.css) and SpOptimizerCard.css's own .selected option, not
+   --highlight-green, which already means something else on this table. */
+.basinnChart tr.basinnChartHighlighted {
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .basinnChart tr.expanded {
 	background: var(--highlight-green);
 }

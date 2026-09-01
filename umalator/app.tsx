@@ -100,6 +100,7 @@ import { OCRModal } from './components/OCRModal';
 import { type CompareResults, ResultsPane } from './components/ResultsPane';
 import { ShopSkillFilter } from './components/ShopSkillFilter';
 import { ShopSkillPanel } from './components/ShopSkillPanel';
+import { SpOptimizerCard } from './components/SpOptimizerCard';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
@@ -119,6 +120,9 @@ import {
 	type CostLookup,
 	type HintLevels,
 	loadShopSkillHints,
+	type OptimizerCandidate,
+	optimizePurchases,
+	type PurchaseSet,
 	pruneHints,
 } from './spOptimizer';
 import { summarizeLengths } from './statisticalAnalysis';
@@ -2470,9 +2474,9 @@ const SKILL_LADDER: LadderIndex = (() => {
 	return ladder;
 })();
 
-// UI-16: base (pre-discount) SP cost per skill, for the coming SP-budget optimizer
-// (spOptimizer.ts's CostLookup) to apply discountedCost against. Not consumed yet this chunk --
-// added now so the optimizer wiring in the next chunk doesn't need another skillmeta pass.
+// UI-16: base (pre-discount) SP cost per skill, for the SP-budget optimizer (spOptimizer.ts's
+// CostLookup) to apply discountedCost against -- consumed by the Buy list card's purchaseOptions
+// memo (chunk 3, below).
 const SKILL_BASE_COST: CostLookup = (() => {
 	const meta = skillmeta as { [key: string]: { baseCost: number } };
 	const costs: CostLookup = {};
@@ -3263,6 +3267,21 @@ function App(props) {
 		[],
 	);
 
+	// UI-16 chunk 3: the SP-budget optimizer's "Buy list" card. spBudget persists like
+	// shopSkillHints above; selectedBuyOption doesn't -- it's reset whenever the option set itself
+	// changes (see purchaseOptionsSignature's effect further down, once purchaseOptions exists)
+	// and isn't worth surviving a page reload on its own.
+	const [spBudget, setSpBudget] = useState<number>(() => {
+		const v = parseInt(localStorage.getItem('chartSpBudget') ?? '', 10);
+		return Number.isFinite(v) && v >= 0 ? v : 0;
+	});
+	useEffect(() => {
+		localStorage.setItem('chartSpBudget', String(spBudget));
+	}, [spBudget]);
+	const [selectedBuyOption, setSelectedBuyOption] = useState<number | null>(
+		null,
+	);
+
 	const [shopPickerOpen, setShopPickerOpen] = useState(false);
 	const [shopPickerShowAll, setShopPickerShowAll] = useState(false);
 	// null = no shop-filtered run has completed yet; otherwise the exact shortlist that run used.
@@ -3607,6 +3626,70 @@ function App(props) {
 			partitionShopSkills(shopSkillIds, chartCandidates?.procableSet ?? null),
 		[shopSkillIds, chartCandidates],
 	);
+
+	// UI-16 chunk 3: the SP-budget optimizer's inputs. uma1.skills is an ImmMap<groupId, skillId>
+	// (see components/HorseDefTypes.ts's SkillSet) -- .values() gives the flat skill-id list,
+	// matching the `Array.from(uma1.skills.values())` idiom already used for save/export above.
+	const ownedSkills = useMemo(
+		() => new Set<string>(uma1.skills.values()),
+		[uma1],
+	);
+	// The shortlist's chart-measured candidates: shopSkillIds narrowed to ids with a real gain
+	// number from the last run (tableData) and not already owned. Empty whenever the shop filter
+	// isn't active, so purchaseOptions below (and SpOptimizerCard's candidateCount) read "no run
+	// yet" rather than stale numbers from a different mode/filter state.
+	const optimizerCandidates = useMemo(() => {
+		if (!shopFilterActive) return [];
+		const out: OptimizerCandidate[] = [];
+		for (const id of shopSkillIds) {
+			if (ownedSkills.has(id)) continue;
+			const row = tableData.get(id);
+			if (row?.statistics) out.push({ id, gain: row.statistics.mean });
+		}
+		return out;
+	}, [shopFilterActive, shopSkillIds, tableData, ownedSkills]);
+	// tableData updates many times per second while a chart streams in, which would otherwise
+	// re-run optimizePurchases' DFS on every batch. Freeze on the last-computed result (via this
+	// ref) while isSimulationRunning is true; a fresh run's final tableData recomputes once
+	// isSimulationRunning goes false.
+	const purchaseOptionsRef = useRef<PurchaseSet[]>([]);
+	const purchaseOptions = useMemo(() => {
+		if (isSimulationRunning) return purchaseOptionsRef.current;
+		const computed =
+			optimizerCandidates.length === 0 || spBudget <= 0
+				? []
+				: optimizePurchases({
+						candidates: optimizerCandidates,
+						hints: shopSkillHints,
+						ladder: SKILL_LADDER,
+						costs: SKILL_BASE_COST,
+						owned: ownedSkills,
+						budget: spBudget,
+						topK: 3,
+					});
+		purchaseOptionsRef.current = computed;
+		return computed;
+	}, [
+		isSimulationRunning,
+		optimizerCandidates,
+		shopSkillHints,
+		spBudget,
+		ownedSkills,
+	]);
+	// Reset the selected option whenever the option SET actually changes (not on every re-render,
+	// which would happen on array-identity alone since purchaseOptions is a fresh array each
+	// recompute) -- keyed off each option's skillIds, not object identity.
+	const purchaseOptionsSignature = purchaseOptions
+		.map((o) => o.skillIds.join('+'))
+		.join('|');
+	useEffect(() => {
+		setSelectedBuyOption(null);
+	}, [purchaseOptionsSignature]);
+	const highlightedBuySkills = useMemo(() => {
+		if (selectedBuyOption == null) return new Set<string>();
+		const option = purchaseOptions[selectedBuyOption];
+		return option ? new Set(option.skillIds) : new Set<string>();
+	}, [selectedBuyOption, purchaseOptions]);
 
 	// --- Skill Chart coordinator state ---
 	// chartRunRef holds every piece of mutable state a chart run needs: which round it's on, the
@@ -5186,6 +5269,22 @@ function App(props) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
+					{/* UI-16 chunk 3: renders above the chart table so a user sets their SP
+					    budget before scanning rows. Mode.Chart only -- unique skills aren't
+					    shop purchases, so even the card's "add shop skills" prompt would be
+					    noise on the Uniques Chart tab. */}
+					{mode == Mode.Chart && (
+						<SpOptimizerCard
+							shopFilterActive={shopFilterActive}
+							candidateCount={optimizerCandidates.length}
+							dirty={shopDirty}
+							budget={spBudget}
+							onBudgetChange={setSpBudget}
+							options={purchaseOptions}
+							selectedIndex={selectedBuyOption}
+							onSelect={setSelectedBuyOption}
+						/>
+					)}
 					<div class="basinnChartWrapperWrapper">
 						<BasinnChart
 							data={Array.from(tableData.values())}
@@ -5200,6 +5299,7 @@ function App(props) {
 										])
 									: new Set()
 							}
+							highlighted={highlightedBuySkills}
 							onSelectionChange={basinnChartSelection}
 							onDblClickRow={addSkillFromTable}
 							onInfoClick={showPopover}
