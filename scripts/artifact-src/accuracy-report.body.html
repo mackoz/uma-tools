@@ -591,6 +591,11 @@
 
 	var a = d.headlineA, b = d.headlineB;
 	var ownBuildCount = Object.keys(a.rhoByBuild).length;
+	var ownRaceCounts = Object.values(a.rhoByBuild).map((v) => v[1]);
+	var ownRaceCountMin = Math.min(...ownRaceCounts), ownRaceCountMax = Math.max(...ownRaceCounts);
+	var ownRaceCountRange = ownRaceCountMin === ownRaceCountMax
+		? ownRaceCountMax + ' times'
+		: ownRaceCountMin + '-' + ownRaceCountMax + ' times';
 
 	on('course-id', 'Hanshin, 1600m (outer track)');
 	on('dek-race-count', d.manifest.filesScanned + ' real Champions Meeting races');
@@ -612,7 +617,7 @@
 	on('hb-race-count', d.manifest.filesScanned);
 	on('hb-ci', 'Honest range: ' + fmt2(b.ci95[0]) + ' to ' + fmt2(b.ci95[1]) + ' lengths (based on ' + b.n + ' head-to-head comparisons).');
 	var verdictEl = document.getElementById('hb-verdict');
-	var verdictKey = b.verdict.split(' -- ')[0];
+	var verdictKey = b.verdictKey;
 	var verdictText = { PASS: 'Looks solid', FAIL: 'Real gap found', UNDERPOWERED: 'Too close to call' }[verdictKey] || verdictKey;
 	verdictEl.textContent = verdictText;
 	verdictEl.className = 'verdict-badge verdict-' + (verdictKey === 'PASS' ? 'pass' : verdictKey === 'FAIL' ? 'fail' : 'underpowered');
@@ -621,7 +626,7 @@
 		d.calibration.typicalEffectHighBasinn.toFixed(1) + ' lengths — our honest range above is wide enough to overlap that, which is exactly why we can\'t call it either way yet.');
 
 	var m1 = d.measurement1;
-	on('dist-scope', 'Every horse we could load into the simulator vs. the 4 that raced 15 times each (only those 4 have full frame-by-frame data to compare with)');
+	on('dist-scope', 'Every horse we could load into the simulator vs. the ' + ownBuildCount + ' that raced ' + ownRaceCountRange + ' each (only those ' + ownBuildCount + ' have full frame-by-frame data to compare with)');
 	on('m1-mean', fmt2(m1.meanFinishPosErrBasinn) + ' lengths');
 	on('m1-bias', 'Across ' + m1.nAll + ' horses, the simulator was off by about ' + Math.abs(m1.meanDistBiasM).toFixed(1) + 'm on average (typical swing: ' + m1.meanDistRmsM.toFixed(1) + 'm).');
 	var phaseNiceNames = {
@@ -670,14 +675,23 @@
 	on('fo-n', 'Averaged across ' + fo.nRaces + ' races of about ' + fo.meanFieldSize.toFixed(0) + ' horses each.');
 	on('cov-scope', 'What predicts a bigger gap between sim and reality, across all ' + d.covariateRegression.n + ' horses we checked');
 	var covNiceNames = {};
+	// engine-side style ints, RaceSolver's own convention (see e.g. parseReplay.ts's
+	// runningStyle comment): 1=Front Runner(Nige), 2=Pace Chaser(Senko), 3=Late
+	// Surger(Sashi), 4=End Closer(Oikomi). analyze_replay_diff.py's baseline_style is
+	// computed dynamically as the lowest style value actually present in the corpus (not
+	// always 1), so the label pair below is built from both captured numbers rather than
+	// three hardcoded "(vs 1)" regexes -- a future corpus without a Front Runner baseline
+	// degrades to a readable label instead of a raw internal name.
+	var RUNNING_STYLE_NAMES = { 1: 'Front Runner', 2: 'Pace Chaser', 3: 'Late Surger', 4: 'End Closer' };
 	d.covariateRegression.coefficients.forEach((c) => {
 		if (c.name === 'intercept') return; // not a meaningful factor to show a player
-		var niceName = c.name
-			.replace('blockedFrameCount', 'Got blocked/boxed in (per moment blocked)')
-			.replace('temptationPresent', 'Got Rushed at some point')
-			.replace(/runningStyle==2 \(vs 1\)/, 'Pace strategy vs. Front-runner')
-			.replace(/runningStyle==3 \(vs 1\)/, 'Late Surger vs. Front-runner')
-			.replace(/runningStyle==4 \(vs 1\)/, 'End Closer vs. Front-runner');
+		var styleMatch = c.name.match(/^runningStyle==(\d+) \(vs (\d+)\)$/);
+		var niceName = styleMatch
+			? (RUNNING_STYLE_NAMES[styleMatch[1]] || ('style ' + styleMatch[1])) + ' vs. ' +
+				(RUNNING_STYLE_NAMES[styleMatch[2]] || ('style ' + styleMatch[2]))
+			: c.name
+				.replace('blockedFrameCount', 'Got blocked/boxed in (per moment blocked)')
+				.replace('temptationPresent', 'Got Rushed at some point');
 		var tr = document.createElement('tr');
 		tr.innerHTML = '<td>' + niceName + '</td><td class="num">' + fmt2(c.coef) + '</td><td class="num">' +
 			fmt2(c.ci95[0]) + ' to ' + fmt2(c.ci95[1]) + '</td>';
@@ -685,7 +699,7 @@
 	});
 
 	var m4 = d.measurement4;
-	on('m4-scope', m4.n + ' races out of ' + d.n.all + ' where the real horse\'s Last Spurt kicked in noticeably later than the usual ~' + m4.floorM.toFixed(0) + 'm mark.');
+	on('m4-scope', m4.n + ' horses out of ' + d.n.all + ' we simulated where the real horse\'s Last Spurt kicked in noticeably later than the usual ~' + m4.floorM.toFixed(0) + 'm mark.');
 	var spurt = d.spurtAgreement;
 	if (spurt) {
 		on('spurt-agreement', 'Overall, the simulator\'s full-spurt call matched the replay\'s own in ' + pct(spurt.agreementRate) +

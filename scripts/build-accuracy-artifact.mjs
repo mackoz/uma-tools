@@ -44,7 +44,22 @@ function safeJson(obj) {
 async function main() {
 	const artifactJsonPath = path.resolve(opts.artifactJson);
 	const dataRaw = fs.readFileSync(artifactJsonPath, 'utf8');
-	const data = JSON.parse(dataRaw); // fail loudly now if the input itself isn't valid JSON
+	let data;
+	try {
+		data = JSON.parse(dataRaw); // fail loudly now if the input itself isn't valid JSON
+	} catch (e) {
+		// Defense in depth alongside analyze_replay_diff.py's own sanitize_for_json +
+		// allow_nan=False (PIPE-37): that script should already refuse to emit a bare
+		// NaN/Infinity token, but if it ever does, a bare JSON.parse error here points at
+		// this JSON blob, not at the engine-side stat that produced it -- e.g. a build
+		// with too few races making a bootstrap CI or correlation non-finite.
+		throw new Error(
+			`${artifactJsonPath} is not valid JSON (${e.message}). If this came from ` +
+				'analyze_replay_diff.py, check for a non-finite (NaN/Infinity) stat -- ' +
+				'likely an own-build with too few races for its bootstrap CI or correlation ' +
+				'to resolve.',
+		);
+	}
 
 	const bundleResult = await esbuild.build({
 		entryPoints: [path.join(root, 'artifact-src/accuracy-charts.js')],
