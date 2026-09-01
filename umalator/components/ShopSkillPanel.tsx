@@ -24,6 +24,10 @@ interface ShopSkillPanelProps {
 	// recomputed here, so the same shopSkillIds/procable pair isn't partitioned twice per render.
 	partition: { procable: string[]; wontProc: string[] };
 	ladder: LadderIndex;
+	// UI-16: per-skill shop hint level (0-5, default 0), keyed by skill id -- feeds the SP
+	// optimizer's discountedCost. An id absent from this map is level 0.
+	hints: { [skillId: string]: number };
+	onHintChange: (skillId: string, level: number) => void;
 }
 
 interface FamilyEntry {
@@ -77,18 +81,93 @@ function buildFamilyTree(ids: string[], ladder: LadderIndex): FamilyEntry[] {
 	return entries;
 }
 
+// Keyboard-first bulk entry (UI-16): typing a digit 0-5 in one hint field sets it and jumps
+// focus to the next `.shopSkillHint` field in DOM order, so a user with a long shortlist can
+// click the first field once and then type straight through the whole list. Queries the DOM
+// live (rather than threading refs through every row) since the set of rows changes as the
+// shortlist changes and DOM order already matches the visual/tab order.
+function focusNextHintInput(current: HTMLInputElement) {
+	const inputs = Array.from(
+		document.querySelectorAll<HTMLInputElement>('.shopSkillHint'),
+	);
+	const idx = inputs.indexOf(current);
+	if (idx === -1 || idx === inputs.length - 1) return;
+	const next = inputs[idx + 1];
+	next.focus();
+	next.select();
+}
+
+function ShopSkillHintInput({
+	id,
+	level,
+	onHintChange,
+}: {
+	id: string;
+	level: number;
+	onHintChange: (skillId: string, level: number) => void;
+}) {
+	const onKeyDown = (e: KeyboardEvent) => {
+		if (e.key === 'Tab') return; // native focus movement, left alone
+		// Modified keys (Cmd+R, Ctrl+C, ...) are browser/app shortcuts, not hint entry -- never
+		// swallow them.
+		if (e.metaKey || e.ctrlKey || e.altKey) return;
+		const input = e.currentTarget as HTMLInputElement;
+		if (e.key >= '0' && e.key <= '5') {
+			e.preventDefault();
+			onHintChange(id, Number(e.key));
+			focusNextHintInput(input);
+			return;
+		}
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			onHintChange(id, Math.min(5, level + 1));
+			return;
+		}
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			onHintChange(id, Math.max(0, level - 1));
+			return;
+		}
+		// Digits 6-9 and other printable characters: ignore. Non-printable keys (Escape, F5,
+		// Backspace, ...) pass through -- the value is controlled, so they can't corrupt it, and
+		// swallowing them would break things like reload while a hint field is focused.
+		if (e.key.length === 1) e.preventDefault();
+	};
+	return (
+		<input
+			type="text"
+			inputMode="numeric"
+			maxLength={1}
+			class="shopSkillHint"
+			value={String(level)}
+			aria-label={`Hint level for ${getSkillName(id)}`}
+			onKeyDown={onKeyDown}
+			onInput={(e) => {
+				// Controlled: onKeyDown owns every mutation, so just re-render from state in case
+				// something (e.g. a mobile IME) bypasses keyDown and edits the DOM value directly.
+				(e.currentTarget as HTMLInputElement).value = String(level);
+			}}
+			onFocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+		/>
+	);
+}
+
 function ShopSkillRow({
 	id,
 	parentId,
 	indented,
 	onRemove,
 	wontProcHere,
+	hintLevel,
+	onHintChange,
 }: {
 	id: string;
 	parentId?: string;
 	indented: boolean;
 	onRemove: (skillId: string) => void;
 	wontProcHere: boolean;
+	hintLevel: number;
+	onHintChange: (skillId: string, level: number) => void;
 }) {
 	const label = parentId
 		? `Remove ${getSkillName(id)}, required by ${getSkillName(parentId)}`
@@ -104,6 +183,11 @@ function ShopSkillRow({
 		>
 			<img class="shopSkillChipIcon" src={getSkillIcon(id)} loading="lazy" />
 			<span class="shopSkillChipName">{getSkillName(id)}</span>
+			<ShopSkillHintInput
+				id={id}
+				level={hintLevel}
+				onHintChange={onHintChange}
+			/>
 			<button
 				type="button"
 				class="shopSkillChipRemove"
@@ -122,12 +206,16 @@ function ShopSkillSection({
 	ladder,
 	onRemove,
 	wontProcSet,
+	hints,
+	onHintChange,
 }: {
 	title: string;
 	ids: string[];
 	ladder: LadderIndex;
 	onRemove: (skillId: string) => void;
 	wontProcSet: Set<string>;
+	hints: { [skillId: string]: number };
+	onHintChange: (skillId: string, level: number) => void;
 }) {
 	if (ids.length === 0) return null;
 	const entries = buildFamilyTree(ids, ladder);
@@ -143,6 +231,8 @@ function ShopSkillSection({
 						indented={false}
 						onRemove={onRemove}
 						wontProcHere={wontProcSet.has(entry.id)}
+						hintLevel={hints[entry.id] ?? 0}
+						onHintChange={onHintChange}
 					/>
 					{entry.children.map((childId) => (
 						<ShopSkillRow
@@ -152,6 +242,8 @@ function ShopSkillSection({
 							indented={true}
 							onRemove={onRemove}
 							wontProcHere={wontProcSet.has(childId)}
+							hintLevel={hints[childId] ?? 0}
+							onHintChange={onHintChange}
 						/>
 					))}
 				</div>
@@ -166,6 +258,8 @@ export function ShopSkillPanel({
 	onClear,
 	partition,
 	ladder,
+	hints,
+	onHintChange,
 }: ShopSkillPanelProps) {
 	const { procable: inPool, wontProc } = partition;
 	const wontProcSet = new Set(wontProc);
@@ -187,6 +281,8 @@ export function ShopSkillPanel({
 						ladder={ladder}
 						onRemove={onRemove}
 						wontProcSet={wontProcSet}
+						hints={hints}
+						onHintChange={onHintChange}
 					/>
 					<ShopSkillSection
 						title="Won't activate here"
@@ -194,6 +290,8 @@ export function ShopSkillPanel({
 						ladder={ladder}
 						onRemove={onRemove}
 						wontProcSet={wontProcSet}
+						hints={hints}
+						onHintChange={onHintChange}
 					/>
 				</div>
 			)}
