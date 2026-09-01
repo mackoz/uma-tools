@@ -66,6 +66,24 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-01</summary>
+						<ul>
+							<li>
+								Each skill in the Shop Skills panel now has a{' '}
+								<strong>hint level</strong> field (0–5), matching the game's own
+								SP-discount hints — type a digit to set it and jump to the next
+								field, or use the arrow keys to nudge one up or down. Above the
+								chart table, a new <strong>Buy list</strong> card lets you enter
+								an SP budget and shows up to three different purchase options,
+								each with its estimated gain, SP cost, and skill icons —
+								clicking one highlights those rows in the chart. Gains are
+								estimates: each option sums the chart's already-measured
+								per-skill gains rather than re-simulating the combination, so
+								skills that interact with each other won't be reflected exactly.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-08-30</summary>
 						<ul>
 							<li>
