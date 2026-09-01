@@ -115,6 +115,12 @@ import {
 	removeShopSkill,
 	shopFilterDirty,
 } from './shopSkillFilter';
+import {
+	type CostLookup,
+	type HintLevels,
+	loadShopSkillHints,
+	pruneHints,
+} from './spOptimizer';
 import { summarizeLengths } from './statisticalAnalysis';
 import {
 	copyHorseToClipboard,
@@ -2464,6 +2470,16 @@ const SKILL_LADDER: LadderIndex = (() => {
 	return ladder;
 })();
 
+// UI-16: base (pre-discount) SP cost per skill, for the coming SP-budget optimizer
+// (spOptimizer.ts's CostLookup) to apply discountedCost against. Not consumed yet this chunk --
+// added now so the optimizer wiring in the next chunk doesn't need another skillmeta pass.
+const SKILL_BASE_COST: CostLookup = (() => {
+	const meta = skillmeta as { [key: string]: { baseCost: number } };
+	const costs: CostLookup = {};
+	for (const id of Object.keys(meta)) costs[id] = meta[id].baseCost;
+	return costs;
+})();
+
 // See the showUnreleasedUmas toggle above -- both come from unreleased.json (empty on the JP
 // build, since this only ever applies to the Global roster lag).
 const unreleasedOutfitIds = new Set<string>(unreleased.outfits);
@@ -3222,6 +3238,30 @@ function App(props) {
 	useEffect(() => {
 		localStorage.setItem('chartShopSkills', JSON.stringify(shopSkillIds));
 	}, [shopSkillIds]);
+
+	// UI-16: per-skill shop hint level (0-5, default 0), keyed by skill id -- feeds the coming SP
+	// optimizer's discountedCost. Persisted separately from chartShopSkills so the shortlist and
+	// its hint levels can each be cleared/loaded independently.
+	const [shopSkillHints, setShopSkillHints] = useState<HintLevels>(() =>
+		loadShopSkillHints(localStorage.getItem('chartShopSkillHints')),
+	);
+	useEffect(() => {
+		localStorage.setItem('chartShopSkillHints', JSON.stringify(shopSkillHints));
+	}, [shopSkillHints]);
+	// Keeps shopSkillHints in sync with shopSkillIds no matter which of the several call sites
+	// (removeShop's functional updater, the two setShopSkillIds([]) clear sites) dropped an id --
+	// a single effect covers all of them instead of threading the prune through each site.
+	// pruneHints returns the SAME reference when nothing was dropped, so this can't loop.
+	useEffect(() => {
+		setShopSkillHints((h) => pruneHints(h, shopSkillIds));
+	}, [shopSkillIds]);
+	const changeShopHint = useCallback(
+		(id: string, level: number) =>
+			setShopSkillHints((h) =>
+				(h[id] ?? 0) === level ? h : { ...h, [id]: level },
+			),
+		[],
+	);
 
 	const [shopPickerOpen, setShopPickerOpen] = useState(false);
 	const [shopPickerShowAll, setShopPickerShowAll] = useState(false);
@@ -6013,6 +6053,8 @@ function App(props) {
 												onClear={() => setShopSkillIds([])}
 												partition={shopSkillPartition}
 												ladder={SKILL_LADDER}
+												hints={shopSkillHints}
+												onHintChange={changeShopHint}
 											/>
 										}
 										notice={
