@@ -7,9 +7,9 @@ demand for an expanded row. The same `umalator/app.tsx` source powers both `umal
 `CC_GLOBAL`. This describes the implementation on branch `skill-chart-perf-rewrite`, engine commit
 `0861c8f`.
 
-An **SP-budget skill-set optimizer** was prototyped on an earlier branch but is deferred — the six
-layers below are chart-only. Results are estimates from the simulator model, not claims about
-live-game outcomes.
+The six layers below are chart-only; the **SP-budget optimizer** built on top of them (the Buy
+list card) has its own section further down. Results are estimates from the simulator model, not
+claims about live-game outcomes.
 
 ## Why this exists
 
@@ -386,14 +386,29 @@ purely-additive optimizer over the chart's own measured means, not the full re-s
 originally scoped for the ticket (see "Deferred to a follow-up branch" below, and
 `docs/adr/0015-sp-optimizer-additive-knapsack.md` for why).
 
-- **Hint levels.** Each skill chip in the Shop Skills panel (`umalator/components/ShopSkillPanel.tsx`)
-  gets a 0–5 hint-level field, matching the game's own shop SP-discount hints. Typing a digit sets
-  the field and moves focus to the next `.shopSkillHint` field in DOM order; the arrow keys
-  increment/decrement in place. `components/SkillPicker.tsx`'s modal-wide keydown handler
-  early-returns while a hint field is focused, so it doesn't hijack the arrow keys (grid
-  navigation) or Escape (close modal) mid-entry. Hint levels persist to `localStorage` under
-  `chartShopSkillHints` (`umalator/spOptimizer.ts`'s `loadShopSkillHints`/`HintLevels`) and are
-  pruned automatically whenever the shortlist shrinks.
+- **Hint levels are shared per skill, not per shop rung.** In game, a hint is earned for the
+  *skill* and discounts every purchase step of it — so a ○/◎ pair (the same skill's two shop
+  rungs) shares one 0–5 hint-level field; gold skills are separate cards with their own hints.
+  `umalator/spOptimizer.ts`'s `buildHintClusters` derives the sharing rule from the data: two
+  rungs share a hint iff they're the same `SKILL_LADDER` group AND the same rarity (cluster key
+  `${groupId}:${rarity}`; an id outside the ladder keeps its own id as its key). This is
+  corroborated by `master.mdb`'s `single_mode_hint_gain` table: `hint_gain_type` 0 (partner-hint)
+  rows exclusively target rate-1 rarity-1 base skills on both clients (Global 177/177, JP
+  371/371) — a hint never attaches to a ◎/gold/evolved rung directly, so a ◎'s discount always
+  derives from its base skill's hint. Each skill chip in the Shop Skills panel
+  (`umalator/components/ShopSkillPanel.tsx`) still gets a 0–5 hint-level field, but only the
+  *owner* row of each cluster renders one — the first row in the panel's render order (see
+  `ShopSkillPanel.tsx`'s owner rule); every other row of the same cluster shows a tooltip
+  pointing at the owner instead. Typing a digit sets the field and moves focus to the next
+  `.shopSkillHint` field in DOM order; the arrow keys increment/decrement in place.
+  `components/SkillPicker.tsx`'s modal-wide keydown handler early-returns while a hint field is
+  focused, so it doesn't hijack the arrow keys (grid navigation) or Escape (close modal)
+  mid-entry. Hint levels persist to `localStorage` under `chartShopSkillHints`, keyed by cluster
+  (`umalator/spOptimizer.ts`'s `loadShopSkillHints`/`HintLevels`/`remapHintKeys` — the last of
+  these migrates old per-id persisted data to cluster keys on load), and are pruned automatically
+  whenever the shortlist shrinks. `expandHints` fans a cluster-keyed hint back out to a per-id map
+  before it reaches the optimizer below, since `buildGroups` still charges every rung
+  independently via `hints[id] ?? 0`.
 - **The knapsack (`umalator/spOptimizer.ts`, kept import-free like `chartLadder.ts` and
   `shopSkillFilter.ts` so it's plain-node testable).** Candidates are the shortlist's skills that
   have a real measured gain from the last chart run (`tableData`'s per-row `statistics.mean`) and

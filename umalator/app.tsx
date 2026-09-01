@@ -117,13 +117,17 @@ import {
 	shopFilterDirty,
 } from './shopSkillFilter';
 import {
+	buildHintClusters,
 	type CostLookup,
+	expandHints,
+	type HintClusters,
 	type HintLevels,
 	loadShopSkillHints,
 	type OptimizerCandidate,
 	optimizePurchases,
 	type PurchaseSet,
 	pruneHints,
+	remapHintKeys,
 } from './spOptimizer';
 import { summarizeLengths } from './statisticalAnalysis';
 import {
@@ -2456,7 +2460,14 @@ const baseSkillsToTest = Object.keys(skilldata).filter((id) =>
 //  - group_rate -1 is the debuff/"x" variant (already excluded from the chart pool upstream by
 //    isPurpleSkill) -- excluded again here by the `>= 1` check, belt-and-braces.
 // Don't "simplify" this to a bare rarity check or drop the guard -- both traps above are real.
-const SKILL_LADDER: LadderIndex = (() => {
+// UI-16 follow-up: SKILL_RARITY is every id's rarity (not just the ladder-eligible rarity<=2
+// subset SKILL_LADDER itself keeps) -- built in the same pass since it reads the same
+// skilldata[id].rarity SKILL_LADDER's loop already looks up and discards. buildHintClusters below
+// needs both: SKILL_LADDER for the group/rate half of a cluster key, SKILL_RARITY (the full
+// roster) so an id outside the ladder -- e.g. a JP shop-eligible rarity-6 pink skill -- still gets
+// a rarity looked up (though it still falls back to its own id as the cluster key, since
+// buildHintClusters requires BOTH a ladder rung and a rarity to form a real `group:rarity` key).
+const { SKILL_LADDER, SKILL_RARITY } = (() => {
 	// Cast like the shopSkillIds initializer below does for the same skilldata/skillmeta pair --
 	// both are big object-literal-shaped JSON imports tsc infers exact per-key types for, which a
 	// plain `string` id (from Object.keys) can't index without this.
@@ -2465,14 +2476,25 @@ const SKILL_LADDER: LadderIndex = (() => {
 	};
 	const data = skilldata as { [key: string]: { rarity: number } };
 	const ladder: LadderIndex = {};
+	const rarities: { [id: string]: number } = {};
 	for (const id of Object.keys(meta)) {
 		const rarity = data[id]?.rarity;
+		if (rarity != null) rarities[id] = rarity;
 		const rate = meta[id].groupRate;
 		if (rarity == null || rarity > 2 || rate == null || rate < 1) continue;
 		ladder[id] = { group: meta[id].groupId, rate };
 	}
-	return ladder;
+	return { SKILL_LADDER: ladder, SKILL_RARITY: rarities };
 })();
+
+// UI-16 follow-up (shared ○/◎ hints): a hint is earned per-SKILL in game, not per-rung, and
+// discounts both a ○ rung and its ◎ upgrade -- golds (a different rarity) get their own hint. See
+// spOptimizer.ts's buildHintClusters for the cluster-key rule and docs/adr/0015's amendment for
+// the master.mdb evidence.
+const HINT_CLUSTERS: HintClusters = buildHintClusters(
+	SKILL_LADDER,
+	SKILL_RARITY,
+);
 
 // UI-16: base (pre-discount) SP cost per skill, for the SP-budget optimizer (spOptimizer.ts's
 // CostLookup) to apply discountedCost against -- consumed by the Buy list card's purchaseOptions
@@ -3243,11 +3265,20 @@ function App(props) {
 		localStorage.setItem('chartShopSkills', JSON.stringify(shopSkillIds));
 	}, [shopSkillIds]);
 
-	// UI-16: per-skill shop hint level (0-5, default 0), keyed by skill id -- feeds the coming SP
-	// optimizer's discountedCost. Persisted separately from chartShopSkills so the shortlist and
-	// its hint levels can each be cleared/loaded independently.
+	// UI-16 follow-up: shop hint level (0-5, default 0), keyed by CLUSTER (HINT_CLUSTERS[id] ?? id
+	// -- see spOptimizer.ts's buildHintClusters), not by raw skill id. A hint is earned per-SKILL in
+	// game and discounts both a ○ rung and its ◎ upgrade, so this state entry is shared across a
+	// ○/◎ pair; a gold rung (a different rarity) gets its own entry. Persisted separately from
+	// chartShopSkills so the shortlist and its hint levels can each be cleared/loaded independently.
+	// The initializer migrates any pre-existing per-id persisted data (from before this change) to
+	// cluster keys via remapHintKeys -- loadShopSkillHints itself keeps any string key with a
+	// finite clamped value, so cluster keys already survive it unchanged -- and the persistence
+	// effect right below fires on mount, making the migration durable after one reload.
 	const [shopSkillHints, setShopSkillHints] = useState<HintLevels>(() =>
-		loadShopSkillHints(localStorage.getItem('chartShopSkillHints')),
+		remapHintKeys(
+			loadShopSkillHints(localStorage.getItem('chartShopSkillHints')),
+			HINT_CLUSTERS,
+		),
 	);
 	useEffect(() => {
 		localStorage.setItem('chartShopSkillHints', JSON.stringify(shopSkillHints));
@@ -3255,16 +3286,27 @@ function App(props) {
 	// Keeps shopSkillHints in sync with shopSkillIds no matter which of the several call sites
 	// (removeShop's functional updater, the two setShopSkillIds([]) clear sites) dropped an id --
 	// a single effect covers all of them instead of threading the prune through each site.
-	// pruneHints returns the SAME reference when nothing was dropped, so this can't loop.
+	// pruneHints returns the SAME reference when nothing was dropped, so this can't loop. Keyed by
+	// cluster: one surviving rung of a shared cluster keeps that cluster's key alive.
 	useEffect(() => {
-		setShopSkillHints((h) => pruneHints(h, shopSkillIds));
-	}, [shopSkillIds]);
-	const changeShopHint = useCallback(
-		(id: string, level: number) =>
-			setShopSkillHints((h) =>
-				(h[id] ?? 0) === level ? h : { ...h, [id]: level },
+		setShopSkillHints((h) =>
+			pruneHints(
+				h,
+				shopSkillIds.map((id) => HINT_CLUSTERS[id] ?? id),
 			),
-		[],
+		);
+	}, [shopSkillIds]);
+	const changeShopHint = useCallback((id: string, level: number) => {
+		const key = HINT_CLUSTERS[id] ?? id;
+		setShopSkillHints((h) =>
+			(h[key] ?? 0) === level ? h : { ...h, [key]: level },
+		);
+	}, []);
+	// Per-id expansion of the cluster-keyed state above, for optimizePurchases (which still charges
+	// every rung independently -- see spOptimizer.ts's expandHints).
+	const expandedShopHints = useMemo(
+		() => expandHints(shopSkillHints, HINT_CLUSTERS),
+		[shopSkillHints],
 	);
 
 	// UI-16 chunk 3: the SP-budget optimizer's "Buy list" card. spBudget persists like
@@ -3660,7 +3702,7 @@ function App(props) {
 				? []
 				: optimizePurchases({
 						candidates: optimizerCandidates,
-						hints: shopSkillHints,
+						hints: expandedShopHints,
 						ladder: SKILL_LADDER,
 						costs: SKILL_BASE_COST,
 						owned: ownedSkills,
@@ -3672,7 +3714,7 @@ function App(props) {
 	}, [
 		isSimulationRunning,
 		optimizerCandidates,
-		shopSkillHints,
+		expandedShopHints,
 		spBudget,
 		ownedSkills,
 	]);
@@ -6154,6 +6196,7 @@ function App(props) {
 												partition={shopSkillPartition}
 												ladder={SKILL_LADDER}
 												hints={shopSkillHints}
+												hintKeys={HINT_CLUSTERS}
 												onHintChange={changeShopHint}
 											/>
 										}

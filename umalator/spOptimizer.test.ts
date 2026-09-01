@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import type { LadderIndex } from './shopSkillFilter.ts';
 import {
+	buildHintClusters,
 	discountedCost,
+	expandHints,
 	HINT_DISCOUNT,
 	loadShopSkillHints,
 	type OptimizerInput,
 	optimizePurchases,
 	pruneHints,
+	remapHintKeys,
 } from './spOptimizer.ts';
 
 // --- discountedCost: every hint level, rounding, edge inputs ---
@@ -67,6 +70,121 @@ import {
 		untouched,
 		'nothing dropped -> same object reference returned',
 	);
+}
+
+// --- buildHintClusters: cluster key is `${group}:${rarity}` when both known, else the id itself ---
+{
+	const ladder: LadderIndex = {
+		circle: { group: 'g1', rate: 1 },
+		doubleCircle: { group: 'g1', rate: 2 },
+		white: { group: 'g2', rate: 1 },
+		gold: { group: 'g2', rate: 2 },
+		circle3: { group: 'g3', rate: 1 },
+		doubleCircle3: { group: 'g3', rate: 2 },
+		gold3: { group: 'g3', rate: 3 },
+		singleton: { group: 'g4', rate: 1 },
+		noRarity: { group: 'g5', rate: 1 }, // in ladder, absent from rarities
+	};
+	const rarities: { [id: string]: number } = {
+		circle: 1,
+		doubleCircle: 1,
+		white: 1,
+		gold: 2,
+		circle3: 1,
+		doubleCircle3: 1,
+		gold3: 2,
+		singleton: 1,
+		noLadder: 1, // in rarities, absent from ladder
+	};
+	const clusters = buildHintClusters(ladder, rarities);
+
+	// ○/◎ pair: same group, same rarity -> same cluster key.
+	assert.equal(
+		clusters.circle,
+		clusters.doubleCircle,
+		'○/◎ pair shares a cluster key',
+	);
+	assert.equal(clusters.circle, 'g1:1');
+
+	// white+gold pair: same group, different rarity -> different cluster keys.
+	assert.notEqual(
+		clusters.white,
+		clusters.gold,
+		'white/gold pair does not share a cluster key',
+	);
+	assert.equal(clusters.white, 'g2:1');
+	assert.equal(clusters.gold, 'g2:2');
+
+	// three-rung ○/◎/gold family: ○/◎ share, gold alone.
+	assert.equal(
+		clusters.circle3,
+		clusters.doubleCircle3,
+		'○/◎ share within a 3-rung family',
+	);
+	assert.notEqual(
+		clusters.circle3,
+		clusters.gold3,
+		'gold is its own cluster within a 3-rung family',
+	);
+	assert.equal(clusters.gold3, 'g3:2');
+
+	// singleton group: still keyed by group:rarity even with no sibling to share with.
+	assert.equal(clusters.singleton, 'g4:1');
+
+	// id absent from `rarities` (present only in `ladder`) falls back to its own id.
+	assert.equal(clusters.noRarity, 'noRarity');
+	// id absent from `ladder` (present only in `rarities`) falls back to its own id.
+	assert.equal(clusters.noLadder, 'noLadder');
+	// id absent from both inputs entirely never gets an entry (caller does `HINT_CLUSTERS[id] ?? id`).
+	assert.equal(clusters.orphan, undefined);
+}
+
+// --- expandHints: per-cluster level fans out to every member; a key with no cluster members
+// (the B1 JP case: a bare skill id outside the ladder) keeps its own hint through expansion ---
+{
+	const clusters: { [id: string]: string } = {
+		circle: 'g1:1',
+		doubleCircle: 'g1:1',
+	};
+	// A cluster key with two members, neither of which is itself a key in clusterHints.
+	assert.deepEqual(expandHints({ 'g1:1': 4 }, clusters), {
+		circle: 4,
+		doubleCircle: 4,
+	});
+	// A bare skill id absent from `clusters` entirely (e.g. a JP rarity-6 pink skill outside the
+	// rarity<=2 ladder) keeps its own hint level through expansion instead of being dropped.
+	assert.deepEqual(expandHints({ pinkSkill: 3 }, clusters), { pinkSkill: 3 });
+	// Mixed: one clustered key, one bare passthrough key, in the same call.
+	assert.deepEqual(expandHints({ 'g1:1': 2, pinkSkill: 5 }, clusters), {
+		circle: 2,
+		doubleCircle: 2,
+		pinkSkill: 5,
+	});
+}
+
+// --- remapHintKeys: migrates old per-id hints to cluster keys (collision keeps max), is
+// idempotent, and leaves unknown/already-cluster keys untouched ---
+{
+	const clusters: { [id: string]: string } = {
+		circle: 'g1:1',
+		doubleCircle: 'g1:1',
+		gold: 'g2:2',
+	};
+	const oldPerId = { circle: 2, doubleCircle: 4, gold: 1, unknownId: 3 };
+	const migrated = remapHintKeys(oldPerId, clusters);
+	assert.deepEqual(migrated, { 'g1:1': 4, 'g2:2': 1, unknownId: 3 });
+
+	// Idempotent: running it again on the already-migrated (cluster-keyed) map is a no-op, since
+	// no cluster key is ever itself a value looked up in `clusters` (ids/groupIds never contain
+	// ':', so `clusters['g1:1']` is undefined and the `?? key` fallback keeps it as-is).
+	assert.deepEqual(remapHintKeys(migrated, clusters), migrated);
+
+	// A key already in cluster form, or one `clusters` doesn't recognize at all, passes through
+	// untouched.
+	assert.deepEqual(remapHintKeys({ 'g1:1': 5, someUnknown: 2 }, clusters), {
+		'g1:1': 5,
+		someUnknown: 2,
+	});
 }
 
 // --- optimizePurchases: single-rung group, exactly-budget vs budget-1 ---
@@ -339,6 +457,39 @@ import {
 		budget: 6,
 	};
 	assert.deepEqual(optimizePurchases(input), optimizePurchases(input));
+}
+
+// --- end-to-end: a shared cluster hint (expanded via expandHints before reaching
+// optimizePurchases) discounts BOTH rungs of a ○/◎ pair, even though only the ◎ is a candidate ---
+{
+	const ladder: LadderIndex = {
+		circleE: { group: 'gE', rate: 1 },
+		doubleE: { group: 'gE', rate: 2 },
+	};
+	const rarities = { circleE: 1, doubleE: 1 };
+	const clusters = buildHintClusters(ladder, rarities);
+	assert.equal(clusters.circleE, clusters.doubleE); // sanity: still a shared cluster
+
+	const clusterHints = { [clusters.doubleE]: 3 };
+	const expanded = expandHints(clusterHints, clusters);
+	assert.deepEqual(expanded, { circleE: 3, doubleE: 3 });
+
+	const input: OptimizerInput = {
+		candidates: [{ id: 'doubleE', gain: 20 }], // only the ◎ is shortlisted/candidate
+		hints: expanded,
+		ladder,
+		costs: { circleE: 100, doubleE: 150 },
+		// discountedCost(100,3) = round(100*.7) = 70; discountedCost(150,3) = round(150*.7) = 105
+		budget: 175,
+		topK: 1,
+	};
+	assert.deepEqual(optimizePurchases(input), [
+		{ skillIds: ['circleE', 'doubleE'], totalCost: 175, totalGain: 20 },
+	]);
+	// One level lower would leave the ○ prerequisite's cost undiscounted, which must NOT fit.
+	assert.deepEqual(optimizePurchases({ ...input, budget: 174 }), [
+		{ skillIds: [], totalCost: 0, totalGain: 0 },
+	]);
 }
 
 console.log('spOptimizer tests passed');
