@@ -1,0 +1,739 @@
+<title>Sim Accuracy Report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+	:root {
+		--bg: #f4f7f2;
+		--surface: #ffffff;
+		--surface-2: #eef2ec;
+		--ink: #16201a;
+		--muted: #5b6b60;
+		--border: #d8e0d9;
+		--accent: #2f6b4f;
+		--accent-strong: #1f4d38;
+		--accent-ink: #ffffff;
+		--pass: #3f8f5c;
+		--pass-bg: #e6f3ea;
+		--fail: #a23b2e;
+		--fail-bg: #f7e9e6;
+		--brass: #b5792a;
+		--brass-bg: #f6ecdc;
+		--brass-ink: #8a5a1f; /* darker than --brass -- WCAG AA on --brass-bg for badge text; --brass itself stays reserved for decorative border/guide-line use, which has no text-contrast requirement */
+		--info: #2f5f6b;
+		--info-bg: #e7f1f3;
+		--shadow: 0 1px 2px rgb(22 32 26 / 0.06), 0 8px 24px rgb(22 32 26 / 0.06);
+		--font-display: "Oswald", "Arial Narrow", sans-serif;
+		--font-body: "Source Serif 4", Georgia, serif;
+		--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme="light"]) {
+			--bg: #0d1210;
+			--surface: #161d19;
+			--surface-2: #1c2420;
+			--ink: #e7ede9;
+			--muted: #93a69b;
+			--border: #2a352e;
+			--accent: #5fae83;
+			--accent-strong: #7fc79c;
+			--accent-ink: #0d1210;
+			--pass: #6fc292;
+			--pass-bg: #16281e;
+			--fail: #e07a68;
+			--fail-bg: #2c1a16;
+			--brass: #d9a054;
+			--brass-bg: #2a2114;
+			--brass-ink: #d9a054; /* already passes AA here -- no separate shade needed */
+			--info: #7ec2d1;
+			--info-bg: #142226;
+			--shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.4);
+		}
+	}
+	:root[data-theme="dark"] {
+		--bg: #0d1210;
+		--surface: #161d19;
+		--surface-2: #1c2420;
+		--ink: #e7ede9;
+		--muted: #93a69b;
+		--border: #2a352e;
+		--accent: #5fae83;
+		--accent-strong: #7fc79c;
+		--accent-ink: #0d1210;
+		--pass: #6fc292;
+		--pass-bg: #16281e;
+		--fail: #e07a68;
+		--fail-bg: #2c1a16;
+		--brass: #d9a054;
+		--brass-bg: #2a2114;
+		--brass-ink: #d9a054;
+		--info: #7ec2d1;
+		--info-bg: #142226;
+		--shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.4);
+	}
+
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--ink);
+		font-family: var(--font-body);
+		font-size: 17px;
+		line-height: 1.6;
+	}
+	.wrap {
+		max-width: 980px;
+		margin: 0 auto;
+		padding: 48px 24px 96px;
+	}
+	h1, h2, h3, .eyebrow, .stat-label, .tab-label, button, .verdict-badge, .eli5-label {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+	.mono, .stat-value, td.num, th.num, .citation, .tick-label {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* ---- masthead ---- */
+	.masthead {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding-bottom: 20px;
+		margin-bottom: 20px;
+		border-bottom: 2px solid var(--border);
+	}
+	.eyebrow {
+		color: var(--accent);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+	}
+	.masthead h1 {
+		margin: 4px 0 12px;
+		font-size: clamp(2rem, 5vw, 3.1rem);
+		font-weight: 700;
+		line-height: 1.05;
+		text-wrap: balance;
+		text-transform: none;
+		letter-spacing: -0.01em;
+	}
+	.masthead .dek {
+		margin: 0 0 14px;
+		max-width: 62ch;
+		font-size: 1.15rem;
+		color: var(--muted);
+	}
+	.scope-strip {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 20px;
+		align-items: baseline;
+		color: var(--muted);
+		font-size: 0.85rem;
+	}
+	.scope-strip .course-id {
+		font-family: var(--font-display);
+		font-size: 1.15rem;
+		font-weight: 600;
+		text-transform: none;
+		letter-spacing: 0;
+		color: var(--accent-strong);
+	}
+
+	/* ---- panels ---- */
+	.panel {
+		display: grid;
+		grid-template-columns: 56px 1fr;
+		gap: 20px;
+		margin-bottom: 48px;
+	}
+	.post {
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		background: var(--surface);
+		border: 2px solid var(--accent);
+		color: var(--accent-strong);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: 1.1rem;
+	}
+	.panel-body { min-width: 0; }
+	.panel h2 {
+		margin: 6px 0 4px;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--ink);
+		text-transform: none;
+		letter-spacing: 0;
+	}
+	.scope-line {
+		color: var(--muted);
+		font-size: 0.85rem;
+		margin-bottom: 16px;
+		max-width: 62ch;
+	}
+	.panel p { margin: 0 0 14px; max-width: 66ch; }
+	.panel p:last-child { margin-bottom: 0; }
+
+	/* ---- ELI5 boxes ---- */
+	.eli5 {
+		border-left: 3px solid var(--info);
+		background: var(--info-bg);
+		padding: 14px 18px;
+		border-radius: 0 8px 8px 0;
+		margin-bottom: 16px;
+	}
+	.eli5-label {
+		display: block;
+		color: var(--info);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		margin-bottom: 6px;
+	}
+	.eli5 p { margin: 0; max-width: none; font-size: 0.98rem; }
+	.eli5 p + p { margin-top: 8px; }
+
+	/* ---- cards / stats ---- */
+	.card {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		box-shadow: var(--shadow);
+		padding: 20px 24px;
+	}
+	.card + .card { margin-top: 16px; }
+	.stat-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+	.stat-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+	.stat-value { font-size: 2rem; font-weight: 600; color: var(--ink); }
+	.stat-sub { font-size: 0.9rem; color: var(--muted); font-family: var(--font-body); }
+	.stat-sub.mono { font-family: var(--font-mono); font-size: 0.85rem; }
+
+	.verdict-badge {
+		display: inline-block;
+		padding: 4px 12px;
+		border-radius: 999px;
+		font-size: 0.78rem;
+		font-weight: 700;
+		border: 1.5px solid currentColor;
+	}
+	.verdict-pass { color: var(--pass); background: var(--pass-bg); }
+	.verdict-fail { color: var(--fail); background: var(--fail-bg); }
+	.verdict-underpowered { color: var(--brass-ink); background: var(--brass-bg); }
+
+	.callout {
+		border-left: 3px solid var(--brass);
+		background: var(--brass-bg);
+		padding: 12px 16px;
+		border-radius: 0 8px 8px 0;
+		font-size: 0.92rem;
+	}
+	.callout p { margin: 0; max-width: none; }
+
+	table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+	th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+	th { font-family: var(--font-display); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+	td.num, th.num { text-align: right; }
+	.table-scroll { overflow-x: auto; }
+
+	.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+	@media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } .panel { grid-template-columns: 40px 1fr; } }
+
+	.citation {
+		font-size: 0.8rem;
+		color: var(--muted);
+		background: var(--surface-2);
+		border-radius: 6px;
+		padding: 10px 12px;
+		margin-top: 12px;
+	}
+
+	/* ---- charts (shared by histogram + trajectory) ---- */
+	.chart { width: 100%; height: auto; overflow: visible; }
+	.chart .bar-0 { fill: var(--muted); opacity: 0.55; }
+	.chart .bar-1 { fill: var(--accent); opacity: 0.85; }
+	.chart .zero-line { stroke: var(--ink); stroke-width: 1; opacity: 0.4; }
+	.chart .tick { stroke: var(--border); }
+	.chart .tick-label { font-size: 9px; fill: var(--muted); text-anchor: middle; }
+	.chart .tick-label-y { text-anchor: end; }
+	.chart .gridline { stroke: var(--border); stroke-dasharray: 2 3; }
+	.chart .traj-line { fill: none; stroke-width: 2.25; }
+	.chart .traj-real { stroke: var(--ink); }
+	.chart .traj-sim { stroke: var(--accent); stroke-dasharray: 5 3; }
+	.chart .guide { stroke: var(--brass); stroke-width: 1; }
+	.chart .hover-overlay { fill: transparent; cursor: crosshair; }
+	.chart .strip-dot { fill: var(--muted); opacity: 0.35; }
+	.chart .strip-actual { fill: var(--accent); stroke: var(--surface); stroke-width: 1; }
+	.chart .strip-divider { stroke: var(--border); stroke-width: 1; }
+	.chart .strip-hit { fill: transparent; }
+	.chart .strip-zero-label { text-anchor: end; fill: var(--muted); font-size: 9px; }
+	.chart .identity-line { stroke: var(--brass); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.75; }
+	.chart .scatter-dot { fill: var(--accent); opacity: 0.85; }
+	.scatter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+	.scatter-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: var(--shadow); }
+	.scatter-cell-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+	.legend { display: flex; gap: 18px; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+	.legend span { display: inline-flex; align-items: center; gap: 6px; }
+	.swatch { width: 14px; height: 3px; display: inline-block; }
+	.swatch-real { background: var(--ink); }
+	.swatch-sim { background: var(--accent); }
+
+	.traj-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+	.traj-tab {
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		color: var(--muted);
+		border-radius: 6px;
+		padding: 5px 12px;
+		font-size: 0.72rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.traj-tab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+	.traj-tab:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.traj-readout {
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		color: var(--muted);
+		margin-top: 8px;
+		min-height: 1.2em;
+	}
+
+	.footnote { color: var(--muted); font-size: 0.8rem; margin-top: 48px; border-top: 1px solid var(--border); padding-top: 16px; }
+	.footnote .fn-label { color: var(--ink); font-weight: 600; }
+</style>
+
+<div class="wrap">
+	<header class="masthead">
+		<div class="eyebrow">Sim vs. Reality</div>
+		<h1>How close does the simulator get to a real race?</h1>
+		<p class="dek">We took <span id="dek-race-count">real Champions Meeting races</span>, fed the same
+			horses and skills into the simulator, and compared what actually happened to what the
+			simulator predicted. Here's what we found &mdash; in plain terms first, numbers if you
+			want them.</p>
+		<div class="scope-strip">
+			<span class="course-id" id="course-id">&mdash;</span>
+			<span id="corpus-desc">&mdash;</span>
+		</div>
+	</header>
+
+	<section class="panel">
+		<div class="post">1</div>
+		<div class="panel-body">
+			<h2>So, is it accurate?</h2>
+			<div class="scope-line">Short answer: pretty close, but we can't yet prove it's close
+				enough to trust the exact skill-comparison numbers umalator gives you.</div>
+
+			<div class="eli5">
+				<span class="eli5-label">The simple version</span>
+				<p>We looked at this two ways. First: if you pick one specific real race and ask the
+					simulator to run it, how far off does it land? Second, and more important: when
+					umalator tells you "this skill is worth about half a horse-length," can we actually
+					trust that number? Those turn out to be different questions with different
+					answers.</p>
+			</div>
+
+			<div class="grid-2">
+				<div class="card">
+					<div class="stat-row">
+						<span class="stat-label">One race at a time</span>
+					</div>
+					<div class="stat-value" id="ha-sd">&mdash;</div>
+					<div class="stat-sub" id="ha-ci">&mdash;</div>
+					<p class="stat-sub" style="margin-top:10px">Here's the twist: when we reran the exact
+						same simulated race over and over with nothing but different random luck, the
+						result bounced around by almost as much on its own &mdash; see the table below. So a
+						good chunk of that gap isn't the simulator being "wrong," it's just normal
+						race-to-race randomness, same as in the real game. That's true on average across
+						many races &mdash; race by race it's more one-sided, see the next section.</p>
+					<table style="margin-top:14px">
+						<thead><tr><th>Horse</th><th class="num">Sim's own luck swing</th><th class="num">Real races' luck swing</th><th class="num">Match?</th></tr></thead>
+						<tbody id="ha-build-table"></tbody>
+					</table>
+					<p class="stat-sub" style="margin-top:10px; font-size:0.78rem">"Match?" is how well the
+						simulator's good/bad race luck lined up with the real horse's good/bad race luck,
+						from &minus;1 (opposite) to +1 (perfectly in sync).</p>
+				</div>
+				<div class="card">
+					<div class="stat-row">
+						<span class="stat-label">Can you trust the skill numbers?</span>
+						<span class="verdict-badge" id="hb-verdict">&mdash;</span>
+					</div>
+					<div class="stat-value" id="hb-mean">&mdash;</div>
+					<div class="stat-sub" id="hb-ci">&mdash;</div>
+					<p class="stat-sub" style="margin-top:10px">This is the number that actually matters for
+						umalator's skill comparisons. Our best guess landed close to zero, but with only
+						<span id="hb-race-count">so many</span> races to work with, the honest range is wide
+						enough that we can't rule out a real gap. We compared it against what a real skill
+						actually looks like in-game &mdash; see below.</p>
+					<div class="citation" id="hb-citation">&mdash;</div>
+				</div>
+			</div>
+
+			<div class="callout" style="margin-top:16px">
+				<p><strong>One important catch:</strong> to really prove "does this skill help by exactly
+				this much," you'd want to run the <em>same</em> horse twice &mdash; once with a skill,
+				once without &mdash; and compare. Every horse in this data set only raced with one
+				skillset, never a with/without pair. So we can't directly confirm umalator's exact
+				per-skill numbers here, only get a rough sense of how far off the simulator tends to be
+				in general.</p>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">2</div>
+		<div class="panel-body">
+			<h2>What if we reran one race a hundred times?</h2>
+			<div class="scope-line" id="reseed-scope">&mdash;</div>
+			<div class="eli5">
+				<span class="eli5-label">The simple version</span>
+				<p>Each vertical strip below is one real race. Inside it, 100 tiny dots are the
+					simulator running that <em>exact same race</em> 100 times with nothing but different
+					random luck &mdash; that's the simulator's own natural spread. The bigger dot is what
+					actually happened, and the horizontal line across the middle is "matched reality
+					exactly."</p>
+				<p>If the simulator were only ever off by luck, that bigger dot would land inside the
+					cloud of small dots about as often as not. It doesn't &mdash; see the number below.
+					That tells us the gap in most of these races isn't just noise; it leans the same
+					direction race after race.</p>
+			</div>
+			<div class="card table-scroll" id="reseed-chart-host"></div>
+			<div class="grid-2" style="margin-top:16px">
+				<div class="card">
+					<div class="stat-label">Reality inside the sim's own 100-try spread</div>
+					<div class="stat-value" id="reseed-full-coverage" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub">of races &mdash; the rest, all 100 reruns landed on the same side of
+						what really happened.</div>
+				</div>
+				<div class="card">
+					<div class="stat-label">Reality inside the middle 90% of tries</div>
+					<div class="stat-value" id="reseed-central-coverage" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub">a stricter version of the same check &mdash; excludes the most
+						extreme-luck 5% on each side.</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">3</div>
+		<div class="panel-body">
+			<h2>How far off, typically?</h2>
+			<div class="scope-line" id="dist-scope">&mdash;</div>
+			<div class="eli5">
+				<span class="eli5-label">The simple version</span>
+				<p>Each bar below is a horse-length of error. A perfect simulator would pile everything
+					right on 0. Ours leans slightly negative &mdash; the simulator tends to have horses
+					finish a little behind where they really finished &mdash; but most results cluster
+					within about a horse or two of correct.</p>
+			</div>
+			<div class="legend"><span><span class="swatch swatch-real" style="background:var(--muted)"></span>every horse we tracked</span><span><span class="swatch" style="background:var(--accent)"></span><span id="legend-own-count">our repeat horses only</span></span></div>
+			<div class="card" id="dist-chart-host"></div>
+			<div class="grid-2" style="margin-top:16px">
+				<div class="card">
+					<div class="stat-label">Average error, all horses</div>
+					<div class="stat-value" id="m1-mean" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub" id="m1-bias">&mdash;</div>
+				</div>
+				<div class="card">
+					<p class="stat-sub" style="margin-bottom:10px">Error tends to grow as the race goes on
+						&mdash; small gaps early, bigger ones by the final stretch:</p>
+					<table>
+						<thead><tr><th>Part of the race</th><th class="num">Avg. error</th></tr></thead>
+						<tbody id="phase-table"></tbody>
+					</table>
+					<div class="stat-sub" style="margin-top:8px" id="phase-scope">&mdash;</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">4</div>
+		<div class="panel-body">
+			<h2>Does the sim track each horse's good and bad days?</h2>
+			<div class="scope-line" id="scatter-scope">&mdash;</div>
+			<div class="card" id="scatter-chart-host"></div>
+			<p class="stat-sub" id="scatter-note" style="margin-top:10px">&mdash;</p>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">5</div>
+		<div class="panel-body">
+			<h2>Watch a race, side by side</h2>
+			<div class="scope-line">One real race per repeat horse &mdash; picked as a typical example,
+				not the best or worst result we saw.</div>
+			<p>The solid line is what really happened. The dashed line is the simulator's guess. Hover
+				anywhere on the chart to see exactly how far apart they were at that moment.</p>
+			<div class="legend"><span><span class="swatch swatch-real"></span>the real race</span><span><span class="swatch swatch-sim"></span>the simulator</span></div>
+			<div class="card" id="traj-host"></div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">6</div>
+		<div class="panel-body">
+			<h2>What throws the simulator off?</h2>
+			<div class="scope-line" id="cov-scope">&mdash;</div>
+			<div class="eli5">
+				<span class="eli5-label">The simple version</span>
+				<p>Two things: how often a horse's running style tends to get bigger errors, and
+					whether it got boxed in (blocked) during the race. Neither is shocking &mdash; traffic
+					is genuinely hard to simulate, and front-runners live or die by the pace in ways that
+					are sensitive to small differences.</p>
+			</div>
+			<div class="grid-2">
+				<div class="card">
+					<div class="stat-label">Did the simulator predict the right finishing order?</div>
+					<p class="stat-sub" style="margin:8px 0">Somewhat &mdash; better than a coin flip, not
+						perfect. 1.0 would mean it nailed the order every time; 0 would mean it was just
+						guessing.</p>
+					<div class="stat-row" style="margin-top:8px">
+						<div><div class="stat-sub">Order match (&tau;)</div><div class="stat-value" style="font-size:1.4rem" id="fo-tau">&mdash;</div></div>
+						<div><div class="stat-sub">Order match (&rho;)</div><div class="stat-value" style="font-size:1.4rem" id="fo-rho">&mdash;</div></div>
+					</div>
+					<div class="stat-sub" id="fo-n" style="margin-top:8px">&mdash;</div>
+				</div>
+				<div class="card table-scroll">
+					<p class="stat-sub" style="margin-bottom:8px">How much each factor moved the error, in
+						horse-lengths &mdash; the range is our best-guess "probably somewhere in here":</p>
+					<table>
+						<thead><tr><th>Factor</th><th class="num">Effect</th><th class="num">Probably between</th></tr></thead>
+						<tbody id="cov-table"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">7</div>
+		<div class="panel-body">
+			<h2>When the last spurt started late</h2>
+			<div class="scope-line" id="m4-scope">&mdash;</div>
+			<p>In almost every race, a horse's Last Spurt kicks in right on schedule, around the
+				two-thirds mark. These races were the exceptions &mdash; the real horse held back
+				longer than usual. Here's how the simulator handled each one:</p>
+			<p class="stat-sub" id="spurt-agreement" style="margin-bottom:10px">&mdash;</p>
+			<div class="card table-scroll">
+				<table>
+					<thead><tr><th>Race</th><th>Horse</th><th class="num">Real spurt started at</th><th>What the sim did</th><th class="num">HP&nbsp;error</th></tr></thead>
+					<tbody id="m4-table"></tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">8</div>
+		<div class="panel-body">
+			<h2>Does it get stamina right?</h2>
+			<div class="grid-2">
+				<div class="card">
+					<div class="stat-label">Starting stamina (HP), sim vs. real</div>
+					<div class="stat-value" id="m2-diff" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub" id="m2-n">&mdash;</div>
+				</div>
+				<div class="card">
+					<div class="stat-label">Do higher skill levels explain the HP mismatches?</div>
+					<div class="stat-value" id="m3-r" style="font-size:1.4rem">&mdash;</div>
+					<div class="stat-sub" id="m3-n">&mdash;</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel">
+		<div class="post">9</div>
+		<div class="panel-body">
+			<h2>A couple more facts about these real races</h2>
+			<div class="grid-2">
+				<div class="card">
+					<div class="stat-label">How often do horses get Rushed?</div>
+					<div class="stat-value" id="m5-rate" style="font-size:1.4rem">&mdash;</div>
+					<p class="stat-sub" id="m5-note" style="margin-top:10px; max-width: 60ch;"></p>
+				</div>
+				<div class="card">
+					<div class="stat-label">How many of a build's skills actually fire?</div>
+					<div class="stat-value" id="skr-mean" style="font-size:1.4rem">&mdash;</div>
+					<p class="stat-sub" id="skr-note" style="margin-top:10px; max-width: 60ch;"></p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<div class="footnote"><span class="fn-label">For the data-curious:</span> <span id="manifest-line">&mdash;</span></div>
+</div>
+
+<script>window.__ACCURACY_DATA__ = __ACCURACY_DATA_JSON__;</script>
+<script>__ACCURACY_CHARTS_BUNDLE__</script>
+<script>
+(() => {
+	var d = window.__ACCURACY_DATA__;
+	var fmt2 = (x) => (x >= 0 ? '+' : '') + x.toFixed(2);
+	var fmt3 = (x) => (x >= 0 ? '+' : '') + x.toFixed(3);
+	var pct = (x) => (x * 100).toFixed(1) + '%';
+	var on = (id, text) => { document.getElementById(id).textContent = text; };
+	var lengths = (x) => Math.abs(x).toFixed(1) + (Math.abs(x) === 1 ? ' length' : ' lengths');
+
+	var a = d.headlineA, b = d.headlineB;
+	var ownBuildCount = Object.keys(a.rhoByBuild).length;
+	var ownRaceCounts = Object.values(a.rhoByBuild).map((v) => v[1]);
+	var ownRaceCountMin = Math.min(...ownRaceCounts), ownRaceCountMax = Math.max(...ownRaceCounts);
+	var ownRaceCountRange = ownRaceCountMin === ownRaceCountMax
+		? ownRaceCountMax + ' times'
+		: ownRaceCountMin + '-' + ownRaceCountMax + ' times';
+
+	on('course-id', 'Hanshin, 1600m (outer track)');
+	on('dek-race-count', d.manifest.filesScanned + ' real Champions Meeting races');
+	on('corpus-desc', d.manifest.filesScanned + ' real races · ' + d.n.all + ' horses we could simulate (' + d.n.own + ' of them from ' + ownBuildCount + ' horses we tracked across many races each)');
+
+	on('ha-sd', lengths(a.sdEpsilonBasinn) + ' off, typically');
+	on('ha-ci', 'Based on ' + a.n + ' races. Could reasonably be anywhere from ' + lengths(a.ci95[0]) + ' to ' + lengths(a.ci95[1]) + '.');
+	var haTable = document.getElementById('ha-build-table');
+	Object.keys(a.sigmaSimRngByBuild).sort().forEach((build) => {
+		var tr = document.createElement('tr');
+		var rho = a.rhoByBuild[build] ? a.rhoByBuild[build][0] : NaN;
+		tr.innerHTML = '<td>' + build + '</td><td class="num">' + lengths(a.sigmaSimRngByBuild[build]) +
+			'</td><td class="num">' + (a.sigmaRealObservedSecByBuild[build] || 0).toFixed(2) + 's</td><td class="num">' +
+			fmt3(rho) + '</td>';
+		haTable.appendChild(tr);
+	});
+
+	on('hb-mean', fmt2(b.meanBasinn) + ' lengths, on average');
+	on('hb-race-count', d.manifest.filesScanned);
+	on('hb-ci', 'Honest range: ' + fmt2(b.ci95[0]) + ' to ' + fmt2(b.ci95[1]) + ' lengths (based on ' + b.n + ' head-to-head comparisons).');
+	var verdictEl = document.getElementById('hb-verdict');
+	var verdictKey = b.verdictKey;
+	var verdictText = { PASS: 'Looks solid', FAIL: 'Real gap found', UNDERPOWERED: 'Too close to call' }[verdictKey] || verdictKey;
+	verdictEl.textContent = verdictText;
+	verdictEl.className = 'verdict-badge verdict-' + (verdictKey === 'PASS' ? 'pass' : verdictKey === 'FAIL' ? 'fail' : 'underpowered');
+	on('hb-citation', 'For comparison, we checked a real skill in the actual Skill Chart tool: ' + d.calibration.citation +
+		'. So a typical single skill is worth roughly ' + d.calibration.typicalEffectLowBasinn.toFixed(1) + '-' +
+		d.calibration.typicalEffectHighBasinn.toFixed(1) + ' lengths — our honest range above is wide enough to overlap that, which is exactly why we can\'t call it either way yet.');
+
+	var m1 = d.measurement1;
+	on('dist-scope', 'Every horse we could load into the simulator vs. the ' + ownBuildCount + ' that raced ' + ownRaceCountRange + ' each (only those ' + ownBuildCount + ' have full frame-by-frame data to compare with)');
+	on('m1-mean', fmt2(m1.meanFinishPosErrBasinn) + ' lengths');
+	on('m1-bias', 'Across ' + m1.nAll + ' horses, the simulator was off by about ' + Math.abs(m1.meanDistBiasM).toFixed(1) + 'm on average (typical swing: ' + m1.meanDistRmsM.toFixed(1) + 'm).');
+	var phaseNiceNames = {
+		'opening leg': 'Opening leg (start of the race)',
+		'middle leg': 'Middle leg',
+		'final leg': 'Final leg',
+		'last spurt': 'Last spurt (the finish)',
+	};
+	var phaseTable = document.getElementById('phase-table');
+	Object.keys(m1.phaseStats).forEach((phase) => {
+		var s = m1.phaseStats[phase];
+		var tr = document.createElement('tr');
+		tr.innerHTML = '<td>' + (phaseNiceNames[phase] || phase) + '</td><td class="num">' + s.meanM.toFixed(1) + 'm</td>';
+		phaseTable.appendChild(tr);
+	});
+	on('phase-scope', 'From our ' + ownBuildCount + ' repeat horses only (' + m1.phaseBreakdownNOwnRuns + ' races, ' + m1.phaseBreakdownNSamples + ' data points)');
+	on('legend-own-count', 'our ' + ownBuildCount + ' repeat horses only');
+
+	AccuracyCharts.renderHistogramCompare(document.getElementById('dist-chart-host'), [
+		{ label: 'all', data: d.histograms.finishPosErrBasinnAll, n: d.n.all },
+		{ label: 'own', data: d.histograms.finishPosErrBasinnOwn, n: d.n.own },
+	], {});
+
+	var rs = d.reseedSpread;
+	if (rs) {
+		on('reseed-scope', 'Every one of our ' + ownBuildCount + ' repeat horses\' races, re-simulated 100 times each with a different random seed (' + rs.n + ' races total).');
+		on('reseed-full-coverage', rs.fullRangeCoverage + ' / ' + rs.n);
+		on('reseed-central-coverage', rs.centralBandCoverage + ' / ' + rs.n);
+		AccuracyCharts.renderReseedStrip(document.getElementById('reseed-chart-host'), rs, {});
+	}
+
+	var fts = d.finishTimeScatter;
+	var rhoBits = [];
+	if (fts) {
+		on('scatter-scope', 'Our ' + ownBuildCount + ' repeat horses, sim vs. real finish time for each of their races. A point sitting right on the dashed line means the simulator called that race almost exactly right.');
+		AccuracyCharts.renderFinishTimeScatterGrid(document.getElementById('scatter-chart-host'), fts, {});
+		rhoBits = Object.keys(a.rhoByBuild).sort().map((build) => build + ' (' + fmt3(a.rhoByBuild[build][0]) + ')');
+		on('scatter-note', 'How tightly the points hug that line, in one number per horse: ' + rhoBits.join(', ') + '. Closer to +1 means the sim is tracking that horse\'s good and bad races; closer to 0 means it isn\'t.');
+	}
+
+	AccuracyCharts.renderTrajectoryOverlay(document.getElementById('traj-host'), d.trajectoryExamples, {});
+
+	var fo = d.finishOrderAgreement;
+	on('fo-tau', fmt3(fo.meanTau));
+	on('fo-rho', fmt3(fo.meanRho));
+	on('fo-n', 'Averaged across ' + fo.nRaces + ' races of about ' + fo.meanFieldSize.toFixed(0) + ' horses each.');
+	on('cov-scope', 'What predicts a bigger gap between sim and reality, across all ' + d.covariateRegression.n + ' horses we checked');
+	var covNiceNames = {};
+	// engine-side style ints, RaceSolver's own convention (see e.g. parseReplay.ts's
+	// runningStyle comment): 1=Front Runner(Nige), 2=Pace Chaser(Senko), 3=Late
+	// Surger(Sashi), 4=End Closer(Oikomi). analyze_replay_diff.py's baseline_style is
+	// computed dynamically as the lowest style value actually present in the corpus (not
+	// always 1), so the label pair below is built from both captured numbers rather than
+	// three hardcoded "(vs 1)" regexes -- a future corpus without a Front Runner baseline
+	// degrades to a readable label instead of a raw internal name.
+	var RUNNING_STYLE_NAMES = { 1: 'Front Runner', 2: 'Pace Chaser', 3: 'Late Surger', 4: 'End Closer' };
+	d.covariateRegression.coefficients.forEach((c) => {
+		if (c.name === 'intercept') return; // not a meaningful factor to show a player
+		var styleMatch = c.name.match(/^runningStyle==(\d+) \(vs (\d+)\)$/);
+		var niceName = styleMatch
+			? (RUNNING_STYLE_NAMES[styleMatch[1]] || ('style ' + styleMatch[1])) + ' vs. ' +
+				(RUNNING_STYLE_NAMES[styleMatch[2]] || ('style ' + styleMatch[2]))
+			: c.name
+				.replace('blockedFrameCount', 'Got blocked/boxed in (per moment blocked)')
+				.replace('temptationPresent', 'Got Rushed at some point');
+		var tr = document.createElement('tr');
+		tr.innerHTML = '<td>' + niceName + '</td><td class="num">' + fmt2(c.coef) + '</td><td class="num">' +
+			fmt2(c.ci95[0]) + ' to ' + fmt2(c.ci95[1]) + '</td>';
+		document.getElementById('cov-table').appendChild(tr);
+	});
+
+	var m4 = d.measurement4;
+	on('m4-scope', m4.n + ' horses out of ' + d.n.all + ' we simulated where the real horse\'s Last Spurt kicked in noticeably later than the usual ~' + m4.floorM.toFixed(0) + 'm mark.');
+	var spurt = d.spurtAgreement;
+	if (spurt) {
+		on('spurt-agreement', 'Overall, the simulator\'s full-spurt call matched the replay\'s own in ' + pct(spurt.agreementRate) +
+			' of races (sim called ' + spurt.simFullCount + '/' + spurt.n + ' races a full spurt, reality was ' + spurt.realFullCount + '/' + spurt.n + ').');
+	}
+	var m4Table = document.getElementById('m4-table');
+	m4.cases.forEach((c) => {
+		var tr = document.createElement('tr');
+		var simStr = c.simFullSpurt ? 'Sim spurted right on schedule anyway' : 'Sim also spurted late (' + c.simLastSpurtTransition.toFixed(0) + 'm)';
+		tr.innerHTML = '<td>' + c.file.replace(/\.json$/, '').split('-').slice(0, -2).join(' ') + '</td><td>' + c.charaName + (c.own ? ' (repeat horse)' : '') +
+			'</td><td class="num">' + c.realLastSpurtStartDistance.toFixed(0) + 'm</td><td>' + simStr +
+			'</td><td class="num">' + fmt2(c.hpErrMean) + '</td>';
+		m4Table.appendChild(tr);
+	});
+
+	var m2 = d.measurement2, m3 = d.measurement3;
+	on('m2-diff', (m2.meanDiff >= 0 ? '+' : '') + m2.meanDiff.toFixed(1) + ' HP');
+	on('m2-n', 'Across ' + m2.n + ' horses — this is essentially spot-on. Starting stamina is not why simulated races drift from real ones.');
+	var m3r = m3.pearsonRVsSkillLevelMean;
+	on('m3-r', Math.abs(m3r) < 0.2 ? 'Not really' : (m3r > 0 ? 'A little' : 'A little, inversely'));
+	on('m3-n', '(correlation r=' + fmt3(m3r) + ' across ' + m3.nMean + ' horses — close to 0 means no real pattern)');
+
+	var m5 = d.measurement5;
+	on('m5-rate', m5.rushedCount + ' out of ' + m5.n + ' horses (' + pct(m5.observedRate) + ')');
+	on('m5-note', 'That\'s how often a real horse got Rushed (掛かり) in these races. We also checked this against the simulator\'s own math for how often Rushed should happen, but with so few Rushed horses in this data set, we can\'t say with confidence whether the simulator over- or under-predicts it.');
+
+	var skr = d.skillActivationRate;
+	if (skr) {
+		on('skr-mean', pct(skr.meanRate) + ', on average');
+		on('skr-note', 'Across ' + skr.n + ' horses, anywhere from ' + pct(skr.minRate) + ' to ' + pct(skr.maxRate) + ' of a build\'s equipped skills actually triggered. This is a fact about the real races, not the simulator — it\'s the ceiling on how many skills there ever were to compare against.');
+	}
+
+	on('manifest-line', 'We scanned ' + d.manifest.filesScanned + ' saved races (' + d.manifest.runsAttempted + ' horses total). ' +
+		d.manifest.runsBuildFailed.length + ' horses couldn\'t be loaded into the simulator due to an unrelated, already-known gap in skill support, and ' +
+		d.manifest.duplicateActivationsCollapsed + ' duplicate skill activations in the replay data were cleaned up before comparing.');
+})();
+</script>
