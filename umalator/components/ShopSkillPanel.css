@@ -159,6 +159,17 @@
 	outline-offset: 1px;
 }
 
+/* UI-16 follow-up (shared ○/◎ hints): a non-owner row renders this in place of .shopSkillHint --
+   same box size, no border/background -- so the remove button still lines up in a column across
+   owner and non-owner rows instead of hugging the name whenever the field is absent. */
+.shopSkillHintSpacer {
+	flex-shrink: 0;
+	display: inline-block;
+	width: 2ch;
+	padding: 1px 3px;
+	border: 1px solid transparent;
+}
+
 /* Panel rows reuse .shopSkillChip's icon/name/remove layout and rarity mapping (shared with
    .horseSkillPills in components/HorseDef.css) but read as a list, not a wrapping chip cloud --
    override the chip's inline-flex/max-width with a full-width row. */

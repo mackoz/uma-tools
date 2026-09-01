@@ -24,9 +24,15 @@ interface ShopSkillPanelProps {
 	// recomputed here, so the same shopSkillIds/procable pair isn't partitioned twice per render.
 	partition: { procable: string[]; wontProc: string[] };
 	ladder: LadderIndex;
-	// UI-16: per-skill shop hint level (0-5, default 0), keyed by skill id -- feeds the SP
-	// optimizer's discountedCost. An id absent from this map is level 0.
-	hints: { [skillId: string]: number };
+	// UI-16 follow-up (shared ○/◎ hints): hint level (0-5, default 0), keyed by CLUSTER -- a hint
+	// is earned per-SKILL in game and discounts both a ○ rung and its ◎ upgrade, so this is no
+	// longer keyed by raw skill id (see umalator/spOptimizer.ts's buildHintClusters/HintClusters).
+	// A key absent from this map is level 0.
+	hints: { [clusterKey: string]: number };
+	// skillId -> cluster key (app.tsx's module-level HINT_CLUSTERS). An id absent from this map is
+	// its own singleton cluster, matching the `hintKeys[id] ?? id` convention used everywhere else
+	// this map is consulted.
+	hintKeys: { [skillId: string]: string };
 	onHintChange: (skillId: string, level: number) => void;
 }
 
@@ -81,6 +87,73 @@ function buildFamilyTree(ids: string[], ladder: LadderIndex): FamilyEntry[] {
 	return entries;
 }
 
+// Flattens a section's FamilyEntry[] into skill ids in on-screen render order: each top row
+// immediately followed by its rate-descending children.
+function flattenEntries(entries: FamilyEntry[]): string[] {
+	const out: string[] = [];
+	for (const entry of entries) {
+		out.push(entry.id, ...entry.children);
+	}
+	return out;
+}
+
+interface RowHintInfo {
+	hintLevel: number;
+	showHint: boolean;
+	// Only meaningful when showHint is true: whether this owner's cluster has more than one
+	// shortlisted member, i.e. whether the field's aria-label should call out the shared pair.
+	sharedWithPair: boolean;
+	// Only set when showHint is false: the tooltip explaining which skill's field this row's hint
+	// is controlled by.
+	sharedTitle?: string;
+}
+
+// UI-16 follow-up (shared ○/◎ hints) -- the owner rule: across the panel's FULL render order (the
+// "In the pool" section then "Won't activate here", each in buildFamilyTree order -- top rows
+// before their rate-descending children), the FIRST row of each cluster renders the hint field;
+// every later row of the same cluster renders none, with a title pointing at the owner instead.
+// This is the ONLY rule -- deliberately not "top row": for a plain ○/◎ pair the ◎ (top row) owns
+// the field same as "top row" would predict, but for a three-rung ○/◎/gold family the TOP row is
+// the GOLD (buildFamilyTree always picks the highest rate as the top), which sits in its own
+// (rarity-differentiated) cluster and so owns its own field -- the shared ○/◎ field lands on the
+// first CHILD (the ◎), not the top row. Computed once over the combined render order rather than
+// per-section, so a cluster split across both sections still gets exactly one field, wherever its
+// first-encountered member happens to render.
+function buildHintInfo(
+	renderOrder: string[],
+	hintKeys: { [skillId: string]: string },
+	hints: { [clusterKey: string]: number },
+): Map<string, RowHintInfo> {
+	const clusterCounts = new Map<string, number>();
+	for (const id of renderOrder) {
+		const key = hintKeys[id] ?? id;
+		clusterCounts.set(key, (clusterCounts.get(key) ?? 0) + 1);
+	}
+	const ownerOfCluster = new Map<string, string>();
+	const info = new Map<string, RowHintInfo>();
+	for (const id of renderOrder) {
+		const key = hintKeys[id] ?? id;
+		const hintLevel = hints[key] ?? 0;
+		const owner = ownerOfCluster.get(key);
+		if (owner == null) {
+			ownerOfCluster.set(key, id);
+			info.set(id, {
+				hintLevel,
+				showHint: true,
+				sharedWithPair: (clusterCounts.get(key) ?? 0) > 1,
+			});
+		} else {
+			info.set(id, {
+				hintLevel,
+				showHint: false,
+				sharedWithPair: false,
+				sharedTitle: `Hint level is shared with ${getSkillName(owner)}`,
+			});
+		}
+	}
+	return info;
+}
+
 // Keyboard-first bulk entry (UI-16): typing a digit 0-5 in one hint field sets it and jumps
 // focus to the next `.shopSkillHint` field in DOM order, so a user with a long shortlist can
 // click the first field once and then type straight through the whole list. Queries the DOM
@@ -100,10 +173,15 @@ function focusNextHintInput(current: HTMLInputElement) {
 function ShopSkillHintInput({
 	id,
 	level,
+	sharedWithPair,
 	onHintChange,
 }: {
 	id: string;
 	level: number;
+	// UI-16 follow-up: this owner row's cluster has another shortlisted member (its ○/◎ pair
+	// partner) -- call that out in the accessible name, since the field visually only sits next to
+	// one of the two rows it actually controls.
+	sharedWithPair: boolean;
 	onHintChange: (skillId: string, level: number) => void;
 }) {
 	const onKeyDown = (e: KeyboardEvent) => {
@@ -140,7 +218,11 @@ function ShopSkillHintInput({
 			maxLength={1}
 			class="shopSkillHint"
 			value={String(level)}
-			aria-label={`Hint level for ${getSkillName(id)}`}
+			aria-label={
+				sharedWithPair
+					? `Hint level for ${getSkillName(id)} (shared with its ○/◎ pair)`
+					: `Hint level for ${getSkillName(id)}`
+			}
 			onKeyDown={onKeyDown}
 			onInput={(e) => {
 				// Controlled: onKeyDown owns every mutation, so just re-render from state in case
@@ -158,7 +240,7 @@ function ShopSkillRow({
 	indented,
 	onRemove,
 	wontProcHere,
-	hintLevel,
+	hintInfo,
 	onHintChange,
 }: {
 	id: string;
@@ -166,28 +248,38 @@ function ShopSkillRow({
 	indented: boolean;
 	onRemove: (skillId: string) => void;
 	wontProcHere: boolean;
-	hintLevel: number;
+	hintInfo: RowHintInfo;
 	onHintChange: (skillId: string, level: number) => void;
 }) {
 	const label = parentId
 		? `Remove ${getSkillName(id)}, required by ${getSkillName(parentId)}`
 		: `Remove ${getSkillName(id)} from shop skills`;
+	// The "can't activate here" explanation takes priority when both apply -- it's the more
+	// actionable of the two (a dimmed/struck-through row reads as broken without it; a fieldless
+	// owned-elsewhere row is merely explained, not alarming).
+	const title = wontProcHere
+		? "Can't activate on this course for this run style — it won't appear in the chart."
+		: hintInfo.sharedTitle;
 	return (
 		<span
 			class={`shopSkillChip shopSkillPanelItem ${getSkillRarityClass(id)}${wontProcHere ? ' shopSkillChipDimmed' : ''}${indented ? ' shopSkillPanelItemChild' : ''}`}
-			title={
-				wontProcHere
-					? "Can't activate on this course for this run style — it won't appear in the chart."
-					: undefined
-			}
+			title={title}
 		>
 			<img class="shopSkillChipIcon" src={getSkillIcon(id)} loading="lazy" />
 			<span class="shopSkillChipName">{getSkillName(id)}</span>
-			<ShopSkillHintInput
-				id={id}
-				level={hintLevel}
-				onHintChange={onHintChange}
-			/>
+			{hintInfo.showHint ? (
+				<ShopSkillHintInput
+					id={id}
+					level={hintInfo.hintLevel}
+					sharedWithPair={hintInfo.sharedWithPair}
+					onHintChange={onHintChange}
+				/>
+			) : (
+				// Same footprint as the field it stands in for, so the remove button still lines up
+				// in a column across owner and non-owner rows (see the title above for why the gap
+				// isn't just left empty).
+				<span class="shopSkillHintSpacer" aria-hidden="true" />
+			)}
 			<button
 				type="button"
 				class="shopSkillChipRemove"
@@ -200,29 +292,34 @@ function ShopSkillRow({
 	);
 }
 
+// UI-16 follow-up: takes the precomputed {entries, count} instead of the raw id list -- entries
+// (and the render-order-dependent owner rule that produces hintInfo) are now computed ONCE in
+// ShopSkillPanel over both sections' combined render order, not per-section, so a cluster split
+// across "In the pool" and "Won't activate here" still gets exactly one field. `hintInfo` carries
+// every resolved per-row value (hintLevel/showHint/sharedWithPair/sharedTitle) -- this component
+// (and ShopSkillRow) never needs the raw hints/hintKeys maps.
 function ShopSkillSection({
 	title,
-	ids,
-	ladder,
+	entries,
+	count,
 	onRemove,
 	wontProcSet,
-	hints,
+	hintInfo,
 	onHintChange,
 }: {
 	title: string;
-	ids: string[];
-	ladder: LadderIndex;
+	entries: FamilyEntry[];
+	count: number;
 	onRemove: (skillId: string) => void;
 	wontProcSet: Set<string>;
-	hints: { [skillId: string]: number };
+	hintInfo: Map<string, RowHintInfo>;
 	onHintChange: (skillId: string, level: number) => void;
 }) {
-	if (ids.length === 0) return null;
-	const entries = buildFamilyTree(ids, ladder);
+	if (count === 0) return null;
 	return (
 		<div class="shopSkillPanelSection">
 			<div class="shopSkillPanelSectionLabel">
-				{title} ({ids.length})
+				{title} ({count})
 			</div>
 			{entries.map((entry) => (
 				<div key={entry.id} class="shopSkillPanelFamily">
@@ -231,7 +328,7 @@ function ShopSkillSection({
 						indented={false}
 						onRemove={onRemove}
 						wontProcHere={wontProcSet.has(entry.id)}
-						hintLevel={hints[entry.id] ?? 0}
+						hintInfo={hintInfo.get(entry.id) as RowHintInfo}
 						onHintChange={onHintChange}
 					/>
 					{entry.children.map((childId) => (
@@ -242,7 +339,7 @@ function ShopSkillSection({
 							indented={true}
 							onRemove={onRemove}
 							wontProcHere={wontProcSet.has(childId)}
-							hintLevel={hints[childId] ?? 0}
+							hintInfo={hintInfo.get(childId) as RowHintInfo}
 							onHintChange={onHintChange}
 						/>
 					))}
@@ -259,10 +356,22 @@ export function ShopSkillPanel({
 	partition,
 	ladder,
 	hints,
+	hintKeys,
 	onHintChange,
 }: ShopSkillPanelProps) {
 	const { procable: inPool, wontProc } = partition;
 	const wontProcSet = new Set(wontProc);
+
+	// Hoisted out of ShopSkillSection (UI-16 follow-up): both sections' trees are built here, in
+	// one pass, so the owner rule below can see the panel's FULL render order (In the pool, then
+	// Won't activate here) rather than just one section's.
+	const poolEntries = buildFamilyTree(inPool, ladder);
+	const wontProcEntries = buildFamilyTree(wontProc, ladder);
+	const renderOrder = [
+		...flattenEntries(poolEntries),
+		...flattenEntries(wontProcEntries),
+	];
+	const hintInfo = buildHintInfo(renderOrder, hintKeys, hints);
 
 	return (
 		<div class="shopSkillPanel">
@@ -277,20 +386,20 @@ export function ShopSkillPanel({
 				<div class="shopSkillPanelList">
 					<ShopSkillSection
 						title="In the pool"
-						ids={inPool}
-						ladder={ladder}
+						entries={poolEntries}
+						count={inPool.length}
 						onRemove={onRemove}
 						wontProcSet={wontProcSet}
-						hints={hints}
+						hintInfo={hintInfo}
 						onHintChange={onHintChange}
 					/>
 					<ShopSkillSection
 						title="Won't activate here"
-						ids={wontProc}
-						ladder={ladder}
+						entries={wontProcEntries}
+						count={wontProc.length}
 						onRemove={onRemove}
 						wontProcSet={wontProcSet}
-						hints={hints}
+						hintInfo={hintInfo}
 						onHintChange={onHintChange}
 					/>
 				</div>

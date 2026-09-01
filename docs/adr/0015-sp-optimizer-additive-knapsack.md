@@ -23,9 +23,16 @@ any combination. The heavier design was deferred, not abandoned — see
   enumeration rather than a heuristic search.
 - **Group shortlisted candidates by their `SKILL_LADDER` group** (ADR-0013's `rarity <= 2`-gated
   upgrade ladder). Each group becomes a set of mutually exclusive "tiers": buying a given rung also
-  buys every lower-rate rung of the same group not already owned, at a total SP cost discounted
-  per-skill via `discountedCost`/`HINT_DISCOUNT` (`[0, 0.1, 0.2, 0.3, 0.35, 0.4]` for hint levels
-  0–5). A tier's gain is just its terminal (highest bought) rung's own chart-measured mean — gains
+  buys every lower-rate rung of the same group not already owned, at a total SP cost discounted via
+  `discountedCost`/`HINT_DISCOUNT` (`[0, 0.1, 0.2, 0.3, 0.35, 0.4]` for hint levels 0–5) — **the
+  discount level is shared across a family's same-rarity rungs, not stored per rung**: one hint per
+  skill, with a ○/◎ pair (same `SKILL_LADDER` group, same rarity) sharing a single hint and a gold
+  rung (a different rarity) always getting its own. This follow-up (`umalator/spOptimizer.ts`'s
+  `buildHintClusters`/`expandHints`/`remapHintKeys`) is justified by `master.mdb`'s
+  `single_mode_hint_gain` table: `hint_gain_type` 0 (partner-hint) rows target rate-1 rarity-1 base
+  skills exclusively, on both clients (Global 177/177, JP 371/371) — a hint is never attached
+  directly to a ◎/gold/evolved rung, so a ◎'s discount necessarily derives from its base skill's
+  hint. A tier's gain is just its terminal (highest bought) rung's own chart-measured mean — gains
   are never summed within a single group, since only the rung you'd actually end up equipped with
   contributes to the build.
 - **Solve by exact DFS** over "buy one tier, or nothing, per group," bounded only by the SP budget

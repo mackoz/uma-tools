@@ -288,6 +288,88 @@ export function loadShopSkillHints(raw: string | null): HintLevels {
 	return result;
 }
 
+// UI-16 follow-up (shared ○/◎ hints): a hint is earned per-SKILL in game, not per-rung -- it
+// discounts both a ○ rung and its ◎ upgrade. Gold rungs (and any rung of a different rarity) get
+// their own hint. Cluster key: `${groupId}:${rarity}` when both are known for an id (same ladder
+// group AND same rarity -- verified zero-collision on both datasets, see the ADR amendment and
+// docs/statistical-analysis.md); an id absent from the ladder or the rarity lookup keeps its own
+// id as its cluster key, so it never accidentally collides with a real `group:rarity` pair (all
+// ids and groupIds are all-digit, so a bare id can never contain the ':' a cluster key requires).
+export type HintClusters = { [skillId: string]: string };
+
+export function buildHintClusters(
+	ladder: LadderIndex,
+	rarities: { [id: string]: number },
+): HintClusters {
+	const clusters: HintClusters = {};
+	const ids = new Set<string>([
+		...Object.keys(ladder),
+		...Object.keys(rarities),
+	]);
+	for (const id of ids) {
+		const rung = ladder[id];
+		const rarity = rarities[id];
+		clusters[id] =
+			rung != null && rarity != null ? `${rung.group}:${rarity}` : id;
+	}
+	return clusters;
+}
+
+// Expands a cluster-keyed hint map (what's actually persisted/edited) into a per-id map for
+// optimizePurchases, which still charges every rung independently via `hints[id] ?? 0`
+// (buildGroups above). Iterates `clusterHints` (not `clusters`) so a key with no cluster members
+// still survives: `clusters` only maps ids that exist in the ladder/rarity lookups passed to
+// buildHintClusters, but a stored hint can be keyed by a bare skill id that was never indexed
+// there at all -- e.g. on the JP build, shop-eligible rarity-6 pink skills sit outside the
+// rarity<=2 ladder, are priced by SKILL_BASE_COST like anything else, and can carry their own
+// hint. Silently dropping such a key here would regress those JP-only skills while Global (which
+// has no such ids) ships green.
+export function expandHints(
+	clusterHints: HintLevels,
+	clusters: HintClusters,
+): HintLevels {
+	const membersOf = new Map<string, string[]>();
+	for (const id in clusters) {
+		const key = clusters[id];
+		const list = membersOf.get(key);
+		if (list) list.push(id);
+		else membersOf.set(key, [id]);
+	}
+	const out: HintLevels = {};
+	for (const key in clusterHints) {
+		const level = clusterHints[key];
+		const members = membersOf.get(key);
+		if (members && members.length > 0) {
+			for (const id of members) out[id] = level;
+		} else {
+			// Bare skill id with no cluster membership (not indexed by buildHintClusters) -- the B1
+			// JP case above. The key itself IS the skill id here.
+			out[key] = level;
+		}
+	}
+	return out;
+}
+
+// Migrates/normalizes a persisted hint map from the old per-id scheme to the new cluster-keyed
+// one, and is idempotent so it's safe to run on already-migrated data too: each key k maps to
+// clusters[k] ?? k (an already-cluster key -- one containing ':' -- is never itself a value in
+// `clusters`, since no id or groupId ever contains ':', so it passes straight through
+// unmodified). On collision (two old per-id keys landing on the same cluster, e.g. a ○/◎ pair
+// that both had their own stored hint) the max level wins, matching how a player only ever earns
+// the higher of the levels they'd have entered separately.
+export function remapHintKeys(
+	hints: HintLevels,
+	clusters: HintClusters,
+): HintLevels {
+	const out: HintLevels = {};
+	for (const key in hints) {
+		const mapped = clusters[key] ?? key;
+		out[mapped] =
+			mapped in out ? Math.max(out[mapped], hints[key]) : hints[key];
+	}
+	return out;
+}
+
 // Restricts `hints` to just the ids in `keepIds`. Returns the SAME object reference when nothing
 // would actually be dropped, so callers can use reference equality to bail out of a useEffect
 // rather than re-running on a value-equal-but-newly-allocated object every render.

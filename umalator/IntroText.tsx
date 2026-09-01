@@ -72,7 +72,11 @@ export function IntroText(props) {
 								Each skill in the Shop Skills panel now has a{' '}
 								<strong>hint level</strong> field (0–5), matching the game's own
 								SP-discount hints — type a digit to set it and jump to the next
-								field, or use the arrow keys to nudge one up or down. Above the
+								field, or use the arrow keys to nudge one up or down. A hint is
+								earned per skill, not per shop rung, so a ○/◎ pair shares a
+								single field (set on whichever row owns it) that discounts both
+								purchase steps; gold skills always get their own separate field.
+								Existing saved hint levels migrate automatically. Above the
 								chart table, a new <strong>Buy list</strong> card lets you enter
 								an SP budget and shows up to three different purchase options,
 								each with its estimated gain, SP cost, and skill icons —
