@@ -7,7 +7,7 @@ Every sub-app is a separate esbuild entry point sharing `components/`, `strings/
 The primary user-facing simulator. **Has no `.tsx` source of its own** — `build.mjs` compiles `../umalator/app.tsx` with `define: {CC_GLOBAL: 'true'}` and an esbuild `redirectData` plugin that rewrites data imports (`.../data/*.json`, `skill_meta.json`, `umas.json`) to the copies sitting in `umalator-global/` instead of `uma-skill-tools/data/` / repo root. `icons.json` is **not** redirected — both JP and Global builds read the same repo-root `icons.json`.
 
 - **Build:** `cd umalator-global && node build.mjs` (production, minified) or `node build.mjs --debug` (unminified, `CC_DEBUG=true`, PostHog telemetry disabled) or `node build.mjs --serve [port]` (dev server, implies `--debug`; default port 8000).
-- **Data:** `umalator-global/{course_data.json,skill_data.json,skill_meta.json,skillnames.json,umas.json,tracknames.json}` — the Global dataset. See [data-pipeline.md](data-pipeline.md).
+- **Data:** `umalator-global/{course_data.json,skill_data.json,skill_meta.json,skillnames.json,umas.json,tracknames.json,presets.ts}` — the Global dataset. See [data-pipeline.md](data-pipeline.md) and, for `presets.ts` specifically, [cm-presets.md](cm-presets.md).
 - **Telemetry:** PostHog, enabled only when `CC_GLOBAL && !CC_DEBUG` (i.e. never in `--debug`/`--serve` mode).
 - **Gotcha:** the dev server's static-file root is **two directories up from `umalator-global/`**, i.e. the parent of this whole repo checkout. See [deployment.md](deployment.md#local-dev-gotcha-the-server-root-is-your-checkouts-parent-directory) — this only works cleanly if your checkout directory is literally named `uma-tools`.
 
@@ -17,7 +17,7 @@ Same UI as Global, built with `CC_GLOBAL: 'false'` against the JP dataset (`uma-
 
 - **Build:** `cd umalator && node build.mjs` / `--debug`. No `--serve` mode in this one.
 - There is also a legacy `umalator/build.bat` (esbuild → unassert → esbuild minify) that predates `build.mjs` — it does **not** emit `simulator.worker.js`, so it's not sufficient on its own. Treat `build.mjs` as authoritative.
-- **Data:** JP dataset (`uma-skill-tools/data/`, repo-root `umas.json`/`skill_meta.json`/`icons.json`).
+- **Data:** JP dataset (`uma-skill-tools/data/`, repo-root `umas.json`/`skill_meta.json`/`icons.json`/`presets.ts`).
 
 ## `skill-visualizer/` (JP) and `skill-visualizer-global/` (Global)
 

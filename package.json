@@ -21,7 +21,7 @@
     "verify": "node scripts/verify.mjs",
     "verify:baseline": "node scripts/verify.mjs --baseline",
     "smoke": "node scripts/smoke.mjs",
-    "test": "node --experimental-strip-types umalator/statisticalAnalysis.test.ts && node --experimental-strip-types umalator/chartLadder.test.ts && node --experimental-strip-types umalator/shopSkillFilter.test.ts && node --experimental-strip-types umalator/spOptimizer.test.ts",
+    "test": "node --experimental-strip-types umalator/statisticalAnalysis.test.ts && node --experimental-strip-types umalator/chartLadder.test.ts && node --experimental-strip-types umalator/shopSkillFilter.test.ts && node --experimental-strip-types umalator/spOptimizer.test.ts && node --experimental-strip-types umalator/racePresets.test.ts",
     "test:stats": "npm run test",
     "prepare": "husky"
   },

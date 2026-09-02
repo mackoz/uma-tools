@@ -45,6 +45,7 @@ Bundles for the seven maintained build targets aren't committed to git — GitHu
 - **[docs/data-pipeline.md](docs/data-pipeline.md)** — regenerating uma/skill/course data from the game client.
 - **[docs/deployment.md](docs/deployment.md)** — GitHub Pages deployment, the `/uma-tools/` base-path constraint, local dev.
 - **[docs/statistical-analysis.md](docs/statistical-analysis.md)** — how the statistical Skill Chart evaluates skills (paired sampling, adaptive ladder, confidence intervals).
+- **[docs/cm-presets.md](docs/cm-presets.md)** — the CM/LOH preset dropdown's data and the default-preset schedule.
 - **[docs/adr/](docs/adr/README.md)** — decision records: why things are built the way they are, including rejected alternatives. The engine keeps its own set in `uma-skill-tools/docs/adr/`.
 - **[CLAUDE.md](CLAUDE.md)** — repository working conventions (generated-file guardrails, JP/Global split, build commands).
 
