@@ -148,15 +148,18 @@ export function SpOptimizerCard(props: SpOptimizerCardProps) {
 					})}
 					{props.truncated && (
 						<span
-							class="spOptimizerTruncated"
-							title="The search hit its safety limit before covering every combination — these options may not be the true best. A smaller shortlist or budget gives a complete answer."
+							class="spOptimizerTruncated spOptimizerTip"
+							tabIndex={0}
+							data-tip="The search hit its safety limit before covering every combination — these options may not be the true best. A smaller shortlist or budget gives a complete answer."
+							aria-label="The search hit its safety limit before covering every combination — these options may not be the true best. A smaller shortlist or budget gives a complete answer."
 						>
 							⚠ may be incomplete
 						</span>
 					)}
 					<span
-						class="spOptimizerInfo"
-						title={ESTIMATE_NOTE}
+						class="spOptimizerInfo spOptimizerTip"
+						tabIndex={0}
+						data-tip={ESTIMATE_NOTE}
 						aria-label={ESTIMATE_NOTE}
 						role="note"
 					>

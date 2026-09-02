@@ -118,9 +118,42 @@
 }
 
 /* The estimate caveat, demoted from an always-visible footnote to a hover/focus tooltip -- the
-   full sentence is in the title/aria-label. */
+   full sentence is in the data-tip/aria-label. */
 .spOptimizerInfo {
 	font-size: var(--font-sm);
 	color: var(--muted-2);
 	cursor: help;
+}
+
+/* Self-rendered tooltip for the strip's demoted caveat texts. A bare title attribute only fires
+   on mouse hover -- never on keyboard focus or touch -- so these spans are focusable
+   (tabindex=0) and render their data-tip on :hover AND :focus-visible instead; tapping focuses
+   on touch. Screen readers get the same sentence via aria-label. */
+.spOptimizerTip {
+	position: relative;
+}
+.spOptimizerTip:hover::after,
+.spOptimizerTip:focus-visible::after {
+	content: attr(data-tip);
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	z-index: 10;
+	width: max-content;
+	max-width: 340px;
+	padding: 6px 10px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	color: var(--fg);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	line-height: 1.4;
+	white-space: normal;
+	text-align: left;
+	box-shadow: var(--shadow-md);
+}
+.spOptimizerTip:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
 }
