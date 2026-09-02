@@ -490,6 +490,11 @@ async function runTheme(browser, url, theme) {
 				'.shopSkillPanelItem .shopSkillChipName',
 			);
 
+			// UI-16: the per-skill hint-level input (ShopSkillPanel.tsx's .shopSkillHint) -- same
+			// shortlist state as chart.shopfilter.pick above, so it's still present here, before
+			// chart.shopfilter.remove/clearall below empty the panel out.
+			await assertContrast(page, 'contrast.shophint', '.shopSkillHint');
+
 			await check('chart.shopfilter.remove', async () => {
 				// Target the top-level (non-indented) item specifically: if the prior pick auto-
 				// added a prerequisite, `.shopSkillChipRemove` alone would match more than one

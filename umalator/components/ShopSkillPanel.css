@@ -138,6 +138,38 @@
 	color: var(--sp-error);
 }
 
+/* UI-16: per-skill shop hint level (0-5). Kept small and fixed-width so a long shortlist's
+   fields line up in a column -- that alignment is what makes the keyboard-first "click the
+   first field, type straight down the list" flow actually usable at a glance. */
+.shopSkillHint {
+	flex-shrink: 0;
+	width: 2ch;
+	padding: 1px 3px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--sp-border);
+	background: var(--sp-bg);
+	color: var(--sp-text);
+	font-size: var(--font-xs);
+	font-family: inherit;
+	text-align: center;
+	line-height: 1.4;
+}
+.shopSkillHint:focus-visible {
+	outline: 2px solid var(--sp-primary);
+	outline-offset: 1px;
+}
+
+/* UI-16 follow-up (shared ○/◎ hints): a non-owner row renders this in place of .shopSkillHint --
+   same box size, no border/background -- so the remove button still lines up in a column across
+   owner and non-owner rows instead of hugging the name whenever the field is absent. */
+.shopSkillHintSpacer {
+	flex-shrink: 0;
+	display: inline-block;
+	width: 2ch;
+	padding: 1px 3px;
+	border: 1px solid transparent;
+}
+
 /* Panel rows reuse .shopSkillChip's icon/name/remove layout and rarity mapping (shared with
    .horseSkillPills in components/HorseDef.css) but read as a list, not a wrapping chip cloud --
    override the chip's inline-flex/max-width with a full-width row. */
