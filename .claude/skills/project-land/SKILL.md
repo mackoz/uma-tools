@@ -159,7 +159,7 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    the completion to this still-open branch, so the PR's own merge is what lands it, same
    principle as `land --complete-id` (just done by hand since that flag requires
    `wq.py land` to be running at all).
-4. `gh pr merge N --merge --repo mackoz/uma-tools-plans`.
+4. `gh pr merge N --squash --repo mackoz/uma-tools-plans`.
 
 **Single-repo code/engine path** (anomaly-checked, no ticket):
 
@@ -176,7 +176,7 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    (this shouldn't come up for a genuinely ticket-exempt trivial fix, which by definition
    shouldn't be touching the engine submodule at all — treat a mismatch here as a sign this
    isn't actually the simple case it looked like).
-3. `gh pr merge N --merge`.
+3. `gh pr merge N --squash`.
 4. Clean up by hand, matching what `land_one` normally does automatically: checkout the
    default branch, pull, delete the local and remote feature branch, and — code repo only —
    `git submodule update --init`.
@@ -289,6 +289,16 @@ uv run plans/scripts/wq.py land --engine-pr N --code-pr M --plans-pr K --complet
 Omit `--engine-pr` if there's no engine PR for this ticket (per Step 1). Omit
 `--complete-id` if you don't want the ticket auto-completed as part of this run (rare — only
 if the user explicitly wants to land without closing the ticket yet).
+
+`wq.py land` merges every PR with `gh pr merge --squash` (PIPE-38, 2026-09-02), not a merge
+commit — one squashed commit per landed PR, across all three repos, rather than a merge commit
+plus every intermediate review-fix commit riding along. This isn't optional per-repo tuning:
+`mackoz/uma-tools` has merge commits disabled at the repository-settings level (confirmed via
+`gh repo view mackoz/uma-tools --json mergeCommitAllowed` → `false`), so `--merge` fails there
+outright with "Merge commits are not allowed on this repository" — discovered mid-landing on a
+real PIPE-38 run. If you're doing a manual `gh pr merge` anywhere in this skill (the two
+single-repo fallback paths in Step 1.5), use `--squash` there too for the same reason, not just
+inside `wq.py land`.
 
 ## Step 5 — If it dies partway through
 
