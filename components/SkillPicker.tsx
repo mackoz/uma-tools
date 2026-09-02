@@ -376,6 +376,10 @@ export function SkillPickerModal({
 			return Math.max(1, tracks.split(/\s+/).filter(Boolean).length);
 		}
 		function handler(e: KeyboardEvent) {
+			// UI-16: a shop-hint-level field's own keydown handler owns arrows/digits/Escape while
+			// it's focused -- without this, this modal-wide handler would hijack ArrowUp/ArrowDown
+			// (grid navigation) and Escape (closes the modal) out from under it mid-entry.
+			if ((e.target as HTMLElement | null)?.closest?.('.shopSkillHint')) return;
 			switch (e.key) {
 				case 'ArrowDown': {
 					e.preventDefault();

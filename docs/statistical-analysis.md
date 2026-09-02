@@ -7,9 +7,9 @@ demand for an expanded row. The same `umalator/app.tsx` source powers both `umal
 `CC_GLOBAL`. This describes the implementation on branch `skill-chart-perf-rewrite`, engine commit
 `0861c8f`.
 
-An **SP-budget skill-set optimizer** was prototyped on an earlier branch but is deferred — the six
-layers below are chart-only. Results are estimates from the simulator model, not claims about
-live-game outcomes.
+The six layers below are chart-only; the **SP-budget optimizer** built on top of them (the Buy
+list card) has its own section further down. Results are estimates from the simulator model, not
+claims about live-game outcomes.
 
 ## Why this exists
 
@@ -378,6 +378,73 @@ two controls fighting over the same flags.
 
 Changing Model, Preset, or Pruning does not automatically rerun existing results — press Run again.
 
+## SP-budget optimizer (Buy list card)
+
+Once the Shop Skills shortlist (step 3 above) is active, a **Buy list** card renders above the
+chart table in Mode.Chart, alongside an SP budget field. This is UI-16's MVP: a lightweight,
+purely-additive optimizer over the chart's own measured means, not the full re-simulating design
+originally scoped for the ticket (see "Deferred to a follow-up branch" below, and
+`docs/adr/0015-sp-optimizer-additive-knapsack.md` for why).
+
+- **Hint levels are shared per skill, not per shop rung.** In game, a hint is earned for the
+  *skill* and discounts every purchase step of it — so a ○/◎ pair (the same skill's two shop
+  rungs) shares one 0–5 hint-level field; gold skills are separate cards with their own hints.
+  `umalator/spOptimizer.ts`'s `buildHintClusters` derives the sharing rule from the data: two
+  rungs share a hint iff they're the same `SKILL_LADDER` group AND the same rarity (cluster key
+  `${groupId}:${rarity}`; an id outside the ladder keeps its own id as its key). This is
+  corroborated by `master.mdb`'s `single_mode_hint_gain` table: `hint_gain_type` 0 (partner-hint)
+  rows exclusively target rate-1 rarity-1 base skills on both clients (Global 177/177, JP
+  371/371) — a hint never attaches to a ◎/gold/evolved rung directly, so a ◎'s discount always
+  derives from its base skill's hint. Each skill chip in the Shop Skills panel
+  (`umalator/components/ShopSkillPanel.tsx`) still gets a 0–5 hint-level field, but only the
+  *owner* row of each cluster renders one — the first row in the panel's render order (see
+  `ShopSkillPanel.tsx`'s owner rule); every other row of the same cluster shows a tooltip
+  pointing at the owner instead. Typing a digit sets the field and moves focus to the next
+  `.shopSkillHint` field in DOM order; the arrow keys increment/decrement in place.
+  `components/SkillPicker.tsx`'s modal-wide keydown handler early-returns while a hint field is
+  focused, so it doesn't hijack the arrow keys (grid navigation) or Escape (close modal)
+  mid-entry. Hint levels persist to `localStorage` under `chartShopSkillHints`, keyed by cluster
+  (`umalator/spOptimizer.ts`'s `loadShopSkillHints`/`HintLevels`/`remapHintKeys` — the last of
+  these migrates old per-id persisted data to cluster keys on load), and are pruned automatically
+  whenever the shortlist shrinks. `expandHints` fans a cluster-keyed hint back out to a per-id map
+  before it reaches the optimizer below, since `buildGroups` still charges every rung
+  independently via `hints[id] ?? 0`.
+- **The knapsack (`umalator/spOptimizer.ts`, kept import-free like `chartLadder.ts` and
+  `shopSkillFilter.ts` so it's plain-node testable).** Candidates are the shortlist's skills that
+  have a real measured gain from the last chart run (`tableData`'s per-row `statistics.mean`) and
+  aren't already owned. Candidates are grouped by `SKILL_LADDER` group (ADR-0013's `rarity <= 2`-
+  gated upgrade ladder); each group becomes a set of mutually exclusive "tiers" — buying a rung
+  also buys every lower-rate rung of the same group not already owned, at a total SP cost
+  discounted per-skill by `HINT_DISCOUNT = [0, 0.1, 0.2, 0.3, 0.35, 0.4]` (hint levels 0–5) via
+  `discountedCost`. The curve is ported from the earlier prototype and matches
+  community-documented shop discounts; it is not stored in `master.mdb` (checked — the hint
+  tables there encode hint targets, not the discount percentages). A tier's gain is just its terminal (highest-rate bought) rung's own
+  chart-measured mean — gains are never summed within one ladder group, since only the rung
+  you'd actually end up equipped with contributes to the build.
+- An exhaustive DFS enumerates every budget-feasible combination of "buy one tier (or nothing) per
+  group," bounded only by the SP budget and a defensive `NODE_CEILING` (20,000,000 node visits) —
+  no gain-based or dominance pruning (see the ADR for why dominance pruning is unsound once more
+  than one result is wanted). Hitting the ceiling stops the search early and sets `truncated` on
+  the result; the Buy list card then notes the options may be incomplete instead of presenting
+  them as optimal. Results are sorted by (total gain desc, total cost asc) and up to
+  `topK` (default 3) are accepted greedily, each required to differ from every already-accepted
+  result by a symmetric difference of at least 2 skill ids — the diversity rule that keeps the
+  three options from being near-duplicates of each other.
+- `umalator/app.tsx` recomputes this via a `useMemo` keyed on the candidate list, hints, budget,
+  and owned skills, frozen (via a ref) while a chart run is streaming so it doesn't re-run the DFS
+  on every incoming batch — it recomputes once when the run's final `tableData` lands.
+- Clicking an option (`umalator/components/SpOptimizerCard.tsx`) highlights its rows in the chart
+  table: `BasinnChart` gets a new `highlighted` prop (a `Set` of skill ids) rendering a
+  `.basinnChartHighlighted` class, declared before `.expanded` in `BasinnChart.css` so an
+  expanded+highlighted row keeps the expanded row's `--highlight-green` rather than stacking a
+  second background on top of it.
+- **Every gain shown is labeled an estimate**, in both a code comment and the card's own footnote:
+  `optimizePurchases` sums each shortlisted skill's individually measured chart gain: it does not
+  re-simulate the combination, so skills that interact (positively or negatively) when equipped
+  together aren't reflected.
+- Budget persists to `localStorage` under `chartSpBudget`, same work-scoping-knob treatment as
+  `chartShopSkills` below — not part of the serialized race state or shared URLs.
+
 ## Reproducibility
 
 Same race setup, Uma, Model, Preset, Pruning, seed, and Skill Wit Check setting reproduce an
@@ -392,7 +459,7 @@ Compare mode.
 ## Verification
 
 ```sh
-npm run test                             # statisticalAnalysis.ts, chartLadder.ts, and shopSkillFilter.ts unit tests
+npm run test                             # statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, and spOptimizer.ts unit tests
 npm --prefix uma-skill-tools test        # engine tests, including activation-sampling stability
 cd umalator && node build.mjs            # JP app build
 cd umalator-global && node build.mjs     # Global app build
@@ -404,8 +471,21 @@ memorized.
 
 ## Deferred to a follow-up branch
 
-The SP-budget skill-set optimizer from the earlier implementation, rebuilt on top of the worker
-queue and cancellation infrastructure above (spread across all workers, real per-set progress, typed
-results, a proper results panel) — plus a legal add/drop/swap refinement pass after validation,
-optimizer state in shared URLs, and a histogram/multinomial bootstrap (only worth adding if profiling
-says so once bootstrapping is already confined to ~40 skills).
+The SP-budget optimizer above is a deliberately lightweight MVP of UI-16's original heavier
+design (see `docs/adr/0015-sp-optimizer-additive-knapsack.md`). Still deferred:
+
+- **Finalist full-set re-simulation** — running each top option (and enough runner-ups to know
+  they're not actually better) as its own full sample batch through the worker pool, with all of
+  the option's skills equipped together, replacing the additive-sum estimate with a measurement
+  of the actual combination.
+- **Tied-with-#1 paired comparison** — when two re-simulated options come out statistically
+  indistinguishable, a paired comparison (matching how the Skill Chart itself ranks single skills,
+  see "Paired scenarios..." above) to decide which, if either, actually ranks first, rather than a
+  bare mean comparison.
+- **Beam search over the unfiltered candidate pool** — the shipped MVP only ever optimizes over
+  the user's shop shortlist; running it over the chart's full general-skill candidate pool needs a
+  search that doesn't enumerate every combination the way the shortlist-scale DFS does today.
+- **Add/drop/swap refinement** — a local-search pass over a finalist set after re-simulation, since
+  the additive assumption can leave a strictly better neighboring set unexplored.
+- **Optimizer state in shared URLs** — budget, hint levels, and the selected option are
+  `localStorage`-only (like `chartShopSkills`, above), not part of the serialized race state.

@@ -409,7 +409,7 @@ export function BasinnChart(props) {
 							<Fragment key={row.id}>
 								<tr
 									data-skillid={id}
-									class={`${isExpanded ? 'expanded' : ''} ${muted ? 'basinnChartMuted' : ''}`}
+									class={`${isExpanded ? 'expanded' : ''} ${muted ? 'basinnChartMuted' : ''}${props.highlighted.has(id) ? ' basinnChartHighlighted' : ''}`}
 									style={props.hidden.has(id) && 'display:none'}
 									title={rowTooltip(rowData)}
 								>
