@@ -1,8 +1,8 @@
 # Data pipeline
 
-Uma stats, skill effects, skill names, and course geometry are committed JSON, mostly regenerated from the live game client by a set of Perl scripts. This page is the runbook for regenerating them — e.g. when new umas or skills are added to the game. Track-name JSON is the exception: it is hand-maintained because no generator exists.
+Uma stats, skill effects, skill names, and course geometry are committed JSON, mostly regenerated from the live game client by a set of Perl scripts. This page is the runbook for regenerating them — e.g. when new umas or skills are added to the game. Track-name JSON and the CM/LOH preset dropdown data are the exceptions: both are hand-maintained because no generator exists.
 
-**Generated JSON should not be hand-edited.** Edit the generating `.pl` script (or the hardcoded tables inside it) and regenerate instead — see the guardrail in `CLAUDE.md`. The hand-maintained `tracknames.json` files are the explicit exception.
+**Generated JSON should not be hand-edited.** Edit the generating `.pl` script (or the hardcoded tables inside it) and regenerate instead — see the guardrail in `CLAUDE.md`. The hand-maintained `tracknames.json` files and `presets.ts`/`umalator-global/presets.ts` (see [cm-presets.md](cm-presets.md)) are the explicit exceptions.
 
 ## Inputs, from the installed game client
 
