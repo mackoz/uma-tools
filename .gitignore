@@ -9,6 +9,11 @@ node_modules
 # fresh clone won't have this directory.
 .claude/agents/
 
+# Personal Claude Code permission allowlist (which Bash/MCP calls skip the
+# approval prompt) -- machine-local preference, not a project convention to
+# share.
+.claude/settings.json
+
 # Local alias to CLAUDE.md for tools that discover AGENTS.md. The symlink is
 # intentionally checkout-local; CLAUDE.md is the tracked source of truth.
 AGENTS.md
