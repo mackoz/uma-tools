@@ -119,6 +119,7 @@ import {
 import {
 	buildHintClusters,
 	type CostLookup,
+	discountedCost,
 	expandHints,
 	type HintClusters,
 	type HintLevels,
@@ -3736,6 +3737,14 @@ function App(props) {
 		const option = purchaseOptions[selectedBuyOption];
 		return option ? new Set(option.skillIds) : new Set<string>();
 	}, [selectedBuyOption, purchaseOptions]);
+	// Per-skill hint-discounted SP cost for the Buy list's detail overlay -- SpOptimizerCard stays
+	// JSON-free, so app.tsx (which already owns SKILL_BASE_COST and expandedShopHints for
+	// optimizePurchases above) computes it here and passes the function down.
+	const buyCostOf = useCallback(
+		(id: string) =>
+			discountedCost(SKILL_BASE_COST[id] ?? 0, expandedShopHints[id] ?? 0),
+		[expandedShopHints],
+	);
 
 	// --- Skill Chart coordinator state ---
 	// chartRunRef holds every piece of mutable state a chart run needs: which round it's on, the
@@ -5330,6 +5339,7 @@ function App(props) {
 							truncated={purchaseResult.truncated}
 							selectedIndex={selectedBuyOption}
 							onSelect={setSelectedBuyOption}
+							costOf={buyCostOf}
 						/>
 					)}
 					<div class="basinnChartWrapperWrapper">

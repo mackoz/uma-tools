@@ -440,6 +440,19 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   `.basinnChartHighlighted` class, declared before `.expanded` in `BasinnChart.css` so an
   expanded+highlighted row keeps the expanded row's `--highlight-green` rather than stacking a
   second background on top of it.
+- Selecting an option also pops a **detail overlay** (`.spOptimizerDetail`) anchored to the strip
+  and expanding *upward* (`bottom: calc(100% + 6px)`) rather than laid in-flow above or below it —
+  either in-flow placement would push the chart table down, and the table's row count is exactly
+  what the one-row strip redesign above was protecting. The overlay restores the pre-strip card's
+  content (rank badge, big "Est. +X.XX lengths", "N SP · M skills" header, one rarity-bordered
+  icon + name row per skill) plus a per-skill **hint-discounted SP cost**, right-aligned on each
+  row — the one number nothing else in the UI surfaces (the strip's tooltip has names only; the
+  table has gains, not costs) — computed by a `costOf` prop app.tsx supplies from
+  `discountedCost(SKILL_BASE_COST[id], expandedShopHints[id])`, the same discount the optimizer
+  itself charges, so the rows sum to the header's total SP. It scrolls internally past ~320px/50vh
+  (`#mainContent` is the one clipping ancestor in this pane) instead of truncating when the
+  splitter is dragged up, and closes on Escape, on selecting the option again, or on any click
+  outside `.spOptimizerStrip`.
 - **Every gain shown is an estimate**, stated in a code comment and in the strip's ⓘ tooltip
   (demoted from an always-visible footnote when the card became a one-row strip — the strip's
   whole point is giving its former height back to the table): `optimizePurchases` sums each

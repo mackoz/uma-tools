@@ -11,6 +11,10 @@
    table's own row highlighting, not in this strip's height. */
 
 .spOptimizerStrip {
+	/* Anchors the on-demand detail overlay below (.spOptimizerDetail's position: absolute is
+	   relative to this box) -- an absolutely-positioned child is excluded from flex layout
+	   entirely, so this is the only layout change the overlay needs from its parent. */
+	position: relative;
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
@@ -156,4 +160,135 @@
 .spOptimizerTip:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 1px;
+}
+
+/* On-demand detail overlay, shown when an option is selected -- the old (pre-strip) card content
+   restored under detail-scoped names, plus per-skill prices. Positioned to expand UPWARD from the
+   strip (`bottom: calc(100% + 6px)`, not `top`) rather than laid in-flow above or below it: either
+   in-flow placement would push the chart table down, and the table's height is sacred (see the
+   file-level comment on why the strip itself is one row tall). It's free to cover whatever sits
+   above the results pane instead -- that's why it's dismissible via Escape/click-outside, not just
+   by re-clicking the option (see the component's useEffect). */
+.spOptimizerDetail {
+	position: absolute;
+	/* `bottom: 100%` alone resolves against the strip's padding box, so the strip's own
+	   margin-bottom would NOT be part of the visual gap -- the explicit `+ 6px` is the gap, not a
+	   rounding nicety. */
+	bottom: calc(100% + 6px);
+	left: 0;
+	/* NOT `min-width: 320px` + `max-width: 100%` -- those contradict (min-width wins the conflict)
+	   and overflow a <375px viewport into a horizontal scrollbar on #mainContent. */
+	width: min(340px, calc(100vw - 40px));
+	/* A tall 6-8 skill list scrolls inside the card instead of silently truncating against
+	   #mainContent (app.css's one clipping ancestor here) when the splitter is dragged up. */
+	max-height: min(320px, 50vh);
+	overflow-y: auto;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	padding: 10px 12px;
+	font-family: var(--font-sans);
+	/* tokens.css has no popover tier (only sticky 10 / modal 100 / above-modal 110 / overlay
+	   200/210) -- sticky is the right tier since nothing else in #topPane carries a competing
+	   z-index. Kept on the scale by convention; no gate checks this literal. */
+	z-index: var(--z-sticky);
+	/* The overlay grows FROM the strip it's anchored to, so the mount animation below scales/slides
+	   from its bottom edge, not its center. */
+	transform-origin: bottom;
+	/* --transition-fast is 0.15s (~150ms) -- reused here rather than a literal duration so this
+	   stays on the same timing scale as the rest of the file's hover/focus transitions. */
+	animation: spOptimizerDetailIn var(--transition-fast);
+}
+
+@keyframes spOptimizerDetailIn {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.spOptimizerDetail {
+		animation: none;
+	}
+}
+
+.spOptimizerDetailHeader {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+/* Primary number in the overlay -- biggest type, matching the old card's treatment. */
+.spOptimizerDetailHeader .spOptimizerOptionGain {
+	font-size: var(--font-lg);
+	font-weight: 700;
+	color: var(--fg);
+}
+
+.spOptimizerDetailHeader .spOptimizerOptionMeta {
+	margin-left: auto;
+}
+
+.spOptimizerDetailSkills {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.spOptimizerDetailSkill {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.spOptimizerDetailSkillName {
+	flex: 1;
+	font-size: var(--font-xs);
+	color: var(--fg);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.spOptimizerDetailSkillCost {
+	flex-shrink: 0;
+	font-size: var(--font-xs);
+	color: var(--muted-2);
+}
+
+.spOptimizerDetailIcon {
+	width: 20px;
+	height: 20px;
+	border-radius: 3px;
+	flex-shrink: 0;
+	border: 1px solid transparent;
+}
+
+/* Rarity accent border, same --skill-*-accent tokens HorseDef.css's .horseSkillPills/
+   .shopSkillChip combinators already key off of -- rarity belongs to the skill, not this card.
+   Verbatim from the pre-strip card's .spOptimizerOptionIcon rules (ac79efa). */
+.spOptimizerDetailIcon.skill-white {
+	border-color: var(--skill-white-accent);
+}
+.spOptimizerDetailIcon.skill-gold {
+	border-color: var(--skill-gold-accent);
+}
+.spOptimizerDetailIcon.skill-pink {
+	border-color: var(--skill-pink-accent);
+}
+.spOptimizerDetailIcon.skill-unique {
+	border-color: var(--skill-unique-accent);
+}
+
+.spOptimizerFootnote {
+	margin-top: 8px;
+	font-size: 10px;
+	color: var(--muted-2);
 }
