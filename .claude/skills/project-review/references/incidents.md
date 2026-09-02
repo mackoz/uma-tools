@@ -4,7 +4,7 @@ Forensics behind rules stated in `../SKILL.md`. Read a section here only when yo
 *why* a rule exists — the rule itself is always stated inline in `SKILL.md` and is usable without
 this file. Nothing here changes run-to-run behavior.
 
-## Single-PR case duplicated by hand (backs Step 0/Step 1's "a single open PR is fully supported")
+## Single-PR case duplicated by hand (backs the intro's "a single open PR is fully supported")
 
 Step 1's per-slot discovery already skips a repo with nothing open, and Step 3 already skips the
 cross-repo pass when too few repos have a linked PR — this was true before it was written down, it
@@ -22,7 +22,7 @@ remote ref master`, then `unknown revision 'origin/master...HEAD'` — before se
 but only after burning tool calls rediscovering something Step 1 had already resolved and simply
 never passed along.
 
-## Fan-out silently skipped, reasoning never surfaced (backs Step 2.3's transcript-check step)
+## Fan-out silently skipped, reasoning never surfaced (backs Step 2 item 3's transcript-check)
 
 Confirmed by inspecting a raw subagent transcript on 2026-08-25: a `code-review` run reasoned
 mid-run ("weighing whether to spawn parallel agents... diff is small, mostly data regen...

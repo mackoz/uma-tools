@@ -34,9 +34,14 @@ already enforced by the script itself, for the path where the script runs at all
 ## Step 0 — Parse arguments
 
 The ticket ID is the one required input (e.g. `PIPE-3`). `--engine-pr`/`--code-pr`/
-`--plans-pr` are anchors that skip discovery for that repo, the same override convention
-`/project-review` uses. `--skip-review-check` silences the Step 2.1 nudge below for a ticket
-you've already confirmed is reviewed by some other means.
+`--plans-pr` skip the title search for that repo — there's no need to search when you
+already have the PR number. This isn't quite `/project-review`'s anchor mechanism: that
+skill still runs discovery on an anchored repo (to find linked siblings), it just forces the
+anchor's membership regardless of what discovery turns up; here, with the number already in
+hand and no group to build, skipping the search outright is simpler and correct. Both are
+still "the user said so, trust it" for *which PR is which* — see Step 2.5 for where that
+trust does and doesn't extend. `--skip-review-check` silences the Step 2.1 nudge below for a
+ticket you've already confirmed is reviewed by some other means.
 
 ## Step 1 — Discover the ticket's PRs
 
@@ -219,12 +224,14 @@ that came in via `--engine-pr`/`--code-pr`/`--plans-pr` and so skipped Step 1's 
 entirely: do they cross-link each other in their bodies, or at minimum do their titles lead
 with the same ticket ID? If something doesn't check out — an anchor PR that shares no
 evidence with the others, say — **stop and ask**, don't proceed on the assumption that
-"the user passed the number, so it must be right." An anchor overriding *discovery* is a
-reasonable thing for the user to do; an anchor silently overriding this last correctness
-check on a merge is not the same kind of trust, because merging the wrong PR isn't
-recoverable the way reviewing the wrong one is — `/project-review` can afford to trust an
-anchor outright (see its Step 1) precisely because the worst case there is a wasted review,
-not a bad merge.
+"the user passed the number, so it must be right." Trusting an anchor for *which PR number
+goes with which repo* is a reasonable thing to do unchecked — that's just the user telling
+you a fact; trusting it for *whether it actually belongs with the other PRs you're about to
+merge* is a different, bigger claim, and this last check is what verifies that claim before
+anything irreversible happens. `/project-review` can afford to skip an equivalent check and
+trust an anchor's group membership outright (see its Step 1) precisely because the worst
+case there is a wasted review; landing the wrong PR is not recoverable the same way, so this
+skill checks instead of trusting.
 
 ## Step 3 — Always dry-run first
 
