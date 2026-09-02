@@ -188,8 +188,18 @@ closure); let branch-name evidence attach loose candidates to a group that alrea
 
 **Select one group to review:**
 
-- An anchor exists (`--*-pr` or a bare PR URL) → the group containing it. The anchor is itself
-  a member regardless of what other evidence does or doesn't say about it.
+- One anchor exists (`--*-pr` or a bare PR URL) → the group containing it. The anchor is
+  itself a member regardless of what other evidence does or doesn't say about it.
+- **More than one anchor exists** (e.g. `--engine-pr` and `--code-pr` given together) →
+  union every group any anchor belongs to into a single selected set, even if those anchors
+  landed in different, otherwise-unlinked groups. Two explicit anchors are two things the
+  user asked for by name; picking "the group containing it" for only one of them would
+  silently drop the other from the run, and — since the selected set now spans the repos
+  those groups touched — this is also what keeps Step 3's cross-repo pass from being
+  silently skipped just because the anchors didn't happen to share body/ticket-ID evidence.
+  If the anchors turn out to be genuinely unrelated changes the user didn't mean to combine,
+  that will surface as confusing findings in Step 2 rather than a silent drop — tell the user
+  plainly if that seems to be happening rather than pushing through it.
 - No anchor, exactly one group → that group, no prompt.
 - No anchor, more than one group → **print every group with the evidence that formed it** (see
   below), plus any unlinked singletons, and **stop and ask which to review** — one group per
@@ -222,8 +232,9 @@ engine → code → plans ordering is between repos, not within one), do the fol
 dependency order: engine lands first in `wq.py land` too, and a code-side PR is usually easiest
 to understand after seeing what changed underneath it.
 
-1. If this isn't the first slot being reviewed, state the prior slot(s)' HANDOFF block(s)
-   (see below) in your own turn, in plain text, immediately before the next call. This is
+1. If this isn't the first PR being reviewed, state the prior PR(s)' HANDOFF block(s) (see
+   below) in your own turn, in plain text, immediately before the next call — every PR in
+   the group gets one, including a second PR from a repo already reviewed in this run. This is
    for the user's visibility into your progress and for your own context going into Step
    3's synthesis prompt (the `Agent` call there does receive an explicit `prompt`, which is
    how context genuinely reaches that step) — it is **not** how context reaches the next
