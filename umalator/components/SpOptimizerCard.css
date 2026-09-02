@@ -1,31 +1,26 @@
-/* UI-16 chunk 3: the Skill Chart's SP-budget optimizer card. Renders in umalator's main results
-   pane (a sibling of BasinnChart, NOT inside SkillPicker's modal) -- so unlike ShopSkillPanel.css
-   (which deliberately speaks SkillPicker's own --sp-* layer, scoped to the modal it lives in),
-   this speaks umalator's outer --surface/--border/--fg/--accent token layer (tokens.css), the
-   same one .settingsCard and #runOnce already use in app.css. Tokens only, no literal colors. */
+/* UI-16 (+ strip redesign): the Skill Chart's SP-budget optimizer strip. Renders in umalator's
+   main results pane (a sibling of BasinnChart, NOT inside SkillPicker's modal) -- so unlike
+   ShopSkillPanel.css (which deliberately speaks SkillPicker's own --sp-* layer, scoped to the
+   modal it lives in), this speaks umalator's outer --surface/--border/--fg/--accent token layer
+   (tokens.css), the same one .settingsCard and #runOnce already use in app.css. Tokens only, no
+   literal colors.
 
-.spOptimizerCard {
+   Deliberately ONE ROW tall: the results pane has a fixed height budget shared with the table,
+   and the earlier card layout (per-option tiles with icon strips) left only ~3 table rows
+   visible at the default split. Detail beyond rank/gain/SP/count lives in tooltips and in the
+   table's own row highlighting, not in this strip's height. */
+
+.spOptimizerStrip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px 10px;
 	background: var(--card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	padding: 12px 14px;
-	margin-bottom: 10px;
+	padding: 5px 12px;
+	margin-bottom: 6px;
 	font-family: var(--font-sans);
-}
-
-.spOptimizerCardPrompt {
-	font-size: var(--font-sm);
-	color: var(--muted-2);
-	padding: 10px 14px;
-}
-
-.spOptimizerHeader {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	flex-wrap: wrap;
-	gap: 10px 12px;
-	margin-bottom: 8px;
 }
 
 .spOptimizerTitle {
@@ -42,48 +37,28 @@
 }
 
 /* Mirrors .basinnChartRefreshText's look (BasinnChart.css) -- same "stale, please refresh"
-   warning language, just laid out inline in the card instead of absolutely positioned next to
-   the chart's own refresh button. */
+   warning language, just laid out inline in the strip. */
 .spOptimizerDirtyNote {
 	font-size: var(--font-xs);
 	color: var(--warning);
 }
 
-.spOptimizerBody {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
 .spOptimizerOptions {
 	display: flex;
-	gap: 8px;
+	align-items: center;
+	gap: 6px 8px;
 	flex-wrap: wrap;
-}
-
-/* Lay the (at most 3) options out horizontally on wide screens; below ~700px they wrap/stack --
-   same threshold class ShopSkillPanel.css's own breakpoint uses for the same "narrow viewport"
-   reasoning. */
-@media (min-width: 700px) {
-	.spOptimizerOptions {
-		flex-wrap: nowrap;
-	}
-	.spOptimizerOption {
-		flex: 1;
-	}
 }
 
 .spOptimizerOption {
 	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	min-width: 160px;
+	align-items: center;
+	gap: 6px;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
-	padding: 8px 10px;
+	padding: 3px 10px;
 	font-family: inherit;
-	text-align: left;
 	cursor: pointer;
 	transition:
 		background var(--transition-fast),
@@ -106,22 +81,16 @@
 	border-color: var(--accent);
 }
 
-.spOptimizerOptionTop {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-}
-
 .spOptimizerOptionRank {
 	flex-shrink: 0;
-	width: 16px;
-	height: 16px;
+	width: 15px;
+	height: 15px;
 	border-radius: 50%;
 	background: var(--border);
 	color: var(--fg);
 	font-size: 10px;
 	font-weight: 700;
-	line-height: 16px;
+	line-height: 15px;
 	text-align: center;
 }
 
@@ -130,9 +99,9 @@
 	color: var(--bg);
 }
 
-/* Primary number in the card -- biggest type, per the plan. */
+/* Still the primary number in each option -- bold and first, just no longer display-sized. */
 .spOptimizerOptionGain {
-	font-size: var(--font-lg);
+	font-size: var(--font-sm);
 	font-weight: 700;
 	color: var(--fg);
 }
@@ -142,37 +111,16 @@
 	color: var(--muted-2);
 }
 
-.spOptimizerOptionIcons {
-	display: flex;
-	gap: 3px;
-	flex-wrap: wrap;
-	margin-top: 2px;
+.spOptimizerTruncated {
+	font-size: var(--font-xs);
+	color: var(--warning);
+	cursor: help;
 }
 
-.spOptimizerOptionIcon {
-	width: 20px;
-	height: 20px;
-	border-radius: 3px;
-	flex-shrink: 0;
-	border: 1px solid transparent;
-}
-
-/* Rarity accent border, same --skill-*-accent tokens HorseDef.css's .horseSkillPills/
-   .shopSkillChip combinators already key off of -- rarity belongs to the skill, not this card. */
-.spOptimizerOptionIcon.skill-white {
-	border-color: var(--skill-white-accent);
-}
-.spOptimizerOptionIcon.skill-gold {
-	border-color: var(--skill-gold-accent);
-}
-.spOptimizerOptionIcon.skill-pink {
-	border-color: var(--skill-pink-accent);
-}
-.spOptimizerOptionIcon.skill-unique {
-	border-color: var(--skill-unique-accent);
-}
-
-.spOptimizerFootnote {
-	font-size: 10px;
+/* The estimate caveat, demoted from an always-visible footnote to a hover/focus tooltip -- the
+   full sentence is in the title/aria-label. */
+.spOptimizerInfo {
+	font-size: var(--font-sm);
 	color: var(--muted-2);
+	cursor: help;
 }

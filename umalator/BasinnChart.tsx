@@ -155,6 +155,21 @@ const REASON_LABEL: Record<string, string> = {
 	inert: 'never had any effect or activation across every sample so far',
 };
 
+// Rows the ladder stopped evaluating early (or hasn't reached yet) -- rendered dimmed, and sunk
+// below every surviving row in the default Gain sort (see the `mean` column's accessorFn).
+function isMutedRow(row: ChartRow): boolean {
+	return (
+		row.status === 'screened' ||
+		row.status === 'inert' ||
+		row.status === 'pending'
+	);
+}
+
+// Sink offset for muted rows in the Gain column's sort value: far larger than any real gain
+// (lengths are single digits) but finite, so muted rows still order by their own means below
+// every surviving row, with null-statistics rows (-Infinity) last of all.
+const MUTED_SORT_PENALTY = 1e6;
+
 function rowTooltip(row: ChartRow): string {
 	const status = STATUS_LABEL[row.status] ?? row.status;
 	const reason = row.eliminationReason
@@ -235,8 +250,16 @@ export function BasinnChart(props) {
 					'Expected length gain vs. the baseline uma, with a confidence interval on that mean',
 				),
 				id: 'mean',
-				accessorFn: (row: ChartRow) =>
-					row.statistics?.mean ?? Number.NEGATIVE_INFINITY,
+				// Muted rows (screened/inert/pending -- see isMutedRow) sort as if their gain were
+				// MUTED_SORT_PENALTY lower, so the default Gain-descending view shows every surviving
+				// row first and the eliminated noise (0.00 L, n=64) sinks below it instead of
+				// occupying the few rows visible at the default pane height. Only this column gets
+				// the treatment -- sorting by Helps/Proc/n is untouched.
+				accessorFn: (row: ChartRow) => {
+					const mean = row.statistics?.mean ?? Number.NEGATIVE_INFINITY;
+					if (mean === Number.NEGATIVE_INFINITY) return mean;
+					return isMutedRow(row) ? mean - MUTED_SORT_PENALTY : mean;
+				},
 				cell: (info) => formatInterval(info.row.original),
 				sortDescFirst: true,
 			},
@@ -401,10 +424,7 @@ export function BasinnChart(props) {
 						const id = row.getValue('id');
 						const isExpanded = expanded === id;
 						const rowData: ChartRow = row.original;
-						const muted =
-							rowData.status === 'screened' ||
-							rowData.status === 'inert' ||
-							rowData.status === 'pending';
+						const muted = isMutedRow(rowData);
 						return (
 							<Fragment key={row.id}>
 								<tr

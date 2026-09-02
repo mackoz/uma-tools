@@ -440,10 +440,16 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   `.basinnChartHighlighted` class, declared before `.expanded` in `BasinnChart.css` so an
   expanded+highlighted row keeps the expanded row's `--highlight-green` rather than stacking a
   second background on top of it.
-- **Every gain shown is labeled an estimate**, in both a code comment and the card's own footnote:
-  `optimizePurchases` sums each shortlisted skill's individually measured chart gain: it does not
-  re-simulate the combination, so skills that interact (positively or negatively) when equipped
-  together aren't reflected.
+- **Every gain shown is an estimate**, stated in a code comment and in the strip's ⓘ tooltip
+  (demoted from an always-visible footnote when the card became a one-row strip — the strip's
+  whole point is giving its former height back to the table): `optimizePurchases` sums each
+  shortlisted skill's individually measured chart gain: it does not re-simulate the combination,
+  so skills that interact (positively or negatively) when equipped together aren't reflected.
+  An option button's tooltip lists its full skill set (the icon strips the old card layout
+  carried are gone — selecting the option highlights the same skills as table rows). Rows the
+  ladder eliminated early (`isMutedRow`) additionally sort below every surviving row in the
+  default Gain-descending view, so the visible rows at the default pane height are the ones
+  that matter.
 - Budget persists to `localStorage` under `chartSpBudget`, same work-scoping-knob treatment as
   `chartShopSkills` below — not part of the serialized race state or shared URLs.
 
