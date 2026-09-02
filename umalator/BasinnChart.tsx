@@ -65,7 +65,7 @@ export function isHpOnlySkill(id: string): boolean {
 	);
 }
 
-function umaForUniqueSkill(skillId: string): string | null {
+export function umaForUniqueSkill(skillId: string): string | null {
 	const sid = parseInt(skillId, 10);
 	if (sid < 100000 || sid >= 200000) return null;
 
@@ -179,16 +179,28 @@ function rowTooltip(row: ChartRow): string {
 }
 
 function SkillNameCell(props) {
-	const { id, showUmaIcons = false } = props;
+	const { id, showUmaIcons = false, showOutfitEpithet = false } = props;
 
 	if (showUmaIcons) {
-		const umaId = umaForUniqueSkill(id);
-		if (umaId && icons[umaId]) {
+		const outfitId = umaForUniqueSkill(id);
+		if (outfitId && icons[outfitId]) {
+			// Distinguishes two outfits of the same character (Course Chart's candidate pool is
+			// one row per outfit, not per character) -- umas.json keys the epithet by outfit under
+			// the base character id, which is the outfitId's own first 4 characters. Cast like
+			// umaForUniqueSkill() above does for the same umas object -- a plain `string` id can't
+			// index its exact-literal inferred type.
+			const umasById = umas as {
+				[key: string]: { outfits: { [key: string]: string } };
+			};
+			const epithet = showOutfitEpithet
+				? umasById[outfitId.slice(0, 4)]?.outfits[outfitId]
+				: null;
 			return (
 				<div class="chartSkillName">
-					<img src={icons[umaId]} />
+					<img src={icons[outfitId]} />
 					<span>
 						<Text id={`skillnames.${id}`} />
+						{epithet && <span class="chartSkillOutfitEpithet"> {epithet}</span>}
 					</span>
 				</div>
 			);
@@ -236,6 +248,7 @@ export function BasinnChart(props) {
 					<SkillNameCell
 						id={info.getValue()}
 						showUmaIcons={props.showUmaIcons}
+						showOutfitEpithet={props.showOutfitEpithet}
 					/>
 				),
 				// This vendored table-core fork renamed the standard TanStack `sortingFn` column-def
@@ -305,7 +318,7 @@ export function BasinnChart(props) {
 				sortDescFirst: true,
 			},
 		],
-		[props.showUmaIcons],
+		[props.showUmaIcons, props.showOutfitEpithet],
 	);
 
 	const [sorting, setSorting] = useState<SortingState>([

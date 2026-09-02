@@ -1,6 +1,6 @@
 # ADR-0009: Chart runs request `mode: 'compare'` for a real HP policy
 
-**Status:** Accepted
+**Status:** Accepted (scope narrowed by amendment below)
 **Date:** 2026-08-21 (`54aa2d1`, PR #11)
 
 ## Context
@@ -25,3 +25,14 @@ Recovery skills are therefore rankable in the chart: run one for an uma below th
 - Chart output changed relative to pre-rewrite runs — deliberately: stamina-limited builds now spurt (and rank skills) realistically, and recovery skills appear with real effect sizes.
 - Chart runs pay the HP model's cost per scenario; absorbed within PR #11's overall performance budget.
 - The engine-side mode gate itself (`'compare'` as the magic string selecting `GameHpPolicy`) is inherited API shape — if the engine ever grows an explicit HP-policy parameter, the chart's intent recorded here is "real HP, always."
+
+## Amendment (2026-09-02, UI-23)
+
+This decision's "real HP, always" stance is now scoped to the **Skill Chart** and **Uma Chart**
+only. A third chart mode, **Course Chart**, deliberately requests no `mode` at all —
+`NoopHpPolicy`, on purpose, not by omission this time. See
+[ADR-0017](0017-course-chart-neutral-template.md) for why: Course Chart's whole design compares
+every candidate against an identical, skill-less template, so an HP/stamina budget would only add
+simulation noise without changing which candidate has the better unique. This amendment exists so
+a future reader hitting `NoopHpPolicy` in `umalator/app.tsx`'s `buildCourseChartOptions()` doesn't
+read it as a regression of this record's decision — it's a separate, later, equally deliberate one.

@@ -287,10 +287,15 @@ headers GitHub Pages can't set (see [deployment.md](deployment.md)).
 
 ## The two analysis models
 
-Both models request `mode: 'compare'` from the engine, which is what gates `GameHpPolicy`
-(`RaceSolverBuilder.ts`) instead of the no-op HP policy an omitted `mode` produces. Real HP means
-recovery (HP-only) skills have an actual budget to act on and are rankable in both models, so
-neither model excludes them from the candidate list (`isHpOnlySkill` still exists in
+This section covers the **Skill Chart** and **Uma Chart** — the two modes built on
+`buildChartOptions()`. **Course Chart** (UI-23) has its own, deliberately different, `mode`/
+`skillWisdomCheck` semantics; see the Course Chart section below and
+[ADR-0017](adr/0017-course-chart-neutral-template.md).
+
+Both of these two models request `mode: 'compare'` from the engine, which is what gates
+`GameHpPolicy` (`RaceSolverBuilder.ts`) instead of the no-op HP policy an omitted `mode` produces.
+Real HP means recovery (HP-only) skills have an actual budget to act on and are rankable in both
+models, so neither model excludes them from the candidate list (`isHpOnlySkill` still exists in
 `BasinnChart.tsx` for anything that wants to identify a recovery skill, e.g. the icon filter — it's
 no longer used to exclude candidates). Skill Wit Check follows the user's own Settings toggle
 (`skillWisdomCheck`) in both models rather than being hardcoded, so Expected gain reflects this
@@ -311,6 +316,21 @@ built by a single `buildChartOptions(analysisMode)` in `app.tsx`, replacing thre
 maintained copies an earlier implementation had (one of which silently dropped
 `competeFight`/`leadCompetition`/`duelingRates`/`laneMovement`, so its "Run Additional Samples" path
 could merge physically different races into an existing result).
+
+### Course Chart's model — same split, different `mode`/wit-check defaults
+
+Course Chart reuses the same Controlled/Full-race split (and the same `analysisPreset`/pruning
+controls), but through its own `buildCourseChartOptions(analysisMode)`, not
+`buildChartOptions(analysisMode)`:
+
+| | Course Chart (both models) |
+|---|---|
+| `mode` | omitted — `NoopHpPolicy`, and (a second consequence of the same omission) `RaceSolver.ts`'s `posKeepEnd` drops from 10 sections to 3 |
+| `skillWisdomCheck` | hardcoded `false`, regardless of the Settings toggle |
+| Position keeping / `pacemakerCount` / jostling flags | same Controlled/Full-race split as the table above |
+
+The Skill Wit Check Settings card itself (see below) is not shown at all in Course Chart, rather
+than shown-but-forced-off, since a visible toggle that does nothing would be misleading.
 
 ## Skill Wit Check toggle
 
@@ -377,6 +397,41 @@ two controls fighting over the same flags.
    changing the baseline.
 
 Changing Model, Preset, or Pruning does not automatically rerun existing results — press Run again.
+
+## Using the Course Chart
+
+Course Chart (UI-23) answers a different question from the other two chart modes: not "what
+should *I* add to my build," but "which uma/outfit's own native unique is a good fit for this
+course and run style" — see [ADR-0017](adr/0017-course-chart-neutral-template.md) for the full
+modeling rationale. It's reached via its own tab next to Skill Chart/Uma Chart and is completely
+independent of Uma 1 — editing Uma 1's stats or skills has no effect on it and never marks it
+dirty.
+
+1. Configure the race (course, ground, weather, etc.) in the usual panes, then choose the
+   **Course Chart** tab. Uma 1/Uma 2 do not need to be configured for this mode.
+2. Pick one of the four **run-style tabs** (Nige / Senkou / Sasi / Oikomi) — each is its own
+   independent ladder, run separately, using that style's own starting-order range in addition to
+   the strategy itself. Switching tabs while idle restores that style's own cached results (if
+   it's been run) rather than re-running; an unrun style shows a prompt instead of a table, but
+   the tab row itself always stays visible so every style is reachable regardless of which ones
+   have been run.
+3. Every candidate — one row per released outfit's native unique, gated by the **Show Unreleased
+   Umas** Settings toggle the same way the other chart modes' pools are — runs against an
+   identical fixed template (`1500/1200/1200/600/1200` speed/stamina/power/guts/wisdom, `S`
+   distance / `A` surface / `A` strategy aptitude, no other skills). The candidate's own outfit
+   epithet is shown alongside its unique's name, since Course Chart's pool is one row per outfit,
+   not per character — two outfits of the same character with different unique skills both
+   appear.
+4. Pick **Model**, **Preset**, and **Pruning** the same way as the Skill Chart (see above) — the
+   Skill Wit Check Settings card does not appear in this mode, since it's hardcoded off here
+   regardless (see ADR-0017); there is nothing to configure for it.
+5. Press **Run**. Only the selected style tab is computed — the ladder, streaming, sort, and
+   **Refine** behavior are otherwise identical to the Skill Chart. Changing the course, race
+   conditions, Model, Preset, Pruning, or the unreleased-uma toggle marks every style's cache
+   stale (⟲ appears on whichever style you're viewing) the same way editing Uma 1 marks the Skill
+   Chart stale — a re-run is needed per style you want refreshed.
+6. Expanding a row shows the same detail view as the other chart modes, minus a **Show HP**
+   toggle — Course Chart never tracks HP (ADR-0017), so there's no HP series to plot.
 
 ## SP-budget optimizer (Buy list card)
 
