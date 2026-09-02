@@ -24,7 +24,10 @@ any combination. The heavier design was deferred, not abandoned — see
 - **Group shortlisted candidates by their `SKILL_LADDER` group** (ADR-0013's `rarity <= 2`-gated
   upgrade ladder). Each group becomes a set of mutually exclusive "tiers": buying a given rung also
   buys every lower-rate rung of the same group not already owned, at a total SP cost discounted via
-  `discountedCost`/`HINT_DISCOUNT` (`[0, 0.1, 0.2, 0.3, 0.35, 0.4]` for hint levels 0–5) — **the
+  `discountedCost`/`HINT_DISCOUNT` (`[0, 0.1, 0.2, 0.3, 0.35, 0.4]` for hint levels 0–5; ported
+  from the `c000712` prototype and matching community-documented shop discounts — these
+  percentages are **not** derivable from `master.mdb` itself, whose hint tables were checked on
+  both clients and encode hint *targets*, not the discount curve) — **the
   discount level is shared across a family's same-rarity rungs, not stored per rung**: one hint per
   skill, with a ○/◎ pair (same `SKILL_LADDER` group, same rarity) sharing a single hint and a gold
   rung (a different rarity) always getting its own. This follow-up (`umalator/spOptimizer.ts`'s
@@ -35,8 +38,12 @@ any combination. The heavier design was deferred, not abandoned — see
   hint. A tier's gain is just its terminal (highest bought) rung's own chart-measured mean — gains
   are never summed within a single group, since only the rung you'd actually end up equipped with
   contributes to the build.
-- **Solve by exact DFS** over "buy one tier, or nothing, per group," bounded only by the SP budget
-  and a defensive `NODE_CEILING` (2,000,000 node visits) — not by any gain-based bound.
+- **Solve by exhaustive DFS** over "buy one tier, or nothing, per group," bounded only by the SP
+  budget and a defensive `NODE_CEILING` (20,000,000 node visits) — not by any gain-based bound.
+  "Exact" holds only below the ceiling: a large shortlist of mostly-singleton groups with a budget
+  that affords most combinations can genuinely reach it (~25 affordable singleton groups is 2^25
+  leaves), at which point the search stops early, returns a best-effort selection, and reports
+  `truncated: true` — surfaced as a note on the Buy list card rather than presented as optimal.
 - **No cross-tier dominance pruning**, even though it's a standard knapsack optimization. This is
   deliberate: dominance pruning (dropping a group's tier whenever another tier in the same group
   has both lower cost and higher gain) is sound for finding the single best set, but not for
@@ -68,9 +75,9 @@ any combination. The heavier design was deferred, not abandoned — see
   together; the full design exists specifically to close that gap later.
 - **Cross-tier dominance pruning to shrink the DFS.** Rejected — unsound once `topK > 1` with a
   diversity constraint, per the counterexample above. Left un-pruned instead and bounded only by
-  `NODE_CEILING` as a defensive cap, since the shortlist's expected scale (~40 skills, ~10 ladder
-  groups, typically ≤4 tiers per group) stays far below where full enumeration would actually
-  become slow.
+  `NODE_CEILING` as a cap, with truncation surfaced to the user when it hits (see the Decision
+  bullet above) — typical shortlists stay well under the ceiling, but "typical" is not "always",
+  so the cap is disclosed rather than assumed unreachable.
 - **Recompute on every streaming chart batch.** Rejected — `tableData` mutates many times per
   second while a run streams in; freezing on `isSimulationRunning` and recomputing once on the
   final batch avoids re-running the DFS dozens of times per second for a result the user won't see

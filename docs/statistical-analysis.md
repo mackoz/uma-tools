@@ -416,13 +416,17 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   gated upgrade ladder); each group becomes a set of mutually exclusive "tiers" — buying a rung
   also buys every lower-rate rung of the same group not already owned, at a total SP cost
   discounted per-skill by `HINT_DISCOUNT = [0, 0.1, 0.2, 0.3, 0.35, 0.4]` (hint levels 0–5) via
-  `discountedCost`. A tier's gain is just its terminal (highest-rate bought) rung's own
+  `discountedCost`. The curve is ported from the earlier prototype and matches
+  community-documented shop discounts; it is not stored in `master.mdb` (checked — the hint
+  tables there encode hint targets, not the discount percentages). A tier's gain is just its terminal (highest-rate bought) rung's own
   chart-measured mean — gains are never summed within one ladder group, since only the rung
   you'd actually end up equipped with contributes to the build.
-- An exact DFS enumerates every budget-feasible combination of "buy one tier (or nothing) per
-  group," bounded only by the SP budget and a defensive `NODE_CEILING` (2,000,000 node visits) —
+- An exhaustive DFS enumerates every budget-feasible combination of "buy one tier (or nothing) per
+  group," bounded only by the SP budget and a defensive `NODE_CEILING` (20,000,000 node visits) —
   no gain-based or dominance pruning (see the ADR for why dominance pruning is unsound once more
-  than one result is wanted). Results are sorted by (total gain desc, total cost asc) and up to
+  than one result is wanted). Hitting the ceiling stops the search early and sets `truncated` on
+  the result; the Buy list card then notes the options may be incomplete instead of presenting
+  them as optimal. Results are sorted by (total gain desc, total cost asc) and up to
   `topK` (default 3) are accepted greedily, each required to differ from every already-accepted
   result by a symmetric difference of at least 2 skill ids — the diversity rule that keeps the
   three options from being near-duplicates of each other.

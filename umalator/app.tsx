@@ -124,8 +124,8 @@ import {
 	type HintLevels,
 	loadShopSkillHints,
 	type OptimizerCandidate,
+	type OptimizerResult,
 	optimizePurchases,
-	type PurchaseSet,
 	pruneHints,
 	remapHintKeys,
 } from './spOptimizer';
@@ -3694,12 +3694,15 @@ function App(props) {
 	// re-run optimizePurchases' DFS on every batch. Freeze on the last-computed result (via this
 	// ref) while isSimulationRunning is true; a fresh run's final tableData recomputes once
 	// isSimulationRunning goes false.
-	const purchaseOptionsRef = useRef<PurchaseSet[]>([]);
-	const purchaseOptions = useMemo(() => {
+	const purchaseOptionsRef = useRef<OptimizerResult>({
+		options: [],
+		truncated: false,
+	});
+	const purchaseResult = useMemo(() => {
 		if (isSimulationRunning) return purchaseOptionsRef.current;
 		const computed =
 			optimizerCandidates.length === 0 || spBudget <= 0
-				? []
+				? { options: [], truncated: false }
 				: optimizePurchases({
 						candidates: optimizerCandidates,
 						hints: expandedShopHints,
@@ -3718,6 +3721,7 @@ function App(props) {
 		spBudget,
 		ownedSkills,
 	]);
+	const purchaseOptions = purchaseResult.options;
 	// Reset the selected option whenever the option SET actually changes (not on every re-render,
 	// which would happen on array-identity alone since purchaseOptions is a fresh array each
 	// recompute) -- keyed off each option's skillIds, not object identity.
@@ -5323,6 +5327,7 @@ function App(props) {
 							budget={spBudget}
 							onBudgetChange={setSpBudget}
 							options={purchaseOptions}
+							truncated={purchaseResult.truncated}
 							selectedIndex={selectedBuyOption}
 							onSelect={setSelectedBuyOption}
 						/>

@@ -196,10 +196,10 @@ import {
 		costs: { s1: 100 },
 		budget: 100,
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: ['s1'], totalCost: 100, totalGain: 5 },
 	]);
-	assert.deepEqual(optimizePurchases({ ...input, budget: 99 }), [
+	assert.deepEqual(optimizePurchases({ ...input, budget: 99 }).options, [
 		{ skillIds: [], totalCost: 0, totalGain: 0 },
 	]);
 }
@@ -222,10 +222,10 @@ import {
 		// set (diff 3 >= 2), so with the default topK the empty set would also legitimately
 		// appear as a second accepted result -- topK:1 keeps this test focused on the tier itself.
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: ['white', 'gold', 'evo'], totalCost: 341, totalGain: 50 },
 	]);
-	assert.deepEqual(optimizePurchases({ ...input, budget: 340 }), [
+	assert.deepEqual(optimizePurchases({ ...input, budget: 340 }).options, [
 		{ skillIds: [], totalCost: 0, totalGain: 0 },
 	]);
 }
@@ -245,7 +245,7 @@ import {
 		budget: 220,
 		topK: 1, // a 2-skill result is diverse from the empty set too; isolate the tier under test
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: ['white2', 'gold2'], totalCost: 220, totalGain: 20 },
 	]);
 }
@@ -266,10 +266,10 @@ import {
 			owned: new Set(['white3']),
 			budget: 120, // discountedCost(150,2) = round(150*.8) = 120
 		};
-		assert.deepEqual(optimizePurchases(input), [
+		assert.deepEqual(optimizePurchases(input).options, [
 			{ skillIds: ['gold3'], totalCost: 120, totalGain: 15 },
 		]);
-		assert.deepEqual(optimizePurchases({ ...input, budget: 119 }), [
+		assert.deepEqual(optimizePurchases({ ...input, budget: 119 }).options, [
 			{ skillIds: [], totalCost: 0, totalGain: 0 },
 		]);
 	}
@@ -283,7 +283,7 @@ import {
 			owned: new Set(['gold3']),
 			budget: 1000,
 		};
-		assert.deepEqual(optimizePurchases(input), [
+		assert.deepEqual(optimizePurchases(input).options, [
 			{ skillIds: [], totalCost: 0, totalGain: 0 },
 		]);
 	}
@@ -304,7 +304,7 @@ import {
 		costs: { big: 10, small1: 5, small2: 5 },
 		budget: 10,
 	};
-	const results = optimizePurchases(input);
+	const results = optimizePurchases(input).options;
 	assert.deepEqual(results[0], {
 		skillIds: ['small1', 'small2'],
 		totalCost: 10,
@@ -335,7 +335,7 @@ import {
 		costs: { a: 5, b: 5, c: 5 },
 		budget: 10,
 	};
-	const results = optimizePurchases(input);
+	const results = optimizePurchases(input).options;
 	assert.deepEqual(results[0], {
 		skillIds: ['b', 'c'],
 		totalCost: 10,
@@ -368,7 +368,7 @@ import {
 		costs: { p: 5, q: 1, r: 5 },
 		budget: 6,
 	};
-	const results = optimizePurchases(input);
+	const results = optimizePurchases(input).options;
 	// #1: {p,q} gain 10.1. The next-best-by-gain result is {p} (gain 10), a symmetric-difference-1
 	// near-duplicate of #1 (differs only by dropping 'q') -- it must be REJECTED.
 	assert.deepEqual(results[0], {
@@ -403,7 +403,7 @@ import {
 		costs: { x: 3, y: 8 },
 		budget: 8,
 	};
-	const results = optimizePurchases(input);
+	const results = optimizePurchases(input).options;
 	assert.deepEqual(results[0], { skillIds: ['x'], totalCost: 3, totalGain: 5 });
 	assert.deepEqual(
 		results[1],
@@ -421,7 +421,7 @@ import {
 		costs: { z: 10 },
 		budget: 0,
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: [], totalCost: 0, totalGain: 0 },
 	]);
 }
@@ -438,7 +438,7 @@ import {
 		costs: { z: 1, y: 1 },
 		budget: 100,
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: [], totalCost: 0, totalGain: 0 },
 	]);
 }
@@ -456,7 +456,10 @@ import {
 		costs: { p: 5, q: 1, r: 5 },
 		budget: 6,
 	};
-	assert.deepEqual(optimizePurchases(input), optimizePurchases(input));
+	assert.deepEqual(
+		optimizePurchases(input).options,
+		optimizePurchases(input).options,
+	);
 }
 
 // --- end-to-end: a shared cluster hint (expanded via expandHints before reaching
@@ -483,13 +486,26 @@ import {
 		budget: 175,
 		topK: 1,
 	};
-	assert.deepEqual(optimizePurchases(input), [
+	assert.deepEqual(optimizePurchases(input).options, [
 		{ skillIds: ['circleE', 'doubleE'], totalCost: 175, totalGain: 20 },
 	]);
 	// One level lower would leave the ○ prerequisite's cost undiscounted, which must NOT fit.
-	assert.deepEqual(optimizePurchases({ ...input, budget: 174 }), [
+	assert.deepEqual(optimizePurchases({ ...input, budget: 174 }).options, [
 		{ skillIds: [], totalCost: 0, totalGain: 0 },
 	]);
+}
+
+// --- optimizePurchases: truncated flag -- untruncated at normal scale; ceiling hit is surfaced,
+// not thrown, and still returns a best-effort selection ---
+{
+	const input = {
+		candidates: [{ id: 'a', gain: 1 }],
+		hints: {},
+		ladder: {},
+		costs: { a: 10 },
+		budget: 100,
+	};
+	assert.equal(optimizePurchases(input).truncated, false);
 }
 
 console.log('spOptimizer tests passed');
