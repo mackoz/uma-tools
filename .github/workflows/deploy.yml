@@ -73,14 +73,26 @@ jobs:
 
       # Pages serves this repo's tree directly (each app at its own root-relative
       # path, e.g. /umalator-global/) so `path: .` below can't be narrowed to a
-      # single dist folder -- but that also means every build-time-only directory
-      # rides along unless removed first. node_modules is the one that matters:
-      # it's never served, and upload-pages-artifact@v3 has no path-exclude option
-      # of its own to filter it out. Discovered 2026-09-02 when node_modules (now
-      # including playwright) grew past whatever size/file-count limit that action
-      # enforces, failing the archive step outright on every push to master.
-      - name: Remove build-time-only directories before archiving for Pages
-        run: rm -rf node_modules
+      # single dist folder -- but that also means every non-served directory
+      # rides along unless removed first, and upload-pages-artifact@v3 has no
+      # path-exclude option of its own to filter one out. Two independent
+      # problems, found back to back on 2026-09-02:
+      #   - node_modules (now including playwright) grew past whatever size/
+      #     file-count limit that action enforces, failing the archive outright.
+      #   - .claude/skills/handoff and .claude/skills/claude-handoff are
+      #     symlinks into .agents/skills/, which stopped being tracked in the
+      #     same push (see uma-tools-plans PIPE-40) -- a fresh CI checkout never
+      #     materializes a gitignored path, so on the runner they're pure
+      #     dangling symlinks, and `tar` aborts the whole archive on the first
+      #     one it can't stat ("File removed before we read it"), not just that
+      #     one entry. Fixing PIPE-40 properly (making them real files, or
+      #     dropping them) would also fix this, but .claude/ has no business
+      #     being served by Pages either way -- it's Claude Code tooling
+      #     config, not app content -- so removing the whole directory here is
+      #     the more robust fix: correct regardless of what .claude/ contains
+      #     later, not contingent on every symlink inside it staying valid.
+      - name: Remove build-time-only / non-served directories before archiving for Pages
+        run: rm -rf node_modules .claude
 
       - uses: actions/configure-pages@v5
 
