@@ -49,7 +49,7 @@ than guessing at a different invocation form.
 
 ```
 uv run scripts/wq.py file <PREFIX> --type {bug,feature} --title "..." --effort {small,medium,large} \
-  --net-gain {high,medium,low} --scope "..." [--tier TIER --why "..."] [--dry-run]
+  --net-gain {high,medium,low} --scope "..." [--tier TIER --why "..."] [--dry-run] [--park]
 ```
 
 Writes the skeleton from `TEMPLATE.md`, plus the README backlog row, mkdocs nav entry, and a
@@ -63,10 +63,12 @@ Run the printed `git reset`/`git checkout` commands, or pass `--park`: it unstag
 `README.md`/`mkdocs.yml`/`next-ids.json` in place and relocates any other untracked foreign file
 to `plans/leftovers/<timestamp>/` (recorded in `leftovers/MANIFEST.jsonl`) instead of discarding
 it — a tracked file outside that trio still refuses regardless, since `--park` can't move it
-without making a real edit disappear. Since PIPE-38, a `file` call that fails after this point
-(a rejected commit, most commonly the pre-commit hook) now rolls itself back — the minted id is
-free again, not burned — so there's no need to hunt for an orphaned skeleton the way UI-30's
-recovery once did.
+without making a real edit disappear. **`--park` can't be combined with `--dry-run`** — park is
+inherently mutating, so there's nothing left to safely preview; passing both refuses outright
+rather than parking for real during what's billed as a preview. Since PIPE-38, a `file` call that
+fails after this point (a rejected commit, most commonly the pre-commit hook, or any other
+failure before the commit lands) now rolls itself back — the minted id is free again, not burned
+— so there's no need to hunt for an orphaned skeleton the way UI-30's recovery once did.
 
 ## `claim` — move a ticket to in-progress
 
@@ -84,13 +86,14 @@ draft you may have forgotten (see that skill's Step 1) — neither is a substitu
 ## `status` — narrate progress
 
 ```
-uv run scripts/wq.py status <id> "<narrative>" [--blocked | --unblock] [--park]
+uv run scripts/wq.py status <id> "<narrative>" [--blocked | --unblock] [--dry-run] [--park]
 ```
 
 Updates only the README "Where it stands" column — never the frontmatter `Status` line (that's
 tool-only: `claim`/`complete`/`land --complete-id` set it, `--blocked`/`--unblock` are the only
-way `status` itself touches it). Same `--park` escape hatch as `file`, scoped to what `status`
-itself guards (`README.md` and this ticket's own file).
+way `status` itself touches it). Same `--park` escape hatch as `file` (including the same
+can't-combine-with-`--dry-run` rule), scoped to what `status` itself guards (`README.md` and this
+ticket's own file); since PIPE-38 it also gets `file`'s rollback protection for its own writes.
 
 ## Not this skill's job
 
