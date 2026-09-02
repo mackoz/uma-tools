@@ -30,8 +30,9 @@ interface SpOptimizerCardProps {
 	// Shortlist changed since the last completed run (app.tsx's shopDirty) -- the chart's own gain
 	// numbers are stale, so no option buttons render until a fresh run clears this.
 	dirty: boolean;
+	// Read-only here: the input lives in ShopSkillFilter.tsx's row (next to the shortlist it
+	// applies to); this card only needs the value for its zero-budget empty state.
 	budget: number;
-	onBudgetChange: (sp: number) => void;
 	// May be empty, or its first entry may be the empty (nothing-to-buy) set -- see render logic
 	// below for how each case reads.
 	options: PurchaseSet[];
@@ -43,7 +44,8 @@ interface SpOptimizerCardProps {
 	onSelect: (index: number | null) => void;
 }
 
-function parseBudgetInput(raw: string): number {
+// Exported for ShopSkillFilter.tsx, which renders the actual budget input.
+export function parseBudgetInput(raw: string): number {
 	if (raw === '') return 0;
 	const v = parseInt(raw, 10);
 	if (!Number.isFinite(v) || v < 0) return 0;
@@ -116,7 +118,11 @@ export function SpOptimizerCard(props: SpOptimizerCardProps) {
 	} else if (props.candidateCount === 0) {
 		body = <div class="spOptimizerHint">Run the chart to get a buy list.</div>;
 	} else if (props.budget <= 0) {
-		body = <div class="spOptimizerHint">Enter your SP budget.</div>;
+		body = (
+			<div class="spOptimizerHint">
+				Set your SP budget in the Shop skills row above.
+			</div>
+		);
 	} else {
 		// The empty (nothing-bought) set, if present, is never itself a clickable option -- filter
 		// it out entirely rather than rendering a "buy nothing" button.
@@ -166,21 +172,6 @@ export function SpOptimizerCard(props: SpOptimizerCardProps) {
 		<div class="spOptimizerCard">
 			<div class="spOptimizerHeader">
 				<span class="spOptimizerTitle">Buy list</span>
-				<label class="spOptimizerBudgetLabel">
-					SP budget
-					<input
-						type="number"
-						class="spOptimizerBudgetInput"
-						min="0"
-						step="10"
-						value={props.budget}
-						onInput={(e) =>
-							props.onBudgetChange(
-								parseBudgetInput((e.target as HTMLInputElement).value),
-							)
-						}
-					/>
-				</label>
 			</div>
 			{body}
 		</div>

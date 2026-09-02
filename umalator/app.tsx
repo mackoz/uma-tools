@@ -5325,7 +5325,6 @@ function App(props) {
 							candidateCount={optimizerCandidates.length}
 							dirty={shopDirty}
 							budget={spBudget}
-							onBudgetChange={setSpBudget}
 							options={purchaseOptions}
 							truncated={purchaseResult.truncated}
 							selectedIndex={selectedBuyOption}
@@ -6139,6 +6138,8 @@ function App(props) {
 										onOpen={() => setShopPickerOpen(true)}
 										onClear={() => setShopSkillIds([])}
 										wontProcCount={shopSkillPartition.wontProc.length}
+										budget={spBudget}
+										onBudgetChange={setSpBudget}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">

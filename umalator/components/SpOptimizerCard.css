@@ -36,30 +36,6 @@
 	color: var(--muted-2);
 }
 
-.spOptimizerBudgetLabel {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: var(--font-xs);
-	color: var(--muted-2);
-}
-
-.spOptimizerBudgetInput {
-	width: 72px;
-	background: var(--input-bg);
-	border: 1px solid var(--input-border);
-	border-radius: var(--radius-sm);
-	padding: 4px 6px;
-	font-size: var(--font-base);
-	color: var(--fg);
-	font-family: inherit;
-}
-
-.spOptimizerBudgetInput:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 1px;
-}
-
 .spOptimizerHint {
 	font-size: var(--font-xs);
 	color: var(--muted-2);
