@@ -1,6 +1,6 @@
 ---
 name: project-land
-description: Land a work-queue ticket's PR(s) across uma-skill-tools, uma-tools, and uma-tools-plans in the correct order — whether that's a full paired multi-repo landing or a single repo touched alone (a plans-only tooling ticket, or a CLAUDE.md-exempt trivial fix with no ticket at all). The merge-side counterpart to /project-review. Wraps `plans/scripts/wq.py land` when it applies, and a documented direct-merge fallback when it structurally can't (wq.py land hard-requires --code-pr and --plans-pr, so a single-repo landing needs a different path, not a workaround). Handles PR discovery by ticket ID, the required-before-land `## Outcome` narrative, a dry-run preflight, and this project's known rough edges around landing (non-resumable failures, the engine-only-ticket placeholder-PR workaround, telling expected mid-review gitlink state apart from real drift). Use whenever the user asks to land, merge, ship, or close out a ticket's PR(s) — "land PIPE-3", "merge this PR", "ship this", "land the paired PRs for X", "the PR is reviewed, land it" — even if they don't name this skill or mention wq.py directly.
+description: Land a work-queue ticket's PR(s) across uma-skill-tools, uma-tools, and uma-tools-plans in the correct order — whether that's a full paired multi-repo landing or a single repo touched alone (a plans-only tooling ticket, or a CLAUDE.md-exempt trivial fix with no ticket at all). The merge-side counterpart to /project-review. Wraps `plans/scripts/wq.py land` when it applies, and a documented direct-merge fallback when it structurally can't (wq.py land hard-requires --code-pr and --plans-pr, so a single-repo landing needs a different path, not a workaround). Handles PR discovery by ticket ID plus real linkage evidence (a repo with more than one PR matching the ticket ID gets disambiguated by body cross-links and leading-title match, not a blind stop), the required-before-land `## Outcome` narrative, a dry-run preflight, and this project's known rough edges around landing (non-resumable failures, the engine-only-ticket placeholder-PR workaround, telling expected mid-review gitlink state apart from real drift). Use whenever the user asks to land, merge, ship, or close out a ticket's PR(s) — "land PIPE-3", "merge this PR", "ship this", "land the paired PRs for X", "the PR is reviewed, land it", "there are two PRs open in uma-tools, land the PIPE-3 one" — even if they don't name this skill or mention wq.py directly.
 argument-hint: "<TICKET-ID> [--engine-pr N] [--code-pr N] [--plans-pr N] [--skip-review-check]"
 ---
 
@@ -34,9 +34,9 @@ already enforced by the script itself, for the path where the script runs at all
 ## Step 0 — Parse arguments
 
 The ticket ID is the one required input (e.g. `PIPE-3`). `--engine-pr`/`--code-pr`/
-`--plans-pr` bypass discovery for that repo, the same override convention `/project-review`
-uses. `--skip-review-check` silences the Step 2.1 nudge below for a ticket you've already
-confirmed is reviewed by some other means.
+`--plans-pr` are anchors that skip discovery for that repo, the same override convention
+`/project-review` uses. `--skip-review-check` silences the Step 2.1 nudge below for a ticket
+you've already confirmed is reviewed by some other means.
 
 ## Step 1 — Discover the ticket's PRs
 
@@ -45,8 +45,11 @@ first. For each repo without an explicit override, search by ticket ID (case-ins
 same idea as `wq.py ready`'s own PR search):
 
 ```
-gh pr list --repo <github repo> --state open --search "<TICKET-ID> in:title" --json number,title,headRefName,url
+gh pr list --repo <github repo> --state open --search "<TICKET-ID> in:title" --json number,title,headRefName,url,body
 ```
+
+(`body` is there so a repo with more than one match can be disambiguated by real evidence,
+not just a guess — see below.)
 
 Repo table (same as `/project-review`'s Step 1 — derive local paths from where you're
 actually running, don't hardcode a machine's home directory):
@@ -67,11 +70,26 @@ actually running, don't hardcode a machine's home directory):
   ticket file move alone requires one) — but not automatically wrong. If there's *also* no
   code and no engine PR either, or if the only PR that exists is the plans one, `wq.py land`
   doesn't apply at all — go to Step 1.5, don't try to force `--plans-pr` around this.
-- **More than one open PR** in any repo matching the ticket ID: stop and ask which one —
-  don't guess.
+- **More than one open PR** in any repo matching `<TICKET-ID> in:title`: this happens more
+  than the title search alone suggests — a ticket ID can appear in an unrelated PR's title
+  too (`uma-tools-plans#26`, "Fix stale in-progress/pipe-21.md links after PIPE-21
+  completed," matches a `PIPE-21` search but isn't a PIPE-21 landing PR). Disambiguate with
+  the same evidence `/project-review`'s Step 1 uses (full detail in
+  `../project-review/SKILL.md`'s `### Linkage evidence`; the short version below covers the
+  common case):
+  - Prefer the PR whose title *leads* with the ticket ID (`PIPE-21: …`, not a mid-title
+    mention) **and** whose body cross-links whatever other PR(s) this discovery already
+    resolved for the sibling repos (`owner/repo#N`, `repo#N`, or a full PR URL — see
+    `/project-review` for the exact forms and the "one direction is enough" rule).
+  - If exactly one candidate satisfies both, that's the match — no need to ask.
+  - If evidence still doesn't separate them (e.g. two open PRs both lead with the ticket ID,
+    or neither has a body link to check against), **stop and ask which one** — this is now a
+    rarer, better-informed stop than a blanket "more than one, ask" would be, and landing the
+    wrong PR isn't recoverable the way reviewing the wrong one is, so don't guess even when
+    one candidate looks more likely.
 
-Print the resolved PR numbers/titles/URLs before doing anything else, so the user can catch
-a wrong match early.
+Print the resolved PR numbers/titles/URLs (and, if disambiguation ran, the evidence that
+picked the winner) before doing anything else, so the user can catch a wrong match early.
 
 ## Step 1.5 — Choose the landing path
 
@@ -193,6 +211,20 @@ branch in `uma-tools` to commit the gitlink bump onto. You'll need a placeholder
 PR: commit something trivial on its own branch first (`gh pr create` refuses a truly-empty
 diff, so a one-line comment or similar is enough), open the PR, and pass its number as
 `--code-pr`.
+
+**2.5 — Final confirmation that the resolved PRs actually belong together.** Step 1's
+disambiguation already checked this for a repo with more than one title match, but do one
+last check across *all* the PR numbers you're about to hand to `wq.py land` — including any
+that came in via `--engine-pr`/`--code-pr`/`--plans-pr` and so skipped Step 1's search
+entirely: do they cross-link each other in their bodies, or at minimum do their titles lead
+with the same ticket ID? If something doesn't check out — an anchor PR that shares no
+evidence with the others, say — **stop and ask**, don't proceed on the assumption that
+"the user passed the number, so it must be right." An anchor overriding *discovery* is a
+reasonable thing for the user to do; an anchor silently overriding this last correctness
+check on a merge is not the same kind of trust, because merging the wrong PR isn't
+recoverable the way reviewing the wrong one is — `/project-review` can afford to trust an
+anchor outright (see its Step 1) precisely because the worst case there is a wasted review,
+not a bad merge.
 
 ## Step 3 — Always dry-run first
 
