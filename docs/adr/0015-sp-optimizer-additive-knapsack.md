@@ -64,7 +64,9 @@ any combination. The heavier design was deferred, not abandoned — see
   updates many times per second mid-run and would otherwise re-run the DFS on every batch.
 - **Selecting an option only highlights rows** (`BasinnChart`'s new `highlighted` prop) — it never
   triggers a re-simulation. Every gain shown is explicitly labeled an estimate, both in code
-  comments (`SpOptimizerCard.tsx`'s header) and in the card's own footnote text.
+  comments (`SpOptimizerCard.tsx`'s header) and in the UI (originally the card's footnote text;
+  now the strip's ⓘ tooltip, after the card was flattened to a one-row strip to give its height
+  back to the table).
 
 ## Options considered
 

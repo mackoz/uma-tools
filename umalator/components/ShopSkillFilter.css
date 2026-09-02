@@ -34,6 +34,37 @@
 	outline-offset: 1px;
 }
 
+/* UI-16 follow-up: the Buy list card's SP budget, entered here next to the shortlist controls it
+   applies to (ported from SpOptimizerCard.css's .spOptimizerBudget* rules when the input moved). */
+.shopSkillBudgetLabel {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--font-sm);
+	color: var(--muted-2);
+}
+
+.shopSkillBudgetInput {
+	width: 72px;
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	padding: 3px 6px;
+	font-size: var(--font-sm);
+	color: var(--fg);
+	font-family: inherit;
+}
+
+.shopSkillBudgetInput:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.shopSkillBudgetInput:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
 /* Summary-only diagnostic -- per-skill detail lives in ShopSkillPanel's "Won't activate here"
    section; this just keeps that diagnostic visible while the picker is closed. */
 .shopSkillFilterWontProc {

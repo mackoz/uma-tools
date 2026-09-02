@@ -381,7 +381,9 @@ Changing Model, Preset, or Pruning does not automatically rerun existing results
 ## SP-budget optimizer (Buy list card)
 
 Once the Shop Skills shortlist (step 3 above) is active, a **Buy list** card renders above the
-chart table in Mode.Chart, alongside an SP budget field. This is UI-16's MVP: a lightweight,
+chart table in Mode.Chart; the SP budget field it optimizes against sits in the Shop skills
+filter row itself (`ShopSkillFilter.tsx`, next to the Clear button — appearing with it whenever
+the shortlist is non-empty). This is UI-16's MVP: a lightweight,
 purely-additive optimizer over the chart's own measured means, not the full re-simulating design
 originally scoped for the ticket (see "Deferred to a follow-up branch" below, and
 `docs/adr/0015-sp-optimizer-additive-knapsack.md` for why).
@@ -438,10 +440,29 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   `.basinnChartHighlighted` class, declared before `.expanded` in `BasinnChart.css` so an
   expanded+highlighted row keeps the expanded row's `--highlight-green` rather than stacking a
   second background on top of it.
-- **Every gain shown is labeled an estimate**, in both a code comment and the card's own footnote:
-  `optimizePurchases` sums each shortlisted skill's individually measured chart gain: it does not
-  re-simulate the combination, so skills that interact (positively or negatively) when equipped
-  together aren't reflected.
+- Selecting an option also pops a **detail overlay** (`.spOptimizerDetail`) anchored to the strip
+  and expanding *upward* (`bottom: calc(100% + 6px)`) rather than laid in-flow above or below it —
+  either in-flow placement would push the chart table down, and the table's row count is exactly
+  what the one-row strip redesign above was protecting. The overlay restores the pre-strip card's
+  content (rank badge, big "Est. +X.XX lengths", "N SP · M skills" header, one rarity-bordered
+  icon + name row per skill) plus a per-skill **hint-discounted SP cost**, right-aligned on each
+  row — the one number nothing else in the UI surfaces (the strip's tooltip has names only; the
+  table has gains, not costs) — computed by a `costOf` prop app.tsx supplies from
+  `discountedCost(SKILL_BASE_COST[id], expandedShopHints[id])`, the same discount the optimizer
+  itself charges, so the rows sum to the header's total SP. It scrolls internally past ~320px/50vh
+  (`#mainContent` is the one clipping ancestor in this pane) instead of truncating when the
+  splitter is dragged up, and closes on Escape, on selecting the option again, or on any click
+  outside `.spOptimizerStrip`.
+- **Every gain shown is an estimate**, stated in a code comment and in the strip's ⓘ tooltip
+  (demoted from an always-visible footnote when the card became a one-row strip — the strip's
+  whole point is giving its former height back to the table): `optimizePurchases` sums each
+  shortlisted skill's individually measured chart gain: it does not re-simulate the combination,
+  so skills that interact (positively or negatively) when equipped together aren't reflected.
+  An option button's tooltip lists its full skill set (the icon strips the old card layout
+  carried are gone — selecting the option highlights the same skills as table rows). Rows the
+  ladder eliminated early (`isMutedRow`) additionally sort below every surviving row in the
+  default Gain-descending view, so the visible rows at the default pane height are the ones
+  that matter.
 - Budget persists to `localStorage` under `chartSpBudget`, same work-scoping-knob treatment as
   `chartShopSkills` below — not part of the serialized race state or shared URLs.
 

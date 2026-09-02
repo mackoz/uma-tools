@@ -1,31 +1,30 @@
-/* UI-16 chunk 3: the Skill Chart's SP-budget optimizer card. Renders in umalator's main results
-   pane (a sibling of BasinnChart, NOT inside SkillPicker's modal) -- so unlike ShopSkillPanel.css
-   (which deliberately speaks SkillPicker's own --sp-* layer, scoped to the modal it lives in),
-   this speaks umalator's outer --surface/--border/--fg/--accent token layer (tokens.css), the
-   same one .settingsCard and #runOnce already use in app.css. Tokens only, no literal colors. */
+/* UI-16 (+ strip redesign): the Skill Chart's SP-budget optimizer strip. Renders in umalator's
+   main results pane (a sibling of BasinnChart, NOT inside SkillPicker's modal) -- so unlike
+   ShopSkillPanel.css (which deliberately speaks SkillPicker's own --sp-* layer, scoped to the
+   modal it lives in), this speaks umalator's outer --surface/--border/--fg/--accent token layer
+   (tokens.css), the same one .settingsCard and #runOnce already use in app.css. Tokens only, no
+   literal colors.
 
-.spOptimizerCard {
+   Deliberately ONE ROW tall: the results pane has a fixed height budget shared with the table,
+   and the earlier card layout (per-option tiles with icon strips) left only ~3 table rows
+   visible at the default split. Detail beyond rank/gain/SP/count lives in tooltips and in the
+   table's own row highlighting, not in this strip's height. */
+
+.spOptimizerStrip {
+	/* Anchors the on-demand detail overlay below (.spOptimizerDetail's position: absolute is
+	   relative to this box) -- an absolutely-positioned child is excluded from flex layout
+	   entirely, so this is the only layout change the overlay needs from its parent. */
+	position: relative;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px 10px;
 	background: var(--card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	padding: 12px 14px;
-	margin-bottom: 10px;
+	padding: 5px 12px;
+	margin-bottom: 6px;
 	font-family: var(--font-sans);
-}
-
-.spOptimizerCardPrompt {
-	font-size: var(--font-sm);
-	color: var(--muted-2);
-	padding: 10px 14px;
-}
-
-.spOptimizerHeader {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	flex-wrap: wrap;
-	gap: 10px 12px;
-	margin-bottom: 8px;
 }
 
 .spOptimizerTitle {
@@ -36,78 +35,34 @@
 	color: var(--muted-2);
 }
 
-.spOptimizerBudgetLabel {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: var(--font-xs);
-	color: var(--muted-2);
-}
-
-.spOptimizerBudgetInput {
-	width: 72px;
-	background: var(--input-bg);
-	border: 1px solid var(--input-border);
-	border-radius: var(--radius-sm);
-	padding: 4px 6px;
-	font-size: var(--font-base);
-	color: var(--fg);
-	font-family: inherit;
-}
-
-.spOptimizerBudgetInput:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 1px;
-}
-
 .spOptimizerHint {
 	font-size: var(--font-xs);
 	color: var(--muted-2);
 }
 
 /* Mirrors .basinnChartRefreshText's look (BasinnChart.css) -- same "stale, please refresh"
-   warning language, just laid out inline in the card instead of absolutely positioned next to
-   the chart's own refresh button. */
+   warning language, just laid out inline in the strip. */
 .spOptimizerDirtyNote {
 	font-size: var(--font-xs);
 	color: var(--warning);
 }
 
-.spOptimizerBody {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
 .spOptimizerOptions {
 	display: flex;
-	gap: 8px;
+	align-items: center;
+	gap: 6px 8px;
 	flex-wrap: wrap;
-}
-
-/* Lay the (at most 3) options out horizontally on wide screens; below ~700px they wrap/stack --
-   same threshold class ShopSkillPanel.css's own breakpoint uses for the same "narrow viewport"
-   reasoning. */
-@media (min-width: 700px) {
-	.spOptimizerOptions {
-		flex-wrap: nowrap;
-	}
-	.spOptimizerOption {
-		flex: 1;
-	}
 }
 
 .spOptimizerOption {
 	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	min-width: 160px;
+	align-items: center;
+	gap: 6px;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
-	padding: 8px 10px;
+	padding: 3px 10px;
 	font-family: inherit;
-	text-align: left;
 	cursor: pointer;
 	transition:
 		background var(--transition-fast),
@@ -130,22 +85,16 @@
 	border-color: var(--accent);
 }
 
-.spOptimizerOptionTop {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-}
-
 .spOptimizerOptionRank {
 	flex-shrink: 0;
-	width: 16px;
-	height: 16px;
+	width: 15px;
+	height: 15px;
 	border-radius: 50%;
 	background: var(--border);
 	color: var(--fg);
 	font-size: 10px;
 	font-weight: 700;
-	line-height: 16px;
+	line-height: 15px;
 	text-align: center;
 }
 
@@ -154,9 +103,9 @@
 	color: var(--bg);
 }
 
-/* Primary number in the card -- biggest type, per the plan. */
+/* Still the primary number in each option -- bold and first, just no longer display-sized. */
 .spOptimizerOptionGain {
-	font-size: var(--font-lg);
+	font-size: var(--font-sm);
 	font-weight: 700;
 	color: var(--fg);
 }
@@ -166,14 +115,155 @@
 	color: var(--muted-2);
 }
 
-.spOptimizerOptionIcons {
-	display: flex;
-	gap: 3px;
-	flex-wrap: wrap;
-	margin-top: 2px;
+.spOptimizerTruncated {
+	font-size: var(--font-xs);
+	color: var(--warning);
+	cursor: help;
 }
 
-.spOptimizerOptionIcon {
+/* The estimate caveat, demoted from an always-visible footnote to a hover/focus tooltip -- the
+   full sentence is in the data-tip/aria-label. */
+.spOptimizerInfo {
+	font-size: var(--font-sm);
+	color: var(--muted-2);
+	cursor: help;
+}
+
+/* Self-rendered tooltip for the strip's demoted caveat texts. A bare title attribute only fires
+   on mouse hover -- never on keyboard focus or touch -- so these spans are focusable
+   (tabindex=0) and render their data-tip on :hover AND :focus-visible instead; tapping focuses
+   on touch. Screen readers get the same sentence via aria-label. */
+.spOptimizerTip {
+	position: relative;
+}
+.spOptimizerTip:hover::after,
+.spOptimizerTip:focus-visible::after {
+	content: attr(data-tip);
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	z-index: 10;
+	width: max-content;
+	max-width: 340px;
+	padding: 6px 10px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	color: var(--fg);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	line-height: 1.4;
+	white-space: normal;
+	text-align: left;
+	box-shadow: var(--shadow-md);
+}
+.spOptimizerTip:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+/* On-demand detail overlay, shown when an option is selected -- the old (pre-strip) card content
+   restored under detail-scoped names, plus per-skill prices. Positioned to expand UPWARD from the
+   strip (`bottom: calc(100% + 6px)`, not `top`) rather than laid in-flow above or below it: either
+   in-flow placement would push the chart table down, and the table's height is sacred (see the
+   file-level comment on why the strip itself is one row tall). It's free to cover whatever sits
+   above the results pane instead -- that's why it's dismissible via Escape/click-outside, not just
+   by re-clicking the option (see the component's useEffect). */
+.spOptimizerDetail {
+	position: absolute;
+	/* `bottom: 100%` alone resolves against the strip's padding box, so the strip's own
+	   margin-bottom would NOT be part of the visual gap -- the explicit `+ 6px` is the gap, not a
+	   rounding nicety. */
+	bottom: calc(100% + 6px);
+	left: 0;
+	/* NOT `min-width: 320px` + `max-width: 100%` -- those contradict (min-width wins the conflict)
+	   and overflow a <375px viewport into a horizontal scrollbar on #mainContent. */
+	width: min(340px, calc(100vw - 40px));
+	/* A tall 6-8 skill list scrolls inside the card instead of silently truncating against
+	   #mainContent (app.css's one clipping ancestor here) when the splitter is dragged up. */
+	max-height: min(320px, 50vh);
+	overflow-y: auto;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	padding: 10px 12px;
+	font-family: var(--font-sans);
+	/* tokens.css has no popover tier (only sticky 10 / modal 100 / above-modal 110 / overlay
+	   200/210) -- sticky is the right tier since nothing else in #topPane carries a competing
+	   z-index. Kept on the scale by convention; no gate checks this literal. */
+	z-index: var(--z-sticky);
+	/* The overlay grows FROM the strip it's anchored to, so the mount animation below scales/slides
+	   from its bottom edge, not its center. */
+	transform-origin: bottom;
+	/* --transition-fast is 0.15s (~150ms) -- reused here rather than a literal duration so this
+	   stays on the same timing scale as the rest of the file's hover/focus transitions. */
+	animation: spOptimizerDetailIn var(--transition-fast);
+}
+
+@keyframes spOptimizerDetailIn {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.spOptimizerDetail {
+		animation: none;
+	}
+}
+
+.spOptimizerDetailHeader {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+/* Primary number in the overlay -- biggest type, matching the old card's treatment. */
+.spOptimizerDetailHeader .spOptimizerOptionGain {
+	font-size: var(--font-lg);
+	font-weight: 700;
+	color: var(--fg);
+}
+
+.spOptimizerDetailHeader .spOptimizerOptionMeta {
+	margin-left: auto;
+}
+
+.spOptimizerDetailSkills {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.spOptimizerDetailSkill {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.spOptimizerDetailSkillName {
+	flex: 1;
+	font-size: var(--font-xs);
+	color: var(--fg);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.spOptimizerDetailSkillCost {
+	flex-shrink: 0;
+	font-size: var(--font-xs);
+	color: var(--muted-2);
+}
+
+.spOptimizerDetailIcon {
 	width: 20px;
 	height: 20px;
 	border-radius: 3px;
@@ -182,21 +272,23 @@
 }
 
 /* Rarity accent border, same --skill-*-accent tokens HorseDef.css's .horseSkillPills/
-   .shopSkillChip combinators already key off of -- rarity belongs to the skill, not this card. */
-.spOptimizerOptionIcon.skill-white {
+   .shopSkillChip combinators already key off of -- rarity belongs to the skill, not this card.
+   Verbatim from the pre-strip card's .spOptimizerOptionIcon rules (ac79efa). */
+.spOptimizerDetailIcon.skill-white {
 	border-color: var(--skill-white-accent);
 }
-.spOptimizerOptionIcon.skill-gold {
+.spOptimizerDetailIcon.skill-gold {
 	border-color: var(--skill-gold-accent);
 }
-.spOptimizerOptionIcon.skill-pink {
+.spOptimizerDetailIcon.skill-pink {
 	border-color: var(--skill-pink-accent);
 }
-.spOptimizerOptionIcon.skill-unique {
+.spOptimizerDetailIcon.skill-unique {
 	border-color: var(--skill-unique-accent);
 }
 
 .spOptimizerFootnote {
+	margin-top: 8px;
 	font-size: 10px;
 	color: var(--muted-2);
 }

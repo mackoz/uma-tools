@@ -76,14 +76,21 @@ export function IntroText(props) {
 								earned per skill, not per shop rung, so a ○/◎ pair shares a
 								single field (set on whichever row owns it) that discounts both
 								purchase steps; gold skills always get their own separate field.
-								Existing saved hint levels migrate automatically. Above the
-								chart table, a new <strong>Buy list</strong> card lets you enter
-								an SP budget and shows up to three different purchase options,
-								each with its estimated gain, SP cost, and skill icons —
-								clicking one highlights those rows in the chart. Gains are
-								estimates: each option sums the chart's already-measured
-								per-skill gains rather than re-simulating the combination, so
-								skills that interact with each other won't be reflected exactly.
+								Existing saved hint levels migrate automatically. Enter your SP
+								budget next to the Shop Skills button, and a new{' '}
+								<strong>Buy list</strong> strip above the chart table shows up
+								to three different purchase options, each with its estimated
+								gain, SP cost, and skill count — clicking one highlights those
+								skills' rows in the chart and pops open a detail card above the
+								strip listing each skill with its icon and hint-discounted price
+								(click again, press Escape, or click elsewhere to close it;
+								hover an option for its full skill list without opening the
+								card). Gains are estimates: each option sums the chart's
+								already-measured per-skill gains rather than re-simulating the
+								combination, so skills that interact with each other won't be
+								reflected exactly. Rows the chart eliminated early now sort
+								below the surviving ones, so the default view leads with the
+								skills that matter.
 							</li>
 						</ul>
 					</details>
