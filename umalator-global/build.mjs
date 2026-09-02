@@ -49,6 +49,15 @@ const redirectData = {
 		build.onResolve({ filter: /unreleased.json$/ }, (args) => ({
 			path: path.join(dirname, 'unreleased.json'),
 		}));
+		// UI-31: presets.ts (the "CM # - X Cup" dropdown data, formerly a literal inside
+		// umalator/app.tsx) is hand-maintained per JP/Global like umas.json/unreleased.json
+		// above, not pipeline output -- see docs/cm-presets.md. Anchored and dot-escaped
+		// (unlike the looser `skill_meta.json$`-style filters above) so it can't later collide
+		// with some other `*presets.ts` file; RE2 (esbuild's filter engine) supports this
+		// without lookaround.
+		build.onResolve({ filter: /(^|\/)presets\.ts$/ }, (args) => ({
+			path: path.join(dirname, 'presets.ts'),
+		}));
 	},
 };
 

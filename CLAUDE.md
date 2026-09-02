@@ -6,7 +6,7 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 1. **Never hand-edit generated files.** These are all build output or data-pipeline output, not hand-written source:
    - `*/bundle.js`, `*/bundle.css`, `*/bundle.2.js`, `*/simulator.worker.js` — esbuild output. Edit the `.tsx`/`.ts` source and rebuild instead.
-   - `umas.json`, `skill_meta.json`, `icons.json`, and the `umalator-global/` equivalents — Perl-generated from the game's `master.mdb`. Edit the generating `.pl` script (see `docs/data-pipeline.md`) and regenerate, don't patch the JSON directly. `uma-skill-tools/data/{skill_data,skillnames,course_data}.json` are the same story but live in the `uma-skill-tools` submodule (see the submodule section below) — the generating `.pl` scripts are there too, and a fix means committing and pushing in that repo, not editing the checked-out copy here. `tracknames.json` is the exception: it is hand-maintained because no generator exists.
+   - `umas.json`, `skill_meta.json`, `icons.json`, and the `umalator-global/` equivalents — Perl-generated from the game's `master.mdb`. Edit the generating `.pl` script (see `docs/data-pipeline.md`) and regenerate, don't patch the JSON directly. `uma-skill-tools/data/{skill_data,skillnames,course_data}.json` are the same story but live in the `uma-skill-tools` submodule (see the submodule section below) — the generating `.pl` scripts are there too, and a fix means committing and pushing in that repo, not editing the checked-out copy here. `tracknames.json` and `presets.ts`/`umalator-global/presets.ts` (the CM/LOH preset dropdown data, see `docs/cm-presets.md`) are the exceptions: both are hand-maintained because no generator exists — future CM cups aren't in any `master.mdb` yet.
 
 2. **Bundles are *not* committed to git — CI is the only build path.** `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages`, `rougelike`, and `umadle` all have a `build.mjs` and are gitignored (see `.gitignore`); `deploy.yml` rebuilds all seven on every push to `master`, and GitHub Pages is configured (`build_type: workflow`) to serve exactly that CI-built artifact — there is no separate "legacy" branch-source deploy racing it anymore. This means you do **not** need to rebuild-and-commit before pushing, but you should still build locally (see commands below) to catch a broken build before it reaches CI. `build-planner` is the one exception: its `bundle.js`/`bundle.2.js` stay committed because its source doesn't currently compile (see `docs/apps.md#build-planner`) — don't add it to CI without fixing that first.
 
@@ -60,7 +60,7 @@ cd umadle && node build.mjs
 
 npm run build                                # all of the above in one shot
 
-npm run test                                 # unit tests: statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts (plain node:assert, no runner); test:stats is a kept alias
+npm run test                                 # unit tests: statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts (plain node:assert, no runner); test:stats is a kept alias
 npm run verify                               # build both umalator apps + run unit tests + typecheck + CSS metrics + browser smoke + docs, one-line diff vs scripts/verify-baseline.json
 npm run verify:baseline                      # re-record that baseline (run on master right after a merge; skips the tests/smoke/docs stages)
 npm run smoke                                # browser smoke alone: Playwright chromium drives umalator-global (light+dark), asserts contrast/stacking/clipping
@@ -98,6 +98,7 @@ Two parallel datasets, both derived from the same generator logic run against di
 | Roster | 141 umas | 76 umas (Global lags JP releases) |
 | Skill names | `["ja", "en"]` tuples | `["en"]` single-element |
 | Courses | 139 | 119 (Global still lacks some JP courses) |
+| CM/LOH presets | `presets.ts` (repo root), 9 entries | `umalator-global/presets.ts`, 24 entries |
 
 Icons are **not** duplicated — both datasets reference the same `icons/` tree via the same `icons.json`. When adding data by hand for a quick test, don't cross-wire JP data into a Global-built app or vice versa; the shapes differ (see the skillnames array-length difference above) and code branches on `CC_GLOBAL`, not on which JSON happens to be loaded.
 
@@ -132,4 +133,5 @@ Of that 76, 12 umas are **not actually released on Global yet** (every outfit st
 - **Which `master.mdb` tables join to which (outfit → unique skill, evolution)?** → `docs/master-mdb-schema.md`
 - **How do I deploy or run this locally?** → `docs/deployment.md`
 - **How does the statistical Skill Chart evaluate skills (ladder, block sampling, detail-on-demand)?** → `docs/statistical-analysis.md`
+- **How is the CM/LOH preset dropdown's data structured, and how does the default-preset schedule work?** → `docs/cm-presets.md`
 - **Why is something designed the way it is (build posture, chart statistics, submodule, format policy)?** → `docs/adr/` — decision records with context, rejected options, and consequences. Engine-level decisions have their own set in `uma-skill-tools/docs/adr/`. When a change settles a question that could have gone another way, add or amend a record (see `docs/adr/README.md`).
