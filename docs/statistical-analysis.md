@@ -381,7 +381,9 @@ Changing Model, Preset, or Pruning does not automatically rerun existing results
 ## SP-budget optimizer (Buy list card)
 
 Once the Shop Skills shortlist (step 3 above) is active, a **Buy list** card renders above the
-chart table in Mode.Chart, alongside an SP budget field. This is UI-16's MVP: a lightweight,
+chart table in Mode.Chart; the SP budget field it optimizes against sits in the Shop skills
+filter row itself (`ShopSkillFilter.tsx`, next to the Clear button — appearing with it whenever
+the shortlist is non-empty). This is UI-16's MVP: a lightweight,
 purely-additive optimizer over the chart's own measured means, not the full re-simulating design
 originally scoped for the ticket (see "Deferred to a follow-up branch" below, and
 `docs/adr/0015-sp-optimizer-additive-knapsack.md` for why).
