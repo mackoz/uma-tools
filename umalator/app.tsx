@@ -5315,10 +5315,11 @@ function App(props) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
-					{/* UI-16 chunk 3: renders above the chart table so a user sets their SP
-					    budget before scanning rows. Mode.Chart only -- unique skills aren't
-					    shop purchases, so even the card's "add shop skills" prompt would be
-					    noise on the Uniques Chart tab. */}
+					{/* UI-16: the Buy list strip, one row above the chart table (the SP
+					    budget input itself lives in ShopSkillFilter.tsx's filter row).
+					    Mode.Chart only -- unique skills aren't shop purchases, so even the
+					    strip's "add shop skills" prompt would be noise on the Uniques
+					    Chart tab. */}
 					{mode == Mode.Chart && (
 						<SpOptimizerCard
 							shopFilterActive={shopFilterActive}

@@ -498,7 +498,11 @@ async function runTheme(browser, url, theme) {
 			// The SP budget input in the shop-skills filter row (ShopSkillFilter.tsx) -- rendered
 			// whenever the shortlist is non-empty, so it exists here too (behind the open picker
 			// modal; contrast() reads computed styles, not stacking).
-			await assertContrast(page, 'contrast.shopbudget', '.shopSkillBudgetInput');
+			await assertContrast(
+				page,
+				'contrast.shopbudget',
+				'.shopSkillBudgetInput',
+			);
 
 			await check('chart.shopfilter.remove', async () => {
 				// Target the top-level (non-indented) item specifically: if the prior pick auto-
