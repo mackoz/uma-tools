@@ -71,6 +71,17 @@ jobs:
         run: node build.mjs
         working-directory: umadle
 
+      # Pages serves this repo's tree directly (each app at its own root-relative
+      # path, e.g. /umalator-global/) so `path: .` below can't be narrowed to a
+      # single dist folder -- but that also means every build-time-only directory
+      # rides along unless removed first. node_modules is the one that matters:
+      # it's never served, and upload-pages-artifact@v3 has no path-exclude option
+      # of its own to filter it out. Discovered 2026-09-02 when node_modules (now
+      # including playwright) grew past whatever size/file-count limit that action
+      # enforces, failing the archive step outright on every push to master.
+      - name: Remove build-time-only directories before archiving for Pages
+        run: rm -rf node_modules
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
