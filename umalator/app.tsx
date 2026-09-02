@@ -119,6 +119,7 @@ import {
 import {
 	buildHintClusters,
 	type CostLookup,
+	discountedCost,
 	expandHints,
 	type HintClusters,
 	type HintLevels,
@@ -3736,6 +3737,14 @@ function App(props) {
 		const option = purchaseOptions[selectedBuyOption];
 		return option ? new Set(option.skillIds) : new Set<string>();
 	}, [selectedBuyOption, purchaseOptions]);
+	// Per-skill hint-discounted SP cost for the Buy list's detail overlay -- SpOptimizerCard stays
+	// JSON-free, so app.tsx (which already owns SKILL_BASE_COST and expandedShopHints for
+	// optimizePurchases above) computes it here and passes the function down.
+	const buyCostOf = useCallback(
+		(id: string) =>
+			discountedCost(SKILL_BASE_COST[id] ?? 0, expandedShopHints[id] ?? 0),
+		[expandedShopHints],
+	);
 
 	// --- Skill Chart coordinator state ---
 	// chartRunRef holds every piece of mutable state a chart run needs: which round it's on, the
@@ -5315,21 +5324,22 @@ function App(props) {
 		resultsPane = (
 			<div id="resultsPaneWrapper">
 				<div id="resultsPane" class="mode-chart">
-					{/* UI-16 chunk 3: renders above the chart table so a user sets their SP
-					    budget before scanning rows. Mode.Chart only -- unique skills aren't
-					    shop purchases, so even the card's "add shop skills" prompt would be
-					    noise on the Uniques Chart tab. */}
+					{/* UI-16: the Buy list strip, one row above the chart table (the SP
+					    budget input itself lives in ShopSkillFilter.tsx's filter row).
+					    Mode.Chart only -- unique skills aren't shop purchases, so even the
+					    strip's "add shop skills" prompt would be noise on the Uniques
+					    Chart tab. */}
 					{mode == Mode.Chart && (
 						<SpOptimizerCard
 							shopFilterActive={shopFilterActive}
 							candidateCount={optimizerCandidates.length}
 							dirty={shopDirty}
 							budget={spBudget}
-							onBudgetChange={setSpBudget}
 							options={purchaseOptions}
 							truncated={purchaseResult.truncated}
 							selectedIndex={selectedBuyOption}
 							onSelect={setSelectedBuyOption}
+							costOf={buyCostOf}
 						/>
 					)}
 					<div class="basinnChartWrapperWrapper">
@@ -6139,6 +6149,8 @@ function App(props) {
 										onOpen={() => setShopPickerOpen(true)}
 										onClear={() => setShopSkillIds([])}
 										wontProcCount={shopSkillPartition.wontProc.length}
+										budget={spBudget}
+										onBudgetChange={setSpBudget}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
