@@ -1,5 +1,5 @@
 {
-	"tsc": 1000,
+	"tsc": 1026,
 	"dark": {
 		"app": 0,
 		"IntroText": 0,
@@ -7,6 +7,9 @@
 		"InfoModal": 0,
 		"OCRModal": 0,
 		"ResultsPane": 0,
+		"ShopSkillFilter": 0,
+		"ShopSkillPanel": 0,
+		"SpOptimizerCard": 0,
 		"UmasTab": 0,
 		"Dropdown": 0,
 		"Tabs": 0,
@@ -22,6 +25,9 @@
 		"InfoModal": 1,
 		"OCRModal": 2,
 		"ResultsPane": 6,
+		"ShopSkillFilter": 0,
+		"ShopSkillPanel": 0,
+		"SpOptimizerCard": 0,
 		"UmasTab": 106,
 		"Dropdown": 0,
 		"Tabs": 0,
