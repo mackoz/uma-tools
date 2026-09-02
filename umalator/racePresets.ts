@@ -120,9 +120,8 @@ export function cmSchedule(dateISO: string, type: 'CM' | 'LOH'): CmSchedule {
 	const { year, month, day } = parseEventDate(dateISO);
 	const hour = CM_RESET_LOCAL_HOUR - CM_RESET_UTC_OFFSET;
 	const days = scheduleDays(type);
-	const start = Date.UTC(year, month - 1, day, hour);
 	return {
-		start,
+		start: resetInstant(dateISO),
 		round1: Date.UTC(year, month - 1, day + 3, hour),
 		round2: Date.UTC(year, month - 1, day + 5, hour),
 		final: Date.UTC(year, month - 1, day + 7, hour),
