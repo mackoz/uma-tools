@@ -35,6 +35,9 @@ interface SpOptimizerCardProps {
 	// May be empty, or its first entry may be the empty (nothing-to-buy) set -- see render logic
 	// below for how each case reads.
 	options: PurchaseSet[];
+	// The optimizer's DFS hit its node-visit safety ceiling and stopped early -- options are a
+	// best-effort selection, not a guaranteed optimum, and the card says so.
+	truncated: boolean;
 	selectedIndex: number | null;
 	// Clicking the already-selected option calls this with null (toggle off).
 	onSelect: (index: number | null) => void;
@@ -143,6 +146,13 @@ export function SpOptimizerCard(props: SpOptimizerCardProps) {
 							);
 						})}
 					</div>
+					{props.truncated && (
+						<div class="spOptimizerFootnote">
+							The search hit its safety limit before covering every combination
+							— these options may not be the true best. A smaller shortlist or
+							budget gives a complete answer.
+						</div>
+					)}
 					<div class="spOptimizerFootnote">
 						Estimates sum each skill's individually measured gain — combinations
 						aren't re-simulated.

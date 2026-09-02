@@ -56,11 +56,20 @@ export interface OptimizerInput {
 	topK?: number;
 }
 
+export interface OptimizerResult {
+	options: PurchaseSet[];
+	// True when the DFS hit NODE_CEILING and stopped early -- `options` is then a best-effort
+	// selection over what was enumerated, not a guaranteed optimum. Callers should say so.
+	truncated: boolean;
+}
+
 // Defensive ceiling on DFS node visits (one visit per group-choice made), so a pathological input
 // (many groups, each with several tiers) degrades to "best effort within the ceiling" rather than
-// hanging or throwing. At the documented scale (<=4 choices/group, ~10 groups) full enumeration is
-// far below this.
-const NODE_CEILING = 2_000_000;
+// hanging or throwing. This IS reachable at real (if extreme) scale -- ~25 singleton-group
+// shortlist skills with a budget big enough to afford most combinations is 2^25 leaves -- which is
+// why hitting it is surfaced as `truncated` on the result (the Buy list card shows a note) rather
+// than silently returning a possibly-non-optimal top-K as if it were complete.
+const NODE_CEILING = 20_000_000;
 
 interface Tier {
 	// Every rung bought if this tier is chosen (prerequisites first, ascending by rate, then the
@@ -126,9 +135,18 @@ function buildGroups(input: OptimizerInput): Group[] {
 			const rung = ladder[c.id];
 			let rungsToBuy: string[];
 			if (rung) {
+				// Deliberately re-derives the rung chain from `ladder` rather than reusing
+				// shopSkillFilter.ts's prerequisitesOf: this needs the INCLUSIVE chain (the terminal
+				// rung itself), the isOwned filter, and the prebuilt groupRungs index, so the reuse
+				// would be a wrapper, not a simplification. The `rate >= 1` guard mirrors
+				// prerequisitesOf's own: inert for app.tsx's SKILL_LADDER (which never contains
+				// rate < 1), but this function accepts an arbitrary LadderIndex.
 				const allRungs = groupRungs.get(rung.group) ?? [c.id];
 				rungsToBuy = allRungs.filter(
-					(id) => ladder[id].rate <= rung.rate && !isOwned(id),
+					(id) =>
+						ladder[id].rate >= 1 &&
+						ladder[id].rate <= rung.rate &&
+						!isOwned(id),
 				);
 			} else {
 				rungsToBuy = [c.id];
@@ -160,7 +178,7 @@ function symmetricDiffSize(a: string[], b: string[]): number {
 // totalCost asc) such that every accepted result differs from every other accepted result by at
 // least 2 skillIds (a single one-skill swap is fine; a strict superset that only adds one skill is
 // not diverse enough and is skipped in favor of the next-best option that does qualify).
-export function optimizePurchases(input: OptimizerInput): PurchaseSet[] {
+export function optimizePurchases(input: OptimizerInput): OptimizerResult {
 	const topK = input.topK ?? 3;
 	const groups = buildGroups(input);
 
@@ -260,7 +278,7 @@ export function optimizePurchases(input: OptimizerInput): PurchaseSet[] {
 			});
 		}
 	}
-	return accepted;
+	return { options: accepted, truncated: ceilingHit };
 }
 
 // Parses a persisted shop-hint-level map. On any parse failure, or if the top-level value isn't a
@@ -318,12 +336,11 @@ export function buildHintClusters(
 // Expands a cluster-keyed hint map (what's actually persisted/edited) into a per-id map for
 // optimizePurchases, which still charges every rung independently via `hints[id] ?? 0`
 // (buildGroups above). Iterates `clusterHints` (not `clusters`) so a key with no cluster members
-// still survives: `clusters` only maps ids that exist in the ladder/rarity lookups passed to
-// buildHintClusters, but a stored hint can be keyed by a bare skill id that was never indexed
-// there at all -- e.g. on the JP build, shop-eligible rarity-6 pink skills sit outside the
-// rarity<=2 ladder, are priced by SKILL_BASE_COST like anything else, and can carry their own
-// hint. Silently dropping such a key here would regress those JP-only skills while Global (which
-// has no such ids) ships green.
+// still survives. Note the ids this fallback actually serves: non-ladder skills with a known
+// rarity (e.g. shop-eligible rarity-6 pinks) ARE indexed by buildHintClusters as self-keyed
+// singletons and go through the normal members path -- the fallback branch exists for a stored
+// hint keyed by an id buildHintClusters never saw at all (e.g. a stale localStorage entry for a
+// skill since removed from the data). Silently dropping such a key would lose a user's hint.
 export function expandHints(
 	clusterHints: HintLevels,
 	clusters: HintClusters,
@@ -342,8 +359,8 @@ export function expandHints(
 		if (members && members.length > 0) {
 			for (const id of members) out[id] = level;
 		} else {
-			// Bare skill id with no cluster membership (not indexed by buildHintClusters) -- the B1
-			// JP case above. The key itself IS the skill id here.
+			// Bare key with no cluster membership -- an id buildHintClusters never indexed (see the
+			// doc comment above). The key itself IS the skill id here.
 			out[key] = level;
 		}
 	}
