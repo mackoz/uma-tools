@@ -183,6 +183,16 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
 
 ## Step 2 — Preconditions, before touching `wq.py land` at all
 
+**2.0 — A plans-side `wq.py` step refusing on staged residue isn't a landing blocker to work
+around by hand.** `file`/`status` (and `finish_completion`, so `complete`/`land --complete-id`
+too) refuse outright if `README.md`/`mkdocs.yml`/`next-ids.json` or the ticket's own file
+already has something staged that call didn't write — usually a leftover `--dry-run` preview,
+or unrelated in-progress work (PIPE-19). Since PIPE-38, `--park` is the sanctioned way through
+it: `wq.py`'s own trio just gets unstaged in place, and any other untracked foreign file is
+relocated to `plans/leftovers/<timestamp>/` (recorded in `leftovers/MANIFEST.jsonl`) rather
+than discarded. A tracked file outside that trio still refuses regardless — that's someone's
+real work, not residue, and `--park` won't touch it.
+
 **2.1 — Has this actually been reviewed?** `wq.py land` has no idea whether anyone looked
 at the diff — it only checks git/GitHub mechanics. If this session (or a recent one) hasn't
 run `/project-review` or individual `/code-review`s on these PRs, say so and suggest doing
@@ -288,6 +298,11 @@ mid-sequence, after the engine PR's branch state had already changed on origin, 
 run half-done. Each individual step (`land_one`, `sync_gitlink`) happens to no-op cleanly
 if you re-run it against already-completed state, but that's incidental behavior, not a
 designed guarantee — don't treat "just run the same command again" as automatically safe.
+
+This doesn't apply to a failed `wq.py file` from Step 2.0's world, though — since PIPE-38 it
+rolls itself back on anything short of a successful `git commit` (README/mkdocs.yml/next-ids.json
+restored, the skeleton unlinked, the minted id free again), so a rejected filing during this
+same session isn't a burned id to go hunt down and recycle the way UI-30's once was.
 
 If a run dies:
 1. Check what actually happened before doing anything else: `gh pr view <N> --repo <repo>
