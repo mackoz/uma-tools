@@ -14,6 +14,15 @@ node_modules
 # share.
 .claude/settings.json
 
+# Bulk import of personal Claude Code session state (agent defs, session
+# memory/feedback notes with real incident writeups and session UUIDs, and
+# copies of the .claude/skills/ files) from an "agy import" -- machine-local
+# by nature, never meant to be tracked. Was accidentally committed (see
+# d3b0521); this stops it from being tracked going forward. `.claude/skills/
+# handoff` and `.claude/skills/claude-handoff` symlink into `.agents/skills/`
+# and will dangle on a fresh clone as a result -- known, not fixed here.
+.agents/
+
 # Local alias to CLAUDE.md for tools that discover AGENTS.md. The symlink is
 # intentionally checkout-local; CLAUDE.md is the tracked source of truth.
 AGENTS.md
