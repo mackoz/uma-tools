@@ -81,8 +81,11 @@ export function IntroText(props) {
 								<strong>Buy list</strong> strip above the chart table shows up
 								to three different purchase options, each with its estimated
 								gain, SP cost, and skill count — clicking one highlights those
-								skills' rows in the chart (hover an option for its full skill
-								list). Gains are estimates: each option sums the chart's
+								skills' rows in the chart and pops open a detail card above the
+								strip listing each skill with its icon and hint-discounted price
+								(click again, press Escape, or click elsewhere to close it;
+								hover an option for its full skill list without opening the
+								card). Gains are estimates: each option sums the chart's
 								already-measured per-skill gains rather than re-simulating the
 								combination, so skills that interact with each other won't be
 								reflected exactly. Rows the chart eliminated early now sort
