@@ -1,26 +1,27 @@
 ---
 name: project-review
-description: Review the open PR(s) across uma-tools, uma-skill-tools, and uma-tools-plans — whether that's one PR alone or several that pair up together — in dependency order, then run a cross-repo synthesis pass whenever two or more repos are actually involved. Use whenever the user wants to review or sanity-check a change in this project before landing it: "review this PR," "check this diff before I merge it," a single-repo fix, an engine PR plus its uma-tools gitlink bump, a plans-repo ticket paired with either — even if they phrase it as "review these PRs together," "check these are in sync," "does this match the engine PR," or name a specific ticket's PRs without naming this skill. A bare /code-review run on one PR alone would miss how it interacts with sibling repos when there are any; this skill handles that whether or not there turn out to be any.
+description: Review the linked open PR(s) across uma-tools, uma-skill-tools, and uma-tools-plans — whether that's one PR alone or several that link up together via body cross-references or a shared ticket ID — in dependency order, then run a cross-repo synthesis pass whenever two or more repos are actually involved. Discovery is link-aware: it groups open PRs by real evidence (not just "one repo, one PR"), so it also handles a repo with more than one open PR — reviewing the linked set and reporting the rest as excluded — without stopping to ask, except when the grouping is genuinely ambiguous. Use whenever the user wants to review or sanity-check a change in this project before landing it: "review this PR," "check this diff before I merge it," a single-repo fix, an engine PR plus its uma-tools gitlink bump, a plans-repo ticket paired with either, "I've got a few PRs open, review the ones for X," "which of these PRs go together" — even if they phrase it as "review these PRs together," "check these are in sync," "does this match the engine PR," or name a specific ticket's PRs without naming this skill. A bare /code-review run on one PR alone would miss how it interacts with sibling repos when there are any; this skill handles that whether or not there turn out to be any, and without assuming every open PR belongs to the same change.
 argument-hint: "[low|medium|high|xhigh|max] [--comment] [--fix] [<PR URL>] [--engine-pr N] [--code-pr N] [--plans-pr N]"
 ---
 
 # /project-review
 
-Reviews the open PR(s) across all three repos this project spans — one, two, or three,
-whatever's actually open — in dependency order, recording each repo's findings, then runs a
-dedicated cross-repo synthesis pass over the collected findings whenever two or more repos
-are involved, to catch what no single-repo review can: an engine PR whose merge commit the
-code PR's gitlink must record, an engine signature change `uma-tools` depends on, a doc
-claim in `uma-tools-plans` a code change makes stale.
+Reviews one **linked group** of open PRs across the three repos this project spans — however
+many repos and PRs that group actually touches — in dependency order, recording each repo's
+findings, then runs a dedicated cross-repo synthesis pass over the collected findings whenever
+two or more repos are represented in the group, to catch what no single-repo review can: an
+engine PR whose merge commit the code PR's gitlink must record, an engine signature change
+`uma-tools` depends on, a doc claim in `uma-tools-plans` a code change makes stale.
 
-**A single open PR is a first-class, fully supported case here, not a degenerate one.**
-Step 1's per-slot discovery already skips a repo with nothing open, and Step 3 already
-skips the cross-repo pass when fewer than two repos have a PR — this was true before this
-note was added, it just wasn't said out loud anywhere. Don't hand-roll Step 2 and Step 4
-yourself instead of invoking this skill because only one PR happens to be open right now —
-that's exactly the situation this skill already handles; inventing a manual substitute for
-it (as happened once, reviewing `uma-tools-plans#31` by hand) just duplicates what calling
-this skill directly already does.
+Discovery no longer assumes "one repo, one PR, all PRs are the same change" — see Step 1's
+`### Linkage evidence`. A repo with more than one open PR is not an error; an open PR in two
+repos is not automatically a pair. Both get resolved by evidence, not by counting.
+
+**A single open PR is a first-class, fully supported case, not a degenerate one** — Step 1's
+per-slot discovery skips a repo with nothing open, and Step 3 skips the cross-repo pass when
+fewer than two repos are represented in the selected group. Don't hand-roll Step 2 and Step 4
+yourself instead of invoking this skill just because only one PR happens to be open; see
+`references/incidents.md` for why that shortcut cost more than it saved once.
 
 **Important limitation, confirmed 2026-08-25 by inspecting raw subagent transcripts:**
 each per-repo `code-review` call in Step 2 is fully independent — it does not receive the
@@ -46,20 +47,23 @@ it only reviews and (optionally) comments.
 - `--comment` — passed through to every `code-review` call and to the cross-repo pass.
 - `--fix` — passed through to every `code-review` call. Each sub-review fixes only its own
   repo's working tree; this skill never commits on the user's behalf.
-- `--engine-pr N` / `--code-pr N` / `--plans-pr N` — explicit PR numbers that bypass
-  discovery (Step 1) for that repo.
+- `--engine-pr N` / `--code-pr N` / `--plans-pr N` — an **anchor**: this PR is in the group,
+  full stop, no evidence required. It doesn't bypass discovery for that repo — discovery still
+  runs there and elsewhere (see Step 1); it forces this specific PR's membership regardless of
+  what discovery finds or fails to find for it.
 - **A bare GitHub PR URL** (e.g. `https://github.com/mackoz/uma-tools-plans/pull/31`) —
   resolves to whichever slot's `owner/repo` it exactly matches in Step 1's table (never a
   substring match: `mackoz/uma-tools` is a literal prefix of `mackoz/uma-tools-plans`, so a
   loose check would misroute a plans URL into the code slot and hand its sub-review the
-  wrong base branch, exactly what the Step 2 context clause exists to prevent). A URL for a
-  repo outside the three slots is a hard stop, not a guess. This is purely a convenience for
-  not having to know which `--*-pr` flag name applies to which repo — it's equivalent to
-  passing that slot's override flag, **not** a "single-slot" mode: Step 1 still runs full
-  discovery on the other two repos exactly as if the URL hadn't been given, so a sibling PR
-  you didn't know about still gets found. If the URL and an explicit `--*-pr` flag resolve
-  to the *same* slot, stop and ask which one the user means rather than picking one
-  silently; resolving to two *different* slots is fine, that's just two overrides at once.
+  wrong base branch). A URL for a repo outside the three slots is a hard stop, not a guess.
+  It's the same anchor as a `--*-pr` flag, just given by URL instead of number — a convenience
+  for not having to know which flag name applies to which repo, not a "review only this repo"
+  mode: Step 1 still runs full discovery everywhere, so a linked sibling PR you didn't know
+  about still gets found and included in the same group. If the URL and an explicit `--*-pr`
+  flag both resolve to the same repo, that repo now has two anchors; a group may legitimately
+  contain two PRs from one repo (see Step 1), so this is plausible intent, not a collision —
+  proceed with both as anchors rather than stopping to ask, unless they resolve to the exact
+  same PR number, in which case just dedupe.
 - First remaining token, if one of `low|medium|high|xhigh|max` → the level.
 - `ultra` → **stop immediately** and tell the user: ultra is a user-triggered, billed,
   multi-agent cloud review launched only via `/code-review ultra` (or `/ultrareview`)
@@ -108,48 +112,115 @@ symlink — `uma-tools-plans/CLAUDE.md` warns the symlinked path trips tool path
 The base branch genuinely differs per repo (`main` on plans); don't assume it, read it
 off the PR object.
 
-For each slot without an explicit override from Step 0, run:
+### Discover — every open PR in every repo, not just one per slot
+
+Run, per repo:
 
 ```
-gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url
+gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url,body
 ```
 
-(`baseRefName` is what lets you read the base branch off the PR object per above, instead
-of trusting the table's per-repo guess.)
+(`baseRefName` is what lets you read the base branch off the PR object per above, instead of
+trusting the table's per-repo guess. `body` is new — it carries the linkage evidence below.)
 
-- **Zero results** → skip that slot. Note it in the final summary as "no open PR — skipped."
-- **Exactly one** → that's the slot's PR.
-- **More than one** → the repos' own "one open PR per repo" convention is soft guidance now,
-  not a hard rule (a second PR can be legitimate, e.g. two genuinely unrelated efforts
-  in flight at once), so this isn't necessarily wrong — but this skill still can't guess
-  which one the user means. Stop and ask.
+For a PR resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override or a bare PR
+URL from Step 0, look up the same fields with `gh pr view <number> --repo <github repo> --json
+number,title,headRefName,baseRefName,url,body` so it contributes real evidence too, not just a
+bare number.
 
-For a slot resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override, or via
-a bare PR URL from Step 0, instead of discovery, look up the same fields with
-`gh pr view <number> --repo <github repo> --json number,title,headRefName,baseRefName,url`
-so the printed plan (below) and the rest of this skill have real title/URL/branch data to
-work with, not just a bare number or URL.
+**Zero results in a repo** → skip that slot, same as always; note it in the final summary as
+"no open PR — skipped." **One or more** → every one of them is a *candidate*, full stop — there
+is no "more than one → stop and ask" here anymore. The repos' own one-PR-per-repo convention is
+soft guidance now (a second, unrelated PR in flight is legitimate), so more than one open PR in
+a repo is an expected shape, not an error condition; whether they're related is exactly what
+grouping, next, is for. A draft PR is a candidate too — flag it in the printed plan rather than
+silently including or excluding it.
 
-**Relatedness check (informational only — never gates Step 3).** Paired PRs share an
-identical head branch name in practice, though nothing enforces it and `wq.py` never reads
-it. If two or more discovered PRs' `headRefName`s differ, print a warning —
-`"heads differ (<a> vs <b>) — these may be unrelated PRs, reviewing anyway"` — and
-continue. Print this for the user's own situational awareness only; it does **not** skip
-or otherwise affect Step 3's cross-repo pass (this used to gate Step 3, and stopped — see
-that step for why). A real landing this project did, PIPE-21 on 2026-08-29, had three PRs
-with three different branch names — `pipe-21-replay-parser`/`pipe-21-gitlink-bump`/
-`pipe-21-work` — despite being unambiguously the same paired change, since nothing forces
-one branch name across repos. Branch-name mismatch is too weak a signal to skip the one
-step that could catch a real cross-repo problem.
+### Linkage evidence
 
-Print the resolved plan (which slots have a PR, their numbers/titles/URLs, which slots
-are being skipped) before doing anything else, so the user can interrupt if it's wrong.
+Four kinds of evidence connect two PRs, in order of what they can do:
 
-## Step 2 — Per-repo reviews, in order: engine → code → plans
+**Direct link** — PR A's body names PR B: `owner/repo#N`, `repo#N`, or a full
+`https://github.com/<owner>/<repo>/pull/N` URL, where B is a discovered candidate. One direction
+is enough — the first PR opened often can't link a sibling that doesn't exist yet
+(`uma-skill-tools#17`'s body says `Code PR: [uma-tools#50](…)` / `Tracking ticket:
+[uma-tools-plans#41](…)`; `uma-tools-plans#42` says `Pairs with mackoz/uma-tools#51`). A bare
+`#N` means PR N *in that PR's own repo* — never resolve it against a different repo's numbering.
 
-For each slot that has a PR, **in this order**, do the following. This is dependency
-order: engine lands first in `wq.py land` too, and a code-side PR is usually easiest to
-understand after seeing what changed underneath it.
+**Shared ticket ID** — both titles *start* with the same ticket ID: `PIPE-21: …`,
+`PIPE-21 (…): claim + plan`, `UI-21 + PIPE-15: …`. Match the whole ID — `UI-3` is not `UI-31`.
+This is the same signal `wq.py`'s own `cmd_ready` trusts for PR↔ticket lookup, which is why it
+counts as strongly as a direct link. It is **not** evidence when the ID appears mid-title rather
+than leading it: `uma-tools-plans#26`, "Fix stale in-progress/pipe-21.md links after PIPE-21
+completed," matches a naive `PIPE-21 in:title` search but is an unrelated follow-up — its body
+carries no cross-links either. Leading-vs-mid-title is the whole test.
+
+A direct link or a shared leading ticket ID is what **forms a group** — chain PRs together
+through either and take the transitive closure. The next two kinds can only refine a group that
+already exists this way, never create or merge one on their own:
+
+**Branch name alone** — identical `headRefName`, or branches sharing a full ticket-ID prefix
+(`pipe-37-work` / `pipe-37-artifact`; whole-ID again — `pipe-3-` doesn't match `pipe-30-`). A
+body reference naming an unqualified branch instead of a PR number (`uma-skill-tools#15` once
+wrote `mackoz/uma-tools#pipe-3-work`) counts here too. Branch name is corroborating only: PIPE-21
+landed with three PRs on three *different* branches (`pipe-21-replay-parser`/
+`pipe-21-gitlink-bump`/`pipe-21-work`) — see `references/incidents.md` — so a shared branch name
+can attach a loose candidate to a group that direct links or ticket IDs already formed, but it
+must never be the thing that bridges two otherwise-unconnected groups together. Without that
+restriction, one two-ticket title (`UI-21 + PIPE-15: …`) or a body saying "supersedes #48" could
+chain two genuinely separate landings into a false supergroup.
+
+**User-asserted** — an explicit `--engine-pr`/`--code-pr`/`--plans-pr` or a bare PR URL from
+Step 0. The user said so; this outranks everything above and needs no corroboration.
+
+**Not evidence, ever:** both PRs simply being open at the same time; the same author; similar
+timestamps; a ticket ID mentioned mid-title or mid-body rather than leading it (the `#26` case
+again); a body that asserts an unnamed sibling without naming one — `wq.py cmd_claim`'s default
+plans-PR body, "Pairs with the matching code-repo PR; both merge together," proves a sibling is
+*expected*, not which PR it is. This list is the one thing standing between this skill and
+quietly reverting to "both are open, so they must be the same change" — don't let corroborating
+evidence (branch names, timing) substitute for it just because nothing stronger turned up.
+
+### Group and select
+
+**Group** every candidate by chaining direct links and shared leading ticket IDs (transitive
+closure); let branch-name evidence attach loose candidates to a group that already formed.
+
+**Select one group to review:**
+
+- An anchor exists (`--*-pr` or a bare PR URL) → the group containing it. The anchor is itself
+  a member regardless of what other evidence does or doesn't say about it.
+- No anchor, exactly one group → that group, no prompt.
+- No anchor, more than one group → **print every group with the evidence that formed it** (see
+  below), plus any unlinked singletons, and **stop and ask which to review** — one group per
+  run, rerun for another. Recommend rather than just asking blind: when every repo has exactly
+  one open PR and the only reason they're in separate groups is that no evidence links them —
+  nothing *contradicts* either — recommend treating them as one group anyway (today's behavior);
+  don't let a case with real evidence for one relationship and none against it read as equally
+  uncertain as a case with real evidence for two different ones.
+
+### Print the plan
+
+Before doing anything else, so the user can interrupt if it's wrong:
+
+- Each selected member with the evidence that linked it — quote the actual body line, or state
+  it plainly ("both titles lead with `PIPE-37`"). Flag a draft.
+- Each **excluded** open PR, one line each, with why it didn't make the group. Excluded is not
+  settled: if a repo has an open PR that wasn't linked in, say so explicitly and offer to include
+  it on request rather than treating the exclusion as final — the PR most likely to be missed
+  this way is exactly the kind Step 3 exists to catch (e.g. a gitlink-bump PR titled "Bump
+  uma-skill-tools to `<sha>`" with an empty body).
+- A body link to a sibling that's already merged or closed (normal mid-landing state — `wq land`
+  merges the engine PR first) is context worth noting, not something to chase down further.
+
+## Step 2 — Per-PR reviews, in order: engine → code → plans
+
+For each PR in the selected group, **in that repo order** (a group can hold more than one PR
+from the same repo — a stacked pair — in which case order those two by base-on-head: whichever
+PR's `headRefName` another candidate's `baseRefName` names goes first, else ascending number; the
+engine → code → plans ordering is between repos, not within one), do the following. This is
+dependency order: engine lands first in `wq.py land` too, and a code-side PR is usually easiest
+to understand after seeing what changed underneath it.
 
 1. If this isn't the first slot being reviewed, state the prior slot(s)' HANDOFF block(s)
    (see below) in your own turn, in plain text, immediately before the next call. This is
@@ -167,16 +238,13 @@ understand after seeing what changed underneath it.
 
    **Context clause**: one short sentence orienting the sub-review, since the args string is
    its only channel in (see the limitation note above). Include: which slot this is (engine/
-   code/plans), the ticket ID and one-line purpose if inferable from the PR title, the
-   sibling PR(s) in this same paired landing by `owner/repo#number`, and the repo's resolved
-   base branch (the real `baseRefName` Step 1 already looked up — pass that value along
-   rather than making the sub-review re-derive it). That last one earns its place: a
-   sub-review reviewing `uma-tools-plans#28` on 2026-08-29 assumed `master` (the convention
-   in the other two repos, and the wrong one here) and hit two failed git commands —
-   `fatal: couldn't find remote ref master`, then `unknown revision 'origin/master...HEAD'`
-   — before self-recovering via `git branch -a`/`git remote -v` and discovering the real
-   default is `main`. It got there on its own, but only after burning tool calls rediscovering
-   something Step 1 had already resolved and simply never passed along. E.g.:
+   code/plans), the ticket ID and one-line purpose if inferable from the PR title, the other
+   PR(s) in this same linked group by `owner/repo#number` and how each was linked in (direct
+   link, shared ticket ID, branch name, or user-asserted — see Step 1's `### Linkage evidence`;
+   don't overstate a branch-only link as a confirmed pairing), and the repo's resolved base
+   branch (the real `baseRefName` Step 1 already looked up — pass that value along rather than
+   making the sub-review re-derive it; see `references/incidents.md` for what happens when it
+   isn't). E.g.:
 
    ```
    -- this is the plans repo (base branch: main) in a paired HP-5 landing (dead-import +
@@ -210,13 +278,9 @@ understand after seeing what changed underneath it.
    no way to ask it in advance, so this is archaeology, not disclosure.** Since nothing you
    say before the call reaches it (see the limitation note at the top of this skill), you
    cannot instruct a sub-review to fan out or to explain itself; the only way to find out
-   what it actually did is to inspect the record afterward. Confirmed by inspecting a raw
-   subagent transcript on 2026-08-25: a `code-review` run reasoned mid-run ("weighing
-   whether to spawn parallel agents... diff is small, mostly data regen... proceeding
-   manually — still seems worthwhile to follow protocol"), never attempted the `Agent` tool
-   once (zero calls, not a rejected/errored attempt), and its final report said nothing
-   about it either way — the reasoning existed, but only in its own private thinking, never
-   surfaced anywhere the caller could see without reading the transcript directly. So after
+   what it actually did is to inspect the record afterward — see `references/incidents.md`
+   for a confirmed case where a sub-review reasoned about skipping fan-out entirely in its
+   private thinking and never surfaced that decision anywhere the caller could see. So after
    each call:
 
    - The task-completion notification for the `Skill(code-review, ...)` call names an
@@ -268,17 +332,18 @@ understand after seeing what changed underneath it.
 
 This is the step a single-repo `/code-review` structurally cannot perform, and the reason
 this skill exists rather than three manual `/code-review` calls. Skip this step **only**
-if fewer than two slots had an open PR — there's nothing cross-repo to check with just
-one. Run it regardless of Step 1's relatedness-check warning, even if the discovered PRs'
-head branches differ — see Step 1's note on why that check no longer gates this one.
-Nothing here licenses *inventing* a relationship that isn't backed by evidence, though:
-the "hold cross-repo findings to the same evidence bar" rule below still applies exactly
-as strictly as if the branches had matched.
+if the selected group represents **fewer than two repos** — a stacked pair of PRs in one
+repo doesn't trigger this, only two-or-more distinct repos does; there's nothing cross-repo
+to check otherwise. Group membership is exactly what gates this step now — it's gated on
+the linkage evidence Step 1 collected, not a branch-name guess, so run it for whatever group
+Step 1 actually selected without re-litigating whether the members belong together.
 
 Launch one `Agent` with `subagent_type: "cross-repo-synthesis"` (fan-out isn't needed here
 — this is synthesis, not diff-scanning). Give it: every HANDOFF block from Step 2, the PR
-URLs, and the specific things to check, drawn from the "cross-repo invariants at risk" list
-above plus:
+URLs, **how the group was linked** (state it plainly — if branch names alone did the
+linking, say so, and don't let the synthesis assert a relationship the diffs themselves
+don't support), and the specific things to check, drawn from the "cross-repo invariants at
+risk" list above plus:
 
 - Do findings in one repo contradict findings or assumptions recorded in another?
 - Is a change to the paired-merge machinery (`wq.py`, `verify.mjs`) landing in the same
@@ -314,14 +379,18 @@ mutually exclusive — run exactly one, not both.
 **If `--fix` or `--comment` was passed**, print to the terminal only (this skill posts to
 GitHub only through Steps 2–3, never a separate top-level PR comment):
 
-- One section per repo slot: PR number/title/link and posted-review link, or
-  "no open PR — skipped." Include that slot's `FAN-OUT` line from its HANDOFF verbatim —
-  the Agent-call count, and any reasoning recovered from the transcript when the count is
-  zero, or "no reasoning found" if none was recoverable. State it plainly, without
-  editorializing on whether the reasoning was good enough; that judgment isn't this
-  skill's job yet.
+- One section per reviewed PR (`owner/repo#N` — a group holding two PRs from one repo gets
+  two sections, not one merged one): PR number/title/link and posted-review link, or
+  "no open PR — skipped" for a repo the group didn't touch at all. Include that PR's
+  `FAN-OUT` line from its HANDOFF verbatim — the Agent-call count, and any reasoning
+  recovered from the transcript when the count is zero, or "no reasoning found" if none was
+  recoverable. State it plainly, without editorializing on whether the reasoning was good
+  enough; that judgment isn't this skill's job yet.
 - A **Cross-repo** section: the findings from Step 3, or "none found" if the pass ran and
-  found nothing actionable.
+  found nothing actionable, or "skipped — only one repo in this group" if it didn't run.
+- An **Excluded** section: every open PR Step 1 found but didn't include, one line each,
+  same as the printed plan — so a `--fix`/`--comment` run doesn't bury that information
+  behind the action it just took.
 
 **If neither `--fix` nor `--comment` was passed** (the bare/default invocation — the
 common case, since most runs are a first look before deciding what to do about it), skip
@@ -345,13 +414,17 @@ makes it redundant, not complementary — and instead:
    | Finding | Confidence | Impact | Effort | Recommendation |
    |---|---|---|---|---|
 
-   "Finding" identifies where it lives (`repo:file:line`, or the repo slot for a
-   process-level finding with no single line) and states the problem in one clause —
+   "Finding" identifies where it lives (`owner/repo#N:file:line` — the PR number, not just
+   the repo slot, since a group can hold two PRs from one repo — or the repo slot alone for
+   a process-level finding with no single line) and states the problem in one clause —
    enough to act on without cross-referencing the HANDOFF blocks again. Sort however makes
    the table easiest to scan (severity-first is usually right, but use judgment); don't
    split it into a separate table per repo — one table, every finding.
 
-3. **Do not fix, comment, or otherwise act on anything in the table.** State plainly that
+3. **List excluded open PRs** below the table, one line each, same as the printed plan —
+   don't let a silent exclusion look like a repo genuinely had nothing open.
+
+4. **Do not fix, comment, or otherwise act on anything in the table.** State plainly that
    you're waiting for the user to say which rows to act on, and stop there — this is a
    hold point, not a formality; the whole reason this branch exists is that `--fix`/
    `--comment` weren't passed, meaning the user hasn't yet told you to act. Only proceed
@@ -361,17 +434,10 @@ makes it redundant, not complementary — and instead:
 
 ## Step 5 — Cleanup
 
-Run `rm -f <scratchpad dir>/*.diff` again, now that every Step 2 sub-review has finished.
-
-Confirmed by inspecting a raw subagent transcript on 2026-08-25: a Step 2 sub-review
-reviewing `uma-tools-plans#15` tried `git diff origin/main...origin/pipe-5-jp-data-refresh
-> <scratchpad>/pr15.diff`, hit a zsh `file exists` (noclobber) error because a 605-line
-`pr15.diff` from an *earlier* `/project-review` run in the same session was still sitting
-there, read that stale file believing it was current, only caught the mismatch because it
-happened to cross-check one file's presence in the diff against the `--stat` summary, and
-then had to `rm -f` and regenerate (706 lines — confirming the original really was stale)
-before it could proceed. That cost several wasted tool calls and could just as easily have
-produced a wrong finding (or a missed one) on a diff the sub-review never actually saw.
+Run `rm -f <scratchpad dir>/*.diff` again, now that every Step 2 sub-review has finished. A
+stale `.diff` left in the scratchpad has already been read as current by mistake once — see
+`references/incidents.md` — which is exactly what this cleanup and the Step 1 defensive
+sweep exist to prevent.
 
 `project-review-handoffs.md` is the only file in `<scratchpad dir>` this skill's own state
 depends on — every `.diff` file a sub-review wrote there is safe to discard once that
@@ -390,7 +456,16 @@ but cleaning up now means there's nothing left for that sweep to have to catch.
   applied one level down: `--fix`/`--comment` are how the user tells this skill it's
   allowed to act; their absence means it isn't, yet.
 - Before Step 2, if `--fix` was passed, check each target repo's working tree
-  (`git status --porcelain`) and warn if it's dirty — `--fix` will write into it.
+  (`git status --porcelain`) and warn if it's dirty — `--fix` will write into it. If the
+  selected group holds two PRs from the same repo, that's one working tree for two
+  sub-reviews: run them sequentially with a `git status` re-check between the two, or refuse
+  `--fix` for that shape and say why, rather than letting the second `--fix` clobber
+  uncommitted output from the first.
+- Never treat two PRs as related just because both happen to be open at the same time, share
+  an author, or were opened around the same time — group only on the evidence in Step 1's
+  `### Linkage evidence` (a direct body link, a leading shared ticket ID, or user assertion;
+  branch name corroborates but never forms a group on its own) and say which evidence applied
+  when you print the plan.
 - The `uma-skill-tools` submodule sitting in detached HEAD is its normal, healthy state —
   standard for any git submodule checkout, and this repo's own CI/gitlink tooling is built
   around it (see `docs/adr/0011-gitlink-drift-guard.md`, which rejects a branch-name check
