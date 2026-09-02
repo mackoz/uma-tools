@@ -54,6 +54,7 @@ import {
 } from '../components/SkillList';
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
+import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
 import { type CourseData, CourseHelpers } from '../uma-skill-tools/CourseData';
@@ -104,6 +105,14 @@ import { SpOptimizerCard } from './components/SpOptimizerCard';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
 import { IntroText } from './IntroText';
+import {
+	pickDefaultPresetIndex,
+	type RawGroundCondition,
+	type RawPreset,
+	type RawSeason,
+	type RawTime,
+	type RawWeather,
+} from './racePresets';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
 import {
 	addShopSkill,
@@ -281,387 +290,68 @@ class RaceParams extends Record({
 	grade: Grade.G1,
 }) {}
 
-enum EventType {
-	CM,
-	LOH,
-}
+// Lookup tables built from the actual enum members (not hand-copied strings) so that renaming
+// or removing a Season/GroundCondition/Weather/Time member is a compile error here, rather than
+// a silent runtime gap. `presets.ts`'s `satisfies` check keeps the data side honest about which
+// member names exist; these tables are what turns those names back into real enum values.
+const SEASON_MAP: { [K in RawSeason]: Season } = {
+	Spring: Season.Spring,
+	Summer: Season.Summer,
+	Autumn: Season.Autumn,
+	Winter: Season.Winter,
+	Sakura: Season.Sakura,
+};
+const GROUND_MAP: { [K in RawGroundCondition]: GroundCondition } = {
+	Good: GroundCondition.Good,
+	Yielding: GroundCondition.Yielding,
+	Soft: GroundCondition.Soft,
+	Heavy: GroundCondition.Heavy,
+};
+const WEATHER_MAP: { [K in RawWeather]: Weather } = {
+	Sunny: Weather.Sunny,
+	Cloudy: Weather.Cloudy,
+	Rainy: Weather.Rainy,
+	Snowy: Weather.Snowy,
+};
+const TIME_MAP: { [K in RawTime]: Time } = {
+	NoTime: Time.NoTime,
+	Morning: Time.Morning,
+	Midday: Time.Midday,
+	Evening: Time.Evening,
+	Night: Time.Night,
+};
 
-const presets = (
-	CC_GLOBAL
-		? [
-				// ids 19-24: dates are estimated (upstream's own list doesn't reach these yet) - course/conditions
-				// come from JP's original 2022-2023 debut run of each cup (Global's 2nd zodiac lap replays JP's
-				// historical back-catalog, not JP's current rotation)
-				{
-					id: 24,
-					type: EventType.CM,
-					name: 'Aries Cup 2',
-					date: '2026-12-29' /* estimated date */,
-					courseId: 10811,
-					season: Season.Spring,
-					ground: GroundCondition.Firm,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 23,
-					type: EventType.CM,
-					name: 'Pisces Cup 2',
-					date: '2026-12-08' /* estimated date */,
-					courseId: 10504,
-					season: Season.Spring,
-					ground: GroundCondition.Firm,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 22,
-					type: EventType.CM,
-					name: 'Aquarius Cup 2',
-					date: '2026-11-17' /* estimated date */,
-					courseId: 10611,
-					season: Season.Winter,
-					ground: GroundCondition.Soft,
-					weather: Weather.Snowy,
-					time: Time.Midday,
-				},
-				{
-					id: 21,
-					type: EventType.CM,
-					name: 'Capricorn Cup 2',
-					date: '2026-10-27' /* estimated date */,
-					courseId: 10701,
-					season: Season.Winter,
-					ground: GroundCondition.Firm,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 20,
-					type: EventType.CM,
-					name: 'Sagittarius Cup 2',
-					date: '2026-10-06' /* estimated date */,
-					courseId: 10506,
-					season: Season.Winter,
-					ground: GroundCondition.Good,
-					weather: Weather.Cloudy,
-					time: Time.Midday,
-				},
-				{
-					id: 19,
-					type: EventType.CM,
-					name: 'Scorpio Cup 2',
-					date: '2026-09-15' /* estimated date */,
-					courseId: 10808,
-					season: Season.Autumn,
-					ground: GroundCondition.Firm,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 18,
-					type: EventType.CM,
-					name: 'Libra Cup 2',
-					date: '2026-08-25',
-					courseId: 10903,
-					season: Season.Autumn,
-					ground: GroundCondition.Good,
-					weather: Weather.Cloudy,
-					time: Time.Midday,
-				},
-				{
-					id: 17,
-					type: EventType.CM,
-					name: 'Virgo Cup 2',
-					date: '2026-08-05',
-					courseId: 11103,
-					season: Season.Autumn,
-					ground: GroundCondition.Yielding,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 16,
-					type: EventType.CM,
-					name: 'Leo Cup 2',
-					date: '2026-07-25',
-					courseId: 10501,
-					season: Season.Summer,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 15,
-					type: EventType.CM,
-					name: 'Cancer Cup 2',
-					date: '2026-06-24',
-					courseId: 10906,
-					season: Season.Summer,
-					ground: GroundCondition.Yielding,
-					weather: Weather.Cloudy,
-					time: Time.Midday,
-				},
-				{
-					id: 14,
-					type: EventType.CM,
-					name: 'Gemini Cup 2',
-					date: '2026-06-04',
-					courseId: 10602,
-					season: Season.Spring,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 13,
-					type: EventType.CM,
-					name: 'Taurus Cup 2',
-					date: '2026-05-10',
-					courseId: 10606,
-					season: Season.Spring,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 12,
-					type: EventType.CM,
-					name: 'Aries Cup',
-					date: '2026-04-23',
-					courseId: 10504,
-					season: Season.Spring,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 11,
-					type: EventType.CM,
-					name: 'Pisces Cup',
-					date: '2026-03',
-					courseId: 10914,
-					season: Season.Spring,
-					ground: GroundCondition.Heavy,
-					weather: Weather.Rainy,
-					time: Time.Midday,
-				},
-				{
-					id: 10,
-					type: EventType.CM,
-					name: 'Aquarius Cup',
-					date: '2026-02',
-					courseId: 10611,
-					season: Season.Winter,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 9,
-					type: EventType.CM,
-					name: 'Capricorn Cup',
-					date: '2026-02',
-					courseId: 10701,
-					season: Season.Winter,
-					ground: GroundCondition.Soft,
-					weather: Weather.Snowy,
-					time: Time.Midday,
-				},
-				{
-					id: 8,
-					type: EventType.CM,
-					name: 'Sagittarius Cup',
-					date: '2026-01',
-					courseId: 10506,
-					season: Season.Winter,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 7,
-					type: EventType.CM,
-					name: 'Scorpio Cup',
-					date: '2026-01',
-					courseId: 10604,
-					season: Season.Autumn,
-					ground: GroundCondition.Soft,
-					weather: Weather.Rainy,
-					time: Time.Midday,
-				},
-				{
-					id: 6,
-					type: EventType.CM,
-					name: 'Libra Cup',
-					date: '2025-12',
-					courseId: 10810,
-					season: Season.Autumn,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 5,
-					type: EventType.CM,
-					name: 'Virgo Cup',
-					date: '2025-11-20',
-					courseId: 10903,
-					season: Season.Autumn,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 4,
-					type: EventType.CM,
-					name: 'Leo Cup',
-					date: '2025-10-30',
-					courseId: 10906,
-					season: Season.Summer,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 3,
-					type: EventType.CM,
-					name: 'Cancer Cup',
-					date: '2025-10-07',
-					courseId: 10602,
-					season: Season.Summer,
-					ground: GroundCondition.Yielding,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 2,
-					type: EventType.CM,
-					name: 'Gemini Cup',
-					date: '2025-09',
-					courseId: 10811,
-					season: Season.Spring,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					id: 1,
-					type: EventType.CM,
-					name: 'Taurus Cup',
-					date: '2025-08',
-					courseId: 10606,
-					season: Season.Spring,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-			]
-		: [
-				{
-					type: EventType.LOH,
-					date: '2026-02',
-					courseId: 10602,
-					season: Season.Winter,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2026-01',
-					courseId: 10506,
-					season: Season.Winter,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2025-12-21',
-					courseId: 10903,
-					season: Season.Winter,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.LOH,
-					date: '2025-11',
-					courseId: 11502,
-					season: Season.Autumn,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2025-10',
-					courseId: 10302,
-					season: Season.Autumn,
-					ground: GroundCondition.Good,
-					weather: Weather.Cloudy,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2025-09-22',
-					courseId: 10807,
-					season: Season.Autumn,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.LOH,
-					date: '2025-08',
-					courseId: 10105,
-					season: Season.Summer,
-					Time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2025-07-25',
-					courseId: 10906,
-					ground: GroundCondition.Yielding,
-					weather: Weather.Cloudy,
-					season: Season.Summer,
-					time: Time.Midday,
-				},
-				{
-					type: EventType.CM,
-					date: '2025-06-21',
-					courseId: 10606,
-					ground: GroundCondition.Good,
-					weather: Weather.Sunny,
-					season: Season.Spring,
-					time: Time.Midday,
-				},
-			]
-)
+const presets = (rawPresets as readonly RawPreset[])
 	.map((def) => ({
 		id: def.id,
 		name: def.name,
 		type: def.type,
+		// Keeps the original ISO string around (not just the parsed `Date` below) because
+		// `pickDefaultPresetIndex` re-derives the CM schedule from it -- see racePresets.ts.
+		dateISO: def.date,
 		date: new Date(def.date),
 		courseId: def.courseId,
 		racedef: new RaceParams({
 			mood: 2 as Mood,
-			ground: def.type == EventType.CM ? def.ground : GroundCondition.Good,
-			weather: def.type == EventType.CM ? def.weather : Weather.Sunny,
-			season: def.season,
-			time: def.time,
+			ground: def.type === 'CM' ? GROUND_MAP[def.ground] : GroundCondition.Good,
+			weather: def.type === 'CM' ? WEATHER_MAP[def.weather] : Weather.Sunny,
+			season: SEASON_MAP[def.season],
+			time: TIME_MAP[def.time],
 			grade: Grade.G1,
 		}),
 	}))
 	.sort((a, b) => +b.date - +a.date);
 
+// The preset whose CM/LOH schedule (see racePresets.ts, docs/cm-presets.md) is the currently
+// active one: the smallest switchover still in the future, or -- once every preset's window has
+// passed -- the most recent one. `pickDefaultPresetIndex` is run against `presets` itself (the
+// already-sorted array), not the raw un-sorted `rawPresets`, so the returned index can be used
+// to index `presets` directly regardless of what order `presets.ts` happens to list entries in.
 const DEFAULT_PRESET =
 	presets[
-		Math.max(
-			presets.findIndex(
-				(
-					(now) => (p) =>
-						new Date(p.date.getFullYear(), p.date.getUTCMonth() + 1, 0) < now
-				)(new Date()),
-			) - 1,
-			0,
+		pickDefaultPresetIndex(
+			presets.map((p) => ({ date: p.dateISO, type: p.type })),
+			Date.now(),
 		)
 	];
 const DEFAULT_COURSE_ID = DEFAULT_PRESET.courseId;
