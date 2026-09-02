@@ -9,6 +9,19 @@ node_modules
 # fresh clone won't have this directory.
 .claude/agents/
 
+# Worktrees for parallel per-ticket work (CLAUDE.md's Branching & PRs section: "Worktrees
+# live under .claude/worktrees/"). Machine-local scratch checkouts, never meant to be
+# tracked. Wasn't ignored at all until this line: a worktree under here nests a full
+# checkout of the uma-skill-tools submodule, and being merely untracked (not ignored)
+# was enough for uma-tools-plans/scripts/check-citations.py's marker walk to pick it up
+# as a second copy of every engine ANCHOR, reporting each as "defined in both repos" and
+# blocking that repo's own pre-commit hook for as long as the worktree existed -- see
+# uma-tools-plans PIPE-39 for the matching fix on that script's own ignore-detection
+# (it separately failed to treat a whole ignored *directory* the same as an ignored file,
+# so this line alone wasn't sufficient there either, but is still correct and necessary
+# defense-in-depth: worktrees categorically don't belong in this repo's history).
+.claude/worktrees/
+
 # Personal Claude Code permission allowlist (which Bash/MCP calls skip the
 # approval prompt) -- machine-local preference, not a project convention to
 # share.
