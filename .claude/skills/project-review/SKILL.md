@@ -117,16 +117,18 @@ off the PR object.
 Run, per repo:
 
 ```
-gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url,body
+gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url,body,isDraft
 ```
 
 (`baseRefName` is what lets you read the base branch off the PR object per above, instead of
-trusting the table's per-repo guess. `body` is new — it carries the linkage evidence below.)
+trusting the table's per-repo guess. `body` carries the linkage evidence below. `isDraft` (PIPE-38)
+is what actually makes the draft-flagging below possible — see `references/incidents.md` for the
+real PR that sat in draft for days because nothing fetched this field in the first place.)
 
 For a PR resolved via an explicit `--engine-pr`/`--code-pr`/`--plans-pr` override or a bare PR
 URL from Step 0, look up the same fields with `gh pr view <number> --repo <github repo> --json
-number,title,headRefName,baseRefName,url,body` so it contributes real evidence too, not just a
-bare number.
+number,title,headRefName,baseRefName,url,body,isDraft` so it contributes real evidence too, not
+just a bare number.
 
 **Zero results in a repo** → skip that slot, same as always; note it in the final summary as
 "no open PR — skipped." **One or more** → every one of them is a *candidate*, full stop — there
@@ -220,6 +222,14 @@ Before doing anything else, so the user can interrupt if it's wrong:
   it on request rather than treating the exclusion as final — the PR most likely to be missed
   this way is exactly the kind Step 3 exists to catch (e.g. a gitlink-bump PR titled "Bump
   uma-skill-tools to `<sha>`" with an empty body).
+- **An excluded PR that's also a draft is worth a second look, explicitly** (PIPE-38) — not
+  just noted as "excluded," flagged as *possibly forgotten*, e.g.: "note: `<repo>#<N>`
+  ('`<title>`') is a draft and not part of this review — worth checking it wasn't forgotten
+  (`wq.py ready <id>` un-drafts it once implementation is actually done)." A draft *inside* the
+  selected group already gets flagged by the bullet above; this is the case that bullet doesn't
+  cover — nothing links an excluded draft to whatever's currently being reviewed, so nothing else
+  in a normal session would ever surface it. See `references/incidents.md` for the real PR this
+  happened to.
 - A body link to a sibling that's already merged or closed (normal mid-landing state — `wq land`
   merges the engine PR first) is context worth noting, not something to chase down further.
 

@@ -49,3 +49,19 @@ presence in the diff against the `--stat` summary, and then had to `rm -f` and r
 lines — confirming the original really was stale) before it could proceed. That cost several wasted
 tool calls and could just as easily have produced a wrong finding (or a missed one) on a diff the
 sub-review never actually saw.
+
+## A draft PR sat unreviewed with nothing surfacing it (backs the excluded-draft flag in "Print the plan")
+
+`uma-tools-plans#43` (UI-31's claim PR) was opened as a draft by `wq.py claim`, as designed — but
+nothing ever ran `wq.py ready ui-31` to un-draft it once implementation finished. Traced live: the
+commit behind the PR's last comment was literally `wq.py status ui-31 "Implementation complete: ...
+Awaiting review."`, and `status` had no way to notice the PR it was narrating progress on was still
+`isDraft: true`. It sat that way — invisible to a normal review pass, since nothing else in the
+project was reviewing anything in `uma-tools-plans` at the time to stumble onto it — until it
+happened to get noticed and merged as part of UI-31's own landing. This skill's own text already
+said to flag a draft ("A draft PR is a candidate too," "Flag a draft.") before this fix, but the
+`gh pr list`/`gh pr view` calls never actually fetched `isDraft` — those two instructions were
+unfulfillable as written until PIPE-38 added the field. The gap that actually mattered was never
+the field being missing on a PR *inside* the reviewed group (that case was already half-specified);
+it's an excluded draft — one nothing links to whatever's currently being reviewed — since that's
+precisely the shape with no other trigger to ever surface it.

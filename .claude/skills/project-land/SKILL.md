@@ -159,7 +159,7 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    the completion to this still-open branch, so the PR's own merge is what lands it, same
    principle as `land --complete-id` (just done by hand since that flag requires
    `wq.py land` to be running at all).
-4. `gh pr merge N --merge --repo mackoz/uma-tools-plans`.
+4. `gh pr merge N --squash --repo mackoz/uma-tools-plans`.
 
 **Single-repo code/engine path** (anomaly-checked, no ticket):
 
@@ -176,12 +176,22 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    (this shouldn't come up for a genuinely ticket-exempt trivial fix, which by definition
    shouldn't be touching the engine submodule at all — treat a mismatch here as a sign this
    isn't actually the simple case it looked like).
-3. `gh pr merge N --merge`.
+3. `gh pr merge N --squash`.
 4. Clean up by hand, matching what `land_one` normally does automatically: checkout the
    default branch, pull, delete the local and remote feature branch, and — code repo only —
    `git submodule update --init`.
 
 ## Step 2 — Preconditions, before touching `wq.py land` at all
+
+**2.0 — A plans-side `wq.py` step refusing on staged residue isn't a landing blocker to work
+around by hand.** `file`/`status`/`finish_completion` (so `complete`/`land --complete-id` too)
+all refuse outright if `README.md`/`mkdocs.yml`/`next-ids.json` or the ticket's own file already
+has something staged that call didn't write — usually a leftover `--dry-run` preview, or
+unrelated in-progress work (PIPE-19). Since PIPE-38, `file`/`status` have a `--park` escape
+hatch through this (see `/wq`'s own `file`/`status` sections for exactly what it does and its
+`--dry-run` incompatibility) — but **`complete`/`land --complete-id` don't get `--park` at
+all**; a refusal there still needs the printed `git reset`/`git checkout` commands run by hand.
+Don't assume `--park complete <id>` is a thing to try — it isn't, and argparse will say so.
 
 **2.1 — Has this actually been reviewed?** `wq.py land` has no idea whether anyone looked
 at the diff — it only checks git/GitHub mechanics. If this session (or a recent one) hasn't
@@ -280,6 +290,16 @@ Omit `--engine-pr` if there's no engine PR for this ticket (per Step 1). Omit
 `--complete-id` if you don't want the ticket auto-completed as part of this run (rare — only
 if the user explicitly wants to land without closing the ticket yet).
 
+`wq.py land` merges every PR with `gh pr merge --squash` (PIPE-38, 2026-09-02), not a merge
+commit — one squashed commit per landed PR, across all three repos, rather than a merge commit
+plus every intermediate review-fix commit riding along. This isn't optional per-repo tuning:
+`mackoz/uma-tools` has merge commits disabled at the repository-settings level (confirmed via
+`gh repo view mackoz/uma-tools --json mergeCommitAllowed` → `false`), so `--merge` fails there
+outright with "Merge commits are not allowed on this repository" — discovered mid-landing on a
+real PIPE-38 run. If you're doing a manual `gh pr merge` anywhere in this skill (the two
+single-repo fallback paths in Step 1.5), use `--squash` there too for the same reason, not just
+inside `wq.py land`.
+
 ## Step 5 — If it dies partway through
 
 `wq.py land` is **not resumable or idempotent by design** (PIPE-12, open) — it has no
@@ -288,6 +308,14 @@ mid-sequence, after the engine PR's branch state had already changed on origin, 
 run half-done. Each individual step (`land_one`, `sync_gitlink`) happens to no-op cleanly
 if you re-run it against already-completed state, but that's incidental behavior, not a
 designed guarantee — don't treat "just run the same command again" as automatically safe.
+
+This doesn't apply to a failed `wq.py file` or `wq.py status`, though — since PIPE-38 both roll
+themselves back if the pre-commit hook (or any other failure before a real commit lands) rejects
+the commit, restoring whatever they'd written and, for `file`, freeing the minted id again — so
+a rejected filing or status update during this same session isn't a burned id or a stranded
+partial write to go hunt down by hand the way UI-30's recovery once was. `complete`/
+`land --complete-id` (`finish_completion`) don't have this protection yet — a rejected commit
+there still needs manual cleanup.
 
 If a run dies:
 1. Check what actually happened before doing anything else: `gh pr view <N> --repo <repo>
