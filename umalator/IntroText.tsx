@@ -84,6 +84,13 @@ export function IntroText(props) {
 								always off — see the Limitations panel for what that means for
 								recovery skills and final-spurt-conditioned uniques.
 							</li>
+							<li>
+								Fixed: clicking a row's info icon in Skill Chart, Uma Chart, or
+								Course Chart now actually opens the popover again — it broke
+								silently when the Skill Chart moved to the adaptive ladder and
+								has been throwing on every click since. It shows the candidate's
+								length-gain distribution again alongside the condition details.
+							</li>
 						</ul>
 					</details>
 					<details class="release">

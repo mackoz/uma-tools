@@ -105,6 +105,7 @@ import { ShopSkillPanel } from './components/ShopSkillPanel';
 import { SpOptimizerCard } from './components/SpOptimizerCard';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
+import { isHistogramDataEmpty } from './histogramData';
 import { IntroText } from './IntroText';
 import {
 	pickDefaultPresetIndex,
@@ -512,10 +513,17 @@ function Histogram(props) {
 	const xH = 20;
 	const yW = 40;
 
+	// No Preact error boundary sits above BasinnChartPopover's call site (UI-32), so a bad
+	// dereference of `data` here doesn't just fail this component -- it silently unmounts the
+	// whole popover, including ExpandedSkillDetails, which has nothing to do with `data` at all.
+	// isHistogramDataEmpty (histogramData.ts) has the exact contract this guards against and why
+	// it's a boundary check rather than a full scan.
+	const empty = isHistogramDataEmpty(data);
+
 	const x = d3
 		.scaleLinear()
 		.domain(
-			data[0] == 0 && data[data.length - 1] == 0
+			empty || (data[0] == 0 && data[data.length - 1] == 0)
 				? [-1, 1]
 				: [Math.min(0, Math.floor(data[0])), Math.ceil(data[data.length - 1])],
 		)
@@ -525,10 +533,10 @@ function Histogram(props) {
 		.value(id)
 		.domain(x.domain())
 		.thresholds(x.ticks(30));
-	const buckets = bucketize(data);
+	const buckets = empty ? [] : bucketize(data);
 	const y = d3
 		.scaleLinear()
-		.domain([0, d3.max(buckets, (b) => b.length)])
+		.domain([0, empty ? 1 : d3.max(buckets, (b) => b.length)])
 		.range([height - xH, xH]);
 
 	useEffect(() => {
@@ -554,6 +562,16 @@ function Histogram(props) {
 	return (
 		<svg id="histogram" width={width} height={height}>
 			<g>{rects}</g>
+			{empty && (
+				<text
+					x={width / 2}
+					y={height / 2}
+					text-anchor="middle"
+					fill="var(--muted-2)"
+				>
+					no distribution data
+				</text>
+			)}
 			<g ref={axes}></g>
 		</svg>
 	);
@@ -3543,12 +3561,14 @@ function App(props) {
 	// leaving the previous style's rows on screen under the new tab, and clears every piece of
 	// state that's keyed by skill id alone and would otherwise leak a trace/selection from one
 	// style's race into another's (the same unique id appears in all four style tables).
-	// detailCacheRef/selectedSkillId are cleared here; the expanded row itself and the
+	// detailCacheRef/selectedSkillId/popoverSkill are cleared here; the expanded row itself and the
 	// results/runData/chartData state a detail fetch populates are reset by remounting BasinnChart
 	// with key={courseChartStyle} at the render site below, rather than here -- that state lives in
 	// a shared reducer (setResults is literally setSimState, the same dispatch Compare mode uses)
 	// whose non-numeric, non-string branch expects a full {results, runData} payload, not a bare
-	// null/clear.
+	// null/clear. Clearing popoverSkill (not just gating its render on tableData.has, UI-32
+	// follow-up) means a style switch always closes an open popover rather than possibly
+	// repainting it with the new style's data for the same skill id with no new click.
 	function switchCourseChartStyle(style: CourseChartStyle) {
 		if (isSimulationRunning) return;
 		setCourseChartStyle(style);
@@ -3558,6 +3578,7 @@ function App(props) {
 		detailCacheRef.current.clear();
 		selectedSkillIdRef.current = '';
 		setSelectedSkillId('');
+		setPopoverSkill('');
 	}
 
 	// Keeps the active style's cache entry's `table`/`complete` fields mirroring whatever
@@ -3959,8 +3980,16 @@ function App(props) {
 		const run = chartRunRef.current;
 		const acc = run?.accumulators.get(skillId);
 		if (!acc) return;
+		// This state's `results` is documented and consumed elsewhere as sorted (see
+		// compare.ts's runComparison, which sorts before storing -- not runComparisonBlock, which
+		// feeds the chart-block path and never sorts) -- keep the contract here too rather than
+		// handing out an unsorted array (UI-32). Sort the Float32Array first:
+		// plain Array.prototype.sort() with no comparator is lexicographic, so sorting only after
+		// Array.from would silently reorder by string comparison instead of numerically.
+		const sorted = acc.lengths();
+		sorted.sort();
 		setResults({
-			results: Array.from(acc.lengths()),
+			results: Array.from(sorted),
 			runData: {
 				minrun: runs.minrun ?? null,
 				maxrun: runs.maxrun ?? null,
@@ -4480,6 +4509,10 @@ function App(props) {
 		chartRunRef.current = run;
 		detailCacheRef.current.clear();
 		setTableData(new Map());
+		// A fresh run replaces chartRunRef.current wholesale, so an open popover's accumulator
+		// read (popoverResults) would otherwise start reflecting this new run's data for the same
+		// skill id with no new click -- close it instead (UI-32 follow-up).
+		setPopoverSkill('');
 		setIsSimulationRunning(true);
 		updateSimulationProgress(run);
 
@@ -4532,6 +4565,10 @@ function App(props) {
 		detailCacheRef.current.clear();
 		selectedSkillIdRef.current = '';
 		setSelectedSkillId('');
+		// Same skill-id-scoped-state reset as switchCourseChartStyle/doBasinnChart -- a mode
+		// switch can leave an open popover pointed at a skill id that means something different
+		// (or nothing) in the new mode's table (UI-32 follow-up).
+		setPopoverSkill('');
 		// Deliberately just [mode] -- a style switch within Course Chart is handled by
 		// switchCourseChartStyle instead, not by this effect re-running.
 	}, [mode]);
@@ -4683,13 +4720,6 @@ function App(props) {
 			);
 		}
 	}
-
-	const mid = Math.floor(results.length / 2);
-	const median =
-		results.length % 2 == 0
-			? (results[mid - 1] + results[mid]) / 2
-			: results[mid];
-	const mean = results.reduce((a, b) => a + b, 0) / results.length;
 
 	const colors = [
 		{ stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.5)' },
@@ -5133,6 +5163,24 @@ function App(props) {
 		},
 		[tableData, isSimulationRunning, displaying],
 	);
+
+	// ChartRow (tableData's row shape) carries only aggregated statistics -- the raw per-scenario
+	// length gains this popover's histogram needs live in the run's SkillAccumulator, the same
+	// source createExpandedContent and requestChartDetail already read from chartRunRef (UI-32).
+	// Sorted ascending because Histogram derives its x-domain from data[0]/data[data.length-1].
+	// Keyed on tableData, not just popoverSkill, because tableData is the render-visible proxy for
+	// the ref's mutation -- refreshTableRowsNow hands back a fresh Map on every refresh, including
+	// from refineSkill -- so the histogram tracks rounds landing and refined samples arriving while
+	// the popover is open. Recomputing (concatenate + sort) on every such refresh is negligible
+	// next to the summarizeLengths() already done per row per refresh.
+	const popoverResults = useMemo(() => {
+		if (!popoverSkill) return null;
+		const acc = chartRunRef.current?.accumulators.get(popoverSkill);
+		if (!acc || acc.n === 0) return null;
+		const sorted = acc.lengths(); // always a fresh array (chartLadder's concatFloat32)
+		sorted.sort(); // TypedArray sort() is numeric-ascending by default, unlike Array's
+		return sorted;
+	}, [popoverSkill, tableData]);
 
 	const compareResults: CompareResults | null =
 		results.length > 0 && runData && staminaStats && firstUmaStats
@@ -6396,10 +6444,10 @@ function App(props) {
 								)}
 							</>
 						)}
-						{popoverSkill && (
+						{popoverSkill && tableData.has(popoverSkill) && (
 							<BasinnChartPopover
 								skillid={popoverSkill}
-								results={tableData.get(popoverSkill).results}
+								results={popoverResults}
 								courseDistance={course.distance}
 							/>
 						)}

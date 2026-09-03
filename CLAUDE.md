@@ -72,7 +72,7 @@ cd umadle && node build.mjs
 
 npm run build                                # all of the above in one shot
 
-npm run test                                 # unit tests: statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts (plain node:assert, no runner); test:stats is a kept alias
+npm run test                                 # unit tests: statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts (plain node:assert, no runner); test:stats is a kept alias
 npm run verify                               # build both umalator apps + run unit tests + typecheck + CSS metrics + browser smoke + docs, one-line diff vs scripts/verify-baseline.json
 npm run verify:baseline                      # re-record that baseline (run on master right after a merge; skips the tests/smoke/docs stages)
 npm run smoke                                # browser smoke alone: Playwright chromium drives umalator-global (light+dark), asserts contrast/stacking/clipping
