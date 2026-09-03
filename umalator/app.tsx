@@ -2229,12 +2229,20 @@ type CourseChartStyle = (typeof COURSE_CHART_STYLES)[number];
 // Not typed as Record<K, V> -- that identifier collides project-wide with Immutable.js's ambient
 // Record<TProps> (used for HorseState) once both are in scope; see ui-components/Tabs.tsx's own
 // note on the same trap.
-const COURSE_CHART_STYLE_LABEL: { [key in CourseChartStyle]: string } = {
-	Nige: 'Nige (Front Runner)',
-	Senkou: 'Senkou (Pace Chaser)',
-	Sasi: 'Sasi (Late Surger)',
-	Oikomi: 'Oikomi (End Closer)',
-};
+const COURSE_CHART_STYLE_LABEL: { [key in CourseChartStyle]: string } =
+	CC_GLOBAL
+		? {
+				Nige: 'Front Runner',
+				Senkou: 'Pace Chaser',
+				Sasi: 'Late Surger',
+				Oikomi: 'End Closer',
+			}
+		: {
+				Nige: 'Nige (Front Runner)',
+				Senkou: 'Senkou (Pace Chaser)',
+				Sasi: 'Sasi (Late Surger)',
+				Oikomi: 'Oikomi (End Closer)',
+			};
 
 function courseChartTemplate(strategy: CourseChartStyle): HorseState {
 	return new HorseState({
