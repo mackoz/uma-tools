@@ -4407,13 +4407,14 @@ function App(props) {
 				template,
 				course,
 				params,
-			);
+			).filter((id) => !isPurpleSkill(id));
 			uma = template.toJS();
 		} else {
 			// computeChartSkillPool already applies the purple-skill exclusion (folded into its
 			// `all` step, ahead of getActivateableSkills -- order doesn't matter, isPurpleSkill
-			// is independent of activateability) -- unlike the UniquesChart branch above, which
-			// still needs its own explicit filter since it doesn't go through that helper.
+			// is independent of activateability) -- unlike the UniquesChart/CourseChart branches
+			// above, which still need their own explicit filter since neither goes through that
+			// helper.
 			skills = computeChartSkillPool(uma1, course).procable;
 			uma = uma1.toJS();
 		}
@@ -4506,6 +4507,11 @@ function App(props) {
 	// mode with its own per-style semantics makes the staleness obvious enough to fix here rather
 	// than carry forward. Entering Course Chart restores whatever the active style's own cache
 	// holds (possibly nothing); every other mode just starts from an empty table.
+	// Safe to null chartRunRef.current unconditionally here because #modeTabs disables every item
+	// while isSimulationRunning, so this effect can never fire mid-run -- without that guard, a
+	// mode switch mid-run would orphan the run: chart-batch-chunk/-done/-error all bail on a null
+	// chartRunRef.current, so finishRound() (the only path that clears isSimulationRunning for a
+	// chart run) would never fire, stranding it true app-wide.
 	useEffect(() => {
 		if (mode === Mode.CourseChart) {
 			const cached = courseChartRunsRef.current.get(courseChartStyle);
@@ -5311,6 +5317,7 @@ function App(props) {
 						items={COURSE_CHART_STYLES.map((s) => ({
 							key: s,
 							label: COURSE_CHART_STYLE_LABEL[s],
+							disabled: isSimulationRunning,
 						}))}
 						selected={courseChartStyle}
 						onSelect={(key) => switchCourseChartStyle(key as CourseChartStyle)}
@@ -5797,10 +5804,26 @@ function App(props) {
 									id="modeTabs"
 									variant="underline"
 									items={[
-										{ key: 'compare', label: 'Compare' },
-										{ key: 'chart', label: 'Skill Chart' },
-										{ key: 'uniques', label: 'Uma Chart' },
-										{ key: 'course', label: 'Course Chart' },
+										{
+											key: 'compare',
+											label: 'Compare',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'chart',
+											label: 'Skill Chart',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'uniques',
+											label: 'Uma Chart',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'course',
+											label: 'Course Chart',
+											disabled: isSimulationRunning,
+										},
 									]}
 									selected={
 										mode == Mode.Compare

@@ -16,7 +16,7 @@ Three modeling questions had to be settled to make that comparison well-defined,
 real alternative that was seriously considered:
 
 **1. What aptitude should the template use?** The ticket that filed this mode
-(`plans/work-queue/completed/ui-23.md`) originally called for each candidate to keep its own
+(`plans/work-queue/in-progress/ui-23.md`) originally called for each candidate to keep its own
 outfit-specific distance/surface/strategy aptitude grades, matched against the template's stats.
 That data doesn't exist in this fork: `umas.json` here is `{name, outfits: {id: epithet}}` — no
 aptitude field at all (upstream `alpha123/uma-tools`'s `umas.json` does carry one; this fork's
