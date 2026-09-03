@@ -536,8 +536,11 @@ most length per SP spent?" A **Best value** badge renders on that one row's skil
   (only ever the small Shop Skills shortlist), the badge's candidate pool
   (`bestValueCandidates` in `umalator/app.tsx`) scans every row `tableData` currently has, in
   `Mode.Chart` only — Unique skills aren't shop purchases, so the Uniques Chart and Course Chart
-  tabs never show a badge (`bestValueCandidates` is `[]` outside `Mode.Chart`, which the shared
-  `BasinnChart` call passes straight through as `bestValueId={null}`).
+  tabs never show a badge. The two tabs get there differently: the Uniques Chart shares the
+  Chart-mode `<BasinnChart>` call site (`app.tsx`'s `bestValueId={bestValue?.id ?? null}`) and
+  reads as `null` there because `bestValueCandidates` is `[]` outside `Mode.Chart`; Course Chart
+  renders through its own separate `<BasinnChart>` call site that omits the `bestValueId`/
+  `bestValueTooltip` props entirely.
 - **Muted rows are excluded.** Because this scans the *whole* chart rather than a short curated
   list, an early-round noisy mean from a `screened`/`inert`/`pending` row (`BasinnChart.tsx`'s
   `isMutedRow`, exported for this reuse) must not win an unprompted "best in the whole chart"

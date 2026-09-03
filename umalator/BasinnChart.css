@@ -226,13 +226,20 @@
 	content: attr(data-tip);
 	font-size: var(--font-xs);
 	font-weight: 400;
-	left: 0;
 	line-height: 1.4;
+	margin-top: 6px;
 	max-width: 340px;
 	padding: 6px 10px;
-	position: absolute;
+	/* UI-33 review fix 3: fixed (not absolute) with no top/left/bottom/right set at all --
+	   a fixed box with all insets auto resolves to its static (in-flow) position, but the box
+	   is positioned against the viewport, so it escapes .basinnChartWrapper's overflow-y: auto
+	   clipping entirely. Verified no ancestor between here and <body> sets transform/filter/
+	   perspective/contain/will-change (which would make that ancestor a containing block again
+	   and defeat this). Leaving left: 0 here (as absolute positioning did) would anchor the
+	   tooltip to the viewport's left edge instead of the badge once switched to fixed -- both
+	   axes have to stay auto for the static-position fallback to line up with the badge. */
+	position: fixed;
 	text-align: left;
-	top: calc(100% + 6px);
 	white-space: normal;
 	width: max-content;
 	z-index: 10;

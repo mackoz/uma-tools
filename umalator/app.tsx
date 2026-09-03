@@ -3539,8 +3539,13 @@ function App(props) {
 	const bestValueTooltip = useMemo(() => {
 		if (!bestValue) return '';
 		const perHundred = (bestValue.ratio * 100).toFixed(2);
+		const n = bestValue.chainIds.length;
 		const chainNote =
-			bestValue.chainIds.length > 0 ? ' — includes ○ prerequisite' : '';
+			n === 0
+				? ''
+				: n === 1
+					? ' — includes ○ prerequisite'
+					: ` — includes ${n} prerequisite rungs`;
 		return `Best value in this chart: +${bestValue.gain.toFixed(2)} L for ${bestValue.cost} SP (${perHundred} L per 100 SP)${chainNote}`;
 	}, [bestValue]);
 	const highlightedBuySkills = useMemo(() => {
