@@ -27,11 +27,13 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   `plans/work-queue/README.md` row and mkdocs nav entry in one step, then `uv run
   plans/scripts/wq.py claim <id>` to move it to `in-progress/` and cut the branch — don't
   do the file, README, or nav edits by hand. `wq.py file` itself commits directly on whatever
-  branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — that's
-  `main` in the common case, but if you're already mid-session on a branch backing an open PR,
-  filing lands there instead, bundling the new ticket into that PR rather than opening a
-  separate one. `claim`/`status`/`complete` are the ones that always go through a ticket's own
-  branch+PR; don't hand-commit to `main` yourself outside `file`'s own convention. See
+  branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — session-
+  agnostic: it's whatever's checked out at the moment, regardless of which session (or a manual
+  `git checkout`) left it there. That's `main` in the common case, but a branch backing an open
+  PR is just as plausible, and filing there bundles the new ticket into that PR instead of
+  standing alone — check first if it matters, `git checkout main` if you want a standalone
+  filing. `claim`/`status`/`complete` are the ones that always go through a ticket's own
+  branch+PR; don't hand-commit yourself outside `file`'s own convention above. See
   `plans/work-queue/README.md` for the ID scheme and the Category/Type split.
 - **`/wq` drives the mechanics of the above** (`.claude/skills/wq/`) — the exact `file`/
   `claim`/`status` invocation contract and enum vocab (`--net-gain` is one of three fixed

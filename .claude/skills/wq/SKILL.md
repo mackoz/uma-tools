@@ -54,12 +54,14 @@ uv run scripts/wq.py file <PREFIX> --type {bug,feature} --title "..." --effort {
 
 Writes the skeleton from `TEMPLATE.md`, plus the README backlog row, mkdocs nav entry, and a
 dispatch-list row, all in one commit on whatever branch the plans repo currently has checked
-out — `cmd_file` never switches branches itself, unlike `claim`/`land`. That's `main` in the
-common case, but if the plans repo is already sitting on a branch backing an open PR from this
-session, filing lands there instead, bundling the new ticket into that PR rather than opening a
-separate one for it — check `git status`/`git branch --show-current` in the plans repo first if
-which one matters for what you're about to file. `--dry-run` stages the diff and prints exactly
-how to discard it, without committing.
+out — `cmd_file` never switches branches itself, unlike `claim`/`land`. This is session-agnostic:
+it's whatever's checked out at the moment you run it, regardless of which session (this one, an
+earlier one, or a manual `git checkout`) left it there. Check `git status`/`git branch
+--show-current` in the plans repo before filing if it matters where the ticket lands — `main` is
+the common case, but a branch backing an open PR is just as plausible, and filing there bundles
+the new ticket into that PR instead of standing alone. If you want a standalone filing on `main`
+specifically, `git checkout main` first. `--dry-run` stages the diff and prints exactly how to
+discard it, without committing.
 
 If a real (non-`--dry-run`) call refuses with "file(s) already staged that look like a leftover
 --dry-run preview" — that's residue from an earlier aborted or `--dry-run` call, not this one.
