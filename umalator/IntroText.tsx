@@ -86,9 +86,9 @@ export function IntroText(props) {
 							</li>
 							<li>
 								Fixed: clicking a row's info icon in Skill Chart, Uma Chart, or
-								Course Chart now actually opens the popover — it was silently
-								throwing on every click before, going all the way back to when
-								the popover was first added. It shows the candidate's
+								Course Chart now actually opens the popover again — it broke
+								silently when the Skill Chart moved to the adaptive ladder and
+								has been throwing on every click since. It shows the candidate's
 								length-gain distribution again alongside the condition details.
 							</li>
 						</ul>

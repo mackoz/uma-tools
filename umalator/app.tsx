@@ -105,6 +105,7 @@ import { ShopSkillPanel } from './components/ShopSkillPanel';
 import { SpOptimizerCard } from './components/SpOptimizerCard';
 import { BUGS, LIMITATIONS } from './components/simNotes';
 import { UmasTab, UmasTabProps } from './components/UmasTab';
+import { isHistogramDataEmpty } from './histogramData';
 import { IntroText } from './IntroText';
 import {
 	pickDefaultPresetIndex,
@@ -515,15 +516,9 @@ function Histogram(props) {
 	// No Preact error boundary sits above BasinnChartPopover's call site (UI-32), so a bad
 	// dereference of `data` here doesn't just fail this component -- it silently unmounts the
 	// whole popover, including ExpandedSkillDetails, which has nothing to do with `data` at all.
-	// Guard exhaustively rather than assuming a well-formed array: `data` can be null/empty (no
-	// samples yet, e.g. a screened-out row), and TypedArray sort() puts NaN last, so a single NaN
-	// sample would otherwise slip past a bare length check and poison the domain via
-	// Math.ceil(NaN).
-	const empty =
-		data == null ||
-		data.length === 0 ||
-		!Number.isFinite(data[0]) ||
-		!Number.isFinite(data[data.length - 1]);
+	// isHistogramDataEmpty (histogramData.ts) has the exact contract this guards against and why
+	// it's a boundary check rather than a full scan.
+	const empty = isHistogramDataEmpty(data);
 
 	const x = d3
 		.scaleLinear()
@@ -3566,12 +3561,14 @@ function App(props) {
 	// leaving the previous style's rows on screen under the new tab, and clears every piece of
 	// state that's keyed by skill id alone and would otherwise leak a trace/selection from one
 	// style's race into another's (the same unique id appears in all four style tables).
-	// detailCacheRef/selectedSkillId are cleared here; the expanded row itself and the
+	// detailCacheRef/selectedSkillId/popoverSkill are cleared here; the expanded row itself and the
 	// results/runData/chartData state a detail fetch populates are reset by remounting BasinnChart
 	// with key={courseChartStyle} at the render site below, rather than here -- that state lives in
 	// a shared reducer (setResults is literally setSimState, the same dispatch Compare mode uses)
 	// whose non-numeric, non-string branch expects a full {results, runData} payload, not a bare
-	// null/clear.
+	// null/clear. Clearing popoverSkill (not just gating its render on tableData.has, UI-32
+	// follow-up) means a style switch always closes an open popover rather than possibly
+	// repainting it with the new style's data for the same skill id with no new click.
 	function switchCourseChartStyle(style: CourseChartStyle) {
 		if (isSimulationRunning) return;
 		setCourseChartStyle(style);
@@ -3581,6 +3578,7 @@ function App(props) {
 		detailCacheRef.current.clear();
 		selectedSkillIdRef.current = '';
 		setSelectedSkillId('');
+		setPopoverSkill('');
 	}
 
 	// Keeps the active style's cache entry's `table`/`complete` fields mirroring whatever
@@ -3983,8 +3981,9 @@ function App(props) {
 		const acc = run?.accumulators.get(skillId);
 		if (!acc) return;
 		// This state's `results` is documented and consumed elsewhere as sorted (see
-		// compare.ts's runComparisonBlock, which sorts before storing) -- keep the contract here
-		// too rather than handing out an unsorted array (UI-32). Sort the Float32Array first:
+		// compare.ts's runComparison, which sorts before storing -- not runComparisonBlock, which
+		// feeds the chart-block path and never sorts) -- keep the contract here too rather than
+		// handing out an unsorted array (UI-32). Sort the Float32Array first:
 		// plain Array.prototype.sort() with no comparator is lexicographic, so sorting only after
 		// Array.from would silently reorder by string comparison instead of numerically.
 		const sorted = acc.lengths();
@@ -4510,6 +4509,10 @@ function App(props) {
 		chartRunRef.current = run;
 		detailCacheRef.current.clear();
 		setTableData(new Map());
+		// A fresh run replaces chartRunRef.current wholesale, so an open popover's accumulator
+		// read (popoverResults) would otherwise start reflecting this new run's data for the same
+		// skill id with no new click -- close it instead (UI-32 follow-up).
+		setPopoverSkill('');
 		setIsSimulationRunning(true);
 		updateSimulationProgress(run);
 
@@ -4562,6 +4565,10 @@ function App(props) {
 		detailCacheRef.current.clear();
 		selectedSkillIdRef.current = '';
 		setSelectedSkillId('');
+		// Same skill-id-scoped-state reset as switchCourseChartStyle/doBasinnChart -- a mode
+		// switch can leave an open popover pointed at a skill id that means something different
+		// (or nothing) in the new mode's table (UI-32 follow-up).
+		setPopoverSkill('');
 		// Deliberately just [mode] -- a style switch within Course Chart is handled by
 		// switchCourseChartStyle instead, not by this effect re-running.
 	}, [mode]);

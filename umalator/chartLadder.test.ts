@@ -111,6 +111,45 @@ import {
 	assert.equal(acc.procTotal, 0);
 }
 
+{
+	// popoverResults/applyDetailToSelection (app.tsx, UI-32) both sort acc.lengths() in place --
+	// safe only because lengths() returns a fresh array each call (concatFloat32 always allocates,
+	// per its own doc comment). This guards that invariant directly: sorting one call's result
+	// must not disturb a later call, nor the resolveIndex mapping a detail fetch depends on.
+	const acc = new SkillAccumulator('sortSafety');
+	acc.addBlock(
+		{
+			lengths: Float32Array.from([5, 1, 3]),
+			times: Float32Array.from([0, 0, 0]),
+			procCounts: Uint16Array.from([0, 0, 0]),
+			procPositions: Float32Array.from([]),
+		},
+		{ blockSeed: 1, blockSize: 3 },
+	);
+	const first = acc.lengths();
+	assert.notEqual(
+		first,
+		acc.lengths(),
+		'lengths() must return a fresh array each call',
+	);
+	first.sort();
+	assert.deepEqual(
+		Array.from(first),
+		[1, 3, 5],
+		'Float32Array sort() with no comparator must be numeric ascending',
+	);
+	assert.deepEqual(
+		Array.from(acc.lengths()),
+		[5, 1, 3],
+		"sorting one call's array must not mutate the accumulator's stored order",
+	);
+	assert.deepEqual(acc.resolveIndex(1), {
+		blockSeed: 1,
+		blockSize: 3,
+		index: 1,
+	});
+}
+
 // --- evaluateRound: the actual screening decision ---
 const preset = CHART_LADDERS.quick; // targetPool 16, precisionTarget 0.03
 
