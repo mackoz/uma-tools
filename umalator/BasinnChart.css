@@ -254,13 +254,15 @@
    prior skill's activation (activate_count_ names, or is_activate_any_skill) -- a caveat, not a
    commendation like Best value above, so it reuses the same shape (identical rule structure,
    duplicated rather than shared for the same independent-stylability reason as UI-33's own
-   comment above) but with --muted-2/--warning instead of --accent. Both tokens exist in light
-   and dark (tokens.css). */
+   comment above) but with --warning instead of --accent for the background/border tint. Text
+   stays var(--fg) though, same as Best value -- a first attempt at --muted-2 here measured
+   ~4.2:1 against the warning-tinted light-mode background, under WCAG AA's 4.5:1 for this badge's
+   11px bold text (--font-xs); --fg measures >15:1 light / >11:1 dark. */
 .basinnChartConditionalBadge {
 	background: color-mix(in srgb, var(--warning) 20%, transparent);
 	border: 1px solid var(--warning);
 	border-radius: var(--radius-sm);
-	color: var(--muted-2);
+	color: var(--fg);
 	cursor: help;
 	font-size: var(--font-xs);
 	font-weight: bold;

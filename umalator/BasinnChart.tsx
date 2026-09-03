@@ -73,10 +73,19 @@ export function isHpOnlySkill(id: string): boolean {
 // models them instead, at varying fidelity (see ConditionalBadge's tooltip). Purely a display
 // classification -- doesn't affect which skills get simulated, only whether the row gets the
 // Conditional badge below.
+//
+// Checks every() alternative, not some(): buildSkillData (RaceSolverBuilder.ts) only ever skips
+// a later alternative in favor of an earlier one that already placed a trigger -- it falls
+// through to a later, ungated alternative whenever an earlier gated one's own region comes up
+// empty for an unrelated reason (e.g. JP's 101051, whose gated alt0 also requires
+// distance_type==3 and so is skipped -- and its ungated alt1 placed instead -- on every other
+// course type). A some() check would badge that row as modeled even on courses where the
+// activated trigger isn't gated at all; every() only badges a row when there's no ungated
+// alternative for the engine to fall back to.
 export function hasModeledActivationGate(id: string): boolean {
 	const skill = (skilldata as any)[id];
 	if (!skill) return false;
-	return skill.alternatives.some((alt: any) =>
+	return skill.alternatives.every((alt: any) =>
 		/activate_count_\w+|is_activate_any_skill/.test(alt.condition),
 	);
 }
