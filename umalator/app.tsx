@@ -75,6 +75,7 @@ import { deriveSeed } from '../uma-skill-tools/Random';
 import umas from '../umas.json';
 import unreleased from '../unreleased.json';
 import {
+	acrParser,
 	BasinnChart,
 	getActivateableSkills,
 	isMutedRow,
@@ -4610,6 +4611,15 @@ function App(props) {
 			duelingRates: isFull ? duelingRates : undefined,
 			laneMovement: false,
 			syncRng: true,
+			// UI-34: each candidate is equipped with only its own native unique (see this
+			// function's own header comment), so a skill gated on a prior skill's activation
+			// (activate_count_*/is_activate_any_skill) can never satisfy that gate for real --
+			// the counter it reads only moves if a second equipped skill fires. Modeling these as
+			// satisfied/randomly-timed instead of literally-never lets those uniques show a real
+			// (approximated) activation rate rather than a permanent, misleading 0%. Course Chart
+			// only -- compare.ts's runComparisonBlock() gates the actual builder call on this
+			// flag, and buildChartOptions() (Skill/Uma Chart) never sets it.
+			activateCountsAsRandom: true,
 		};
 	}
 
@@ -4660,6 +4670,10 @@ function App(props) {
 				template,
 				course,
 				params,
+				// UI-34: match the acr parser runComparisonBlock() will actually simulate with
+				// (buildCourseChartOptions's activateCountsAsRandom flag), so the prefilter and
+				// the real run agree on which candidates are activateable at all.
+				acrParser,
 			).filter((id) => !isPurpleSkill(id));
 			uma = template.toJS();
 		} else {
@@ -5641,6 +5655,10 @@ function App(props) {
 								showUmaIcons={true}
 								showOutfitEpithet={true}
 								showUmaName={true}
+								// UI-34: Course Chart only -- Skill Chart/Uma Chart equip a full
+								// skill set, so their activate_count_*/is_activate_any_skill
+								// conditions really do move, unlike here.
+								showConditionalBadge={true}
 								courseDistance={course.distance}
 								expandedContent={createExpandedContent}
 							/>

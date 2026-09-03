@@ -1021,6 +1021,18 @@ export function runComparisonBlock(
 		}
 	}
 
+	// UI-34: Course Chart only (buildCourseChartOptions sets this flag; buildChartOptions never
+	// does). Must come after the pacer setup above, not next to the withAsiwotameru() block near
+	// the top of this function -- build() reads _parser lazily, but setupPacer binds it eagerly,
+	// so swapping the parser before useDefaultPacer()/pacer() would re-model the pacer's own
+	// skill triggers under the acr table too. Harmless for Course Chart today only because its
+	// template horse carries no skills at all (courseChartTemplate), but placing this after the
+	// pacer block keeps it correct by construction rather than by that coincidence.
+	if (options.activateCountsAsRandom) {
+		standard.withActivateCountsAsRandom();
+		compare.withActivateCountsAsRandom();
+	}
+
 	let scenarioSkillPos = new Map<string, Array<[number, number]>>();
 	function trackedActivate(s: any, id: any, persp: any) {
 		if (persp === Perspective.Self && trackedSkillIds.has(id)) {

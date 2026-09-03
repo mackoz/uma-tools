@@ -100,3 +100,29 @@ randomness layered on top of the trigger itself.
 - Documented as a Limitations entry (`umalator/components/simNotes.tsx`) rather than left
   implicit, per this repo's own doc-sync convention — a user comparing Course Chart's ranking
   against in-game intuition needs to know full-spurt and wit-check are not modeled here.
+
+## Amendment (2026-09-03, UI-34)
+
+The single-skill isolation this ADR describes (Context, and the "no solo-run engine work was
+needed" consequence above) has a distortion of its own that surfaced during dogfooding: several
+uniques' trigger conditions are gated on a *different* skill having already activated
+(`activate_count_*`/`is_activate_any_skill` — an in-game combo mechanic). With the candidate
+carrying only its own native unique, the counter those conditions read can never move, so the
+gate is permanently unsatisfied and the row reads a flat 0% proc — not because the unique is
+weak, but as a direct consequence of this ADR's own single-skill template.
+
+**Decision**: Course Chart now calls the engine's existing `withActivateCountsAsRandom()`
+(`uma-skill-tools/RaceSolverBuilder.ts`), which models these gates as satisfied or randomly-timed
+instead of literally-never, for Course Chart's builder only (`buildCourseChartOptions()`'s
+`activateCountsAsRandom` flag; Skill Chart and Uma Chart are untouched — they equip a full skill
+set, so their counters genuinely move). This is a coarser approximation than the rest of the
+comparison: `activate_count_heal` in particular has no region-restriction model at all (plain
+random timing over whatever the skill's other clauses allow), so a `>=1`-heal gate and a `>=3`
+gate become indistinguishable under it. Rows affected by this modeling carry a `Conditional`
+badge (`umalator/BasinnChart.tsx`) so this isn't silently presented as exact. See
+`uma-skill-tools`' own ADR-0010 for the engine-side rationale (why `is_activate_any_skill`
+specifically needed a new table entry, and why `noopImmediate` rather than a sampled window).
+
+This amendment doesn't change the "no solo-run engine work needed" consequence above — the
+comparison is still a bare pairwise `runComparisonBlock` against the fixed template, just with a
+different condition table swapped in for the candidate side.
