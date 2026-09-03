@@ -418,10 +418,12 @@ dirty.
 3. Every candidate — one row per released outfit's native unique, gated by the **Show Unreleased
    Umas** Settings toggle the same way the other chart modes' pools are — runs against an
    identical fixed template (`1500/1200/1200/600/1200` speed/stamina/power/guts/wisdom, `S`
-   distance / `A` surface / `A` strategy aptitude, no other skills). The candidate's own outfit
-   epithet is shown alongside its unique's name, since Course Chart's pool is one row per outfit,
-   not per character — two outfits of the same character with different unique skills both
-   appear.
+   distance / `A` surface / `A` strategy aptitude, no other skills). Each row's label is the
+   candidate's own outfit epithet followed by its character's name (e.g. "[Starlight Beat] Oguri
+   Cap"), not the unique's own name — since Course Chart's pool is one row per outfit, not per
+   character, and the point of the mode is comparing umas, not skills; two outfits of the same
+   character with different unique skills both appear, distinguished by epithet. The unique's own
+   name and full condition are still available by clicking a row's info icon.
 4. Pick **Model**, **Preset**, and **Pruning** the same way as the Skill Chart (see above) — the
    Skill Wit Check Settings card does not appear in this mode, since it's hardcoded off here
    regardless (see ADR-0017); there is nothing to configure for it.

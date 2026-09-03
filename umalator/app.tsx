@@ -5343,6 +5343,7 @@ function App(props) {
 								onInfoClick={showPopover}
 								showUmaIcons={true}
 								showOutfitEpithet={true}
+								showUmaName={true}
 								courseDistance={course.distance}
 								expandedContent={createExpandedContent}
 							/>

@@ -29,8 +29,8 @@
 	text-align: left;
 }
 
-/* Six columns: Skill / Gain (95% CI) / Typical P10-P90 / Helps / Proc / n -- widths sum to 100%,
-   sized roughly by how much each column's content actually needs. */
+/* Six columns: Skill (or Uma, in Course Chart) / Gain (95% CI) / Typical P10-P90 / Helps / Proc /
+   n -- widths sum to 100%, sized roughly by how much each column's content actually needs. */
 .basinnChart th:nth-child(1) {
 	width: 28%;
 }

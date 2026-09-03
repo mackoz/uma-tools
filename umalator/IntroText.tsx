@@ -74,7 +74,9 @@ export function IntroText(props) {
 								course and run style, completely independent of your Uma 1 build
 								— pick one of the four style tabs (Nige/Senkou/Sasi/Oikomi) and
 								press Run to see which uma's unique actually pulls its weight
-								here. Every candidate is compared on the same fixed, neutral
+								here. Rows are labeled by outfit and character name, not the
+								unique's own name — click a row's info icon for the skill
+								details. Every candidate is compared on the same fixed, neutral
 								stat template and normalized aptitude, so the ranking isn't
 								confounded by your own stat or skill choices the way the
 								existing Uma Chart's is. This mode never tracks HP — every
