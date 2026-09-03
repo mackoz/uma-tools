@@ -26,8 +26,12 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   writes the skeleton from `plans/work-queue/TEMPLATE.md`, and wires up the
   `plans/work-queue/README.md` row and mkdocs nav entry in one step, then `uv run
   plans/scripts/wq.py claim <id>` to move it to `in-progress/` and cut the branch — don't
-  do the file, README, or nav edits by hand. Ticket changes go on their
-  own PR in `uma-tools-plans`; never commit to its `main` directly. See
+  do the file, README, or nav edits by hand. `wq.py file` itself commits directly on whatever
+  branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — that's
+  `main` in the common case, but if you're already mid-session on a branch backing an open PR,
+  filing lands there instead, bundling the new ticket into that PR rather than opening a
+  separate one. `claim`/`status`/`complete` are the ones that always go through a ticket's own
+  branch+PR; don't hand-commit to `main` yourself outside `file`'s own convention. See
   `plans/work-queue/README.md` for the ID scheme and the Category/Type split.
 - **`/wq` drives the mechanics of the above** (`.claude/skills/wq/`) — the exact `file`/
   `claim`/`status` invocation contract and enum vocab (`--net-gain` is one of three fixed

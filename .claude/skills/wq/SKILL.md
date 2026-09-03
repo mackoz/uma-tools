@@ -53,9 +53,13 @@ uv run scripts/wq.py file <PREFIX> --type {bug,feature} --title "..." --effort {
 ```
 
 Writes the skeleton from `TEMPLATE.md`, plus the README backlog row, mkdocs nav entry, and a
-dispatch-list row, all in one commit direct to `main` (filing itself isn't a branch+PR flow —
-only `claim`/`status`/`complete` work on a ticket's own branch). `--dry-run` stages the diff and
-prints exactly how to discard it, without committing.
+dispatch-list row, all in one commit on whatever branch the plans repo currently has checked
+out — `cmd_file` never switches branches itself, unlike `claim`/`land`. That's `main` in the
+common case, but if the plans repo is already sitting on a branch backing an open PR from this
+session, filing lands there instead, bundling the new ticket into that PR rather than opening a
+separate one for it — check `git status`/`git branch --show-current` in the plans repo first if
+which one matters for what you're about to file. `--dry-run` stages the diff and prints exactly
+how to discard it, without committing.
 
 If a real (non-`--dry-run`) call refuses with "file(s) already staged that look like a leftover
 --dry-run preview" — that's residue from an earlier aborted or `--dry-run` call, not this one.
@@ -107,5 +111,6 @@ ticket's own file); since PIPE-38 it also gets `file`'s rollback protection for 
 
 ## Guardrail
 
-Branch and PR in the plans repo for `claim`/`status`/`complete` — never commit straight to
-`main` outside of `file`'s own direct-commit convention above.
+Branch and PR in the plans repo for `claim`/`status`/`complete` — never hand-commit yourself
+outside of `file`'s own direct-to-current-branch convention above (which lands on whatever's
+checked out, not necessarily `main` — see that section).
