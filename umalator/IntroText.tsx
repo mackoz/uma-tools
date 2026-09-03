@@ -66,6 +66,22 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-03</summary>
+						<ul>
+							<li>
+								The Skill Chart now flags a <strong>Best value</strong> badge on
+								the single row with the highest length gain per SP spent —
+								chart-wide, not just among your Shop Skills shortlist. Hover (or
+								focus) the badge for the exact gain, SP cost, and per-100-SP
+								ratio; a gold skill's cost includes any unowned shop
+								prerequisite it needs first, same as the Buy list card's own
+								cost accounting. Rows the chart eliminated early don't compete
+								for the badge, and it holds steady while a chart run is still
+								streaming in.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-02</summary>
 						<ul>
 							<li>

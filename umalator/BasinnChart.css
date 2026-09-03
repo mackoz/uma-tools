@@ -192,6 +192,57 @@
 	display: none;
 }
 
+/* UI-33: "Best value" badge on the single chart row with the highest length-gain-per-SP ratio.
+   Duplicates SpOptimizerCard.css's .spOptimizerTip hover/focus data-tip pattern locally rather
+   than sharing a class -- BasinnChart.tsx and SpOptimizerCard.tsx share no other CSS, and the two
+   components are meant to stay independently stylable. Uses only existing theme tokens (no new
+   ones): --accent for the badge tint (same color-mix recipe as .basinnChartHighlighted above),
+   --card/--border/--fg/--font-xs/--radius-sm/--shadow-md for the tooltip bubble. */
+.basinnChartBestValueBadge {
+	background: color-mix(in srgb, var(--accent) 20%, transparent);
+	border: 1px solid var(--accent);
+	border-radius: var(--radius-sm);
+	color: var(--fg);
+	cursor: help;
+	font-size: var(--font-xs);
+	font-weight: bold;
+	margin-left: 4px;
+	padding: 1px 6px;
+	position: relative;
+	white-space: nowrap;
+}
+
+/* Bare title attribute only fires on mouse hover -- never on keyboard focus or touch -- so the
+   badge is focusable (tabIndex=0 in BasinnChart.tsx) and renders its data-tip on :hover AND
+   :focus-visible instead; tapping focuses on touch. Screen readers get the same sentence via
+   aria-label. */
+.basinnChartBestValueBadge:hover::after,
+.basinnChartBestValueBadge:focus-visible::after {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-md);
+	color: var(--fg);
+	content: attr(data-tip);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	left: 0;
+	line-height: 1.4;
+	max-width: 340px;
+	padding: 6px 10px;
+	position: absolute;
+	text-align: left;
+	top: calc(100% + 6px);
+	white-space: normal;
+	width: max-content;
+	z-index: 10;
+}
+
+.basinnChartBestValueBadge:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
 @media (max-width: 768px) {
 	.basinnChartWrapperWrapper {
 		overflow-x: auto;

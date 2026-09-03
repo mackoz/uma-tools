@@ -8,8 +8,9 @@ demand for an expanded row. The same `umalator/app.tsx` source powers both `umal
 `0861c8f`.
 
 The six layers below are chart-only; the **SP-budget optimizer** built on top of them (the Buy
-list card) has its own section further down. Results are estimates from the simulator model, not
-claims about live-game outcomes.
+list card) and the **Best-value badge** (a single-skill, chart-wide cost-efficiency callout) each
+have their own section further down. Results are estimates from the simulator model, not claims
+about live-game outcomes.
 
 ## Why this exists
 
@@ -522,6 +523,45 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   that matter.
 - Budget persists to `localStorage` under `chartSpBudget`, same work-scoping-knob treatment as
   `chartShopSkills` below — not part of the serialized race state or shared URLs.
+
+## Best-value badge
+
+UI-33 answers a different question than the Buy List optimizer above: not "what's the best
+combination under my SP budget," but "which single skill, out of everything charted, gives the
+most length per SP spent?" A **Best value** badge renders on that one row's skill-name cell in
+`BasinnChart.tsx`, with a hover/focus tooltip giving the exact gain, SP cost, and per-100-SP ratio
+(no new column, no layout resize).
+
+- **Scope is chart-wide, not shortlist-scoped.** Unlike the optimizer's `optimizerCandidates`
+  (only ever the small Shop Skills shortlist), the badge's candidate pool
+  (`bestValueCandidates` in `umalator/app.tsx`) scans every row `tableData` currently has, in
+  `Mode.Chart` only — Unique skills aren't shop purchases, so the Uniques Chart and Course Chart
+  tabs never show a badge (`bestValueCandidates` is `[]` outside `Mode.Chart`, which the shared
+  `BasinnChart` call passes straight through as `bestValueId={null}`).
+- **Muted rows are excluded.** Because this scans the *whole* chart rather than a short curated
+  list, an early-round noisy mean from a `screened`/`inert`/`pending` row (`BasinnChart.tsx`'s
+  `isMutedRow`, exported for this reuse) must not win an unprompted "best in the whole chart"
+  claim the way it might slip past on a five-row shortlist.
+- **Cost is the full chain cost-to-reach**, exactly like the optimizer's chain-cost semantics: a
+  gold (◎) rung's cost includes every unowned cheaper rung in its ladder group. `spOptimizer.ts`'s
+  `findBestValue` computes this via `shopSkillFilter.ts`'s `prerequisitesOf` (the *exclusive*
+  chain — everything strictly below the candidate on its ladder) rather than reusing
+  `optimizePurchases`' internal `buildGroups`, which builds an *inclusive* chain for a different
+  purpose (tier selection, not a single best-value ratio) and isn't a drop-in fit here. Hint
+  discounts apply per rung the same way (`discountedCost`), and an owned prerequisite contributes
+  nothing to the cost.
+- **Zero-cost guard.** 13 rarity<3 JP skills (and some Global ones) have `baseCost: 0` in
+  `skill_meta.json`; a candidate with non-positive gain or non-positive chain cost is ineligible,
+  so this can never divide by zero or crown a free skill "best" by an undefined/infinite ratio. If
+  no candidate qualifies at all, no badge renders.
+- **Ties** break by (ratio desc, cost asc, id asc) — deterministic across re-renders and reloads.
+- **Freezes during a streaming run**, mirroring `purchaseOptionsRef`'s pattern exactly: a
+  `bestValueRef` holds the last-computed `BestValue` while `isSimulationRunning` is true, and
+  `findBestValue` only re-runs once a fresh run's final `tableData` lands — otherwise the whole-
+  chart scan would re-run on every incoming batch.
+- No `CC_GLOBAL` branch is needed: `baseCost` is present on every skill in both `skill_meta.json`
+  datasets (verified 2119/2119 JP, 737/737 Global), so the zero-cost guard above is the only
+  behavior that depends on it, and that guard is data-driven, not build-driven.
 
 ## Reproducibility
 

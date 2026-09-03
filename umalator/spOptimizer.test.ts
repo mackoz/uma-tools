@@ -4,6 +4,7 @@ import {
 	buildHintClusters,
 	discountedCost,
 	expandHints,
+	findBestValue,
 	HINT_DISCOUNT,
 	loadShopSkillHints,
 	type OptimizerInput,
@@ -506,6 +507,160 @@ import {
 		budget: 100,
 	};
 	assert.equal(optimizePurchases(input).truncated, false);
+}
+
+// --- findBestValue: empty input -> null ---
+{
+	assert.equal(findBestValue([], {}, {}, {}, new Set()), null);
+}
+
+// --- findBestValue: every candidate has non-positive gain -> null ---
+{
+	const result = findBestValue(
+		[
+			{ id: 'a', gain: 0 },
+			{ id: 'b', gain: -5 },
+		],
+		{},
+		{},
+		{ a: 100, b: 100 },
+		new Set(),
+	);
+	assert.equal(result, null);
+}
+
+// --- findBestValue: zero/missing cost is excluded, not treated as an infinite ratio ---
+{
+	// Both candidates resolve to cost 0 (one explicit baseCost: 0, one absent from costs entirely)
+	// -> no candidate qualifies -> null, not a divide-by-zero/Infinity ratio.
+	assert.equal(
+		findBestValue(
+			[
+				{ id: 'a', gain: 10 },
+				{ id: 'b', gain: 5 },
+			],
+			{},
+			{},
+			{ a: 0 }, // b absent from costs -> costs[b] ?? 0 -> 0
+			new Set(),
+		),
+		null,
+	);
+	// A huge-gain zero-cost candidate must NOT win over a real, positive-cost one.
+	const result = findBestValue(
+		[
+			{ id: 'zero', gain: 100 },
+			{ id: 'real', gain: 1 },
+		],
+		{},
+		{},
+		{ real: 10 }, // 'zero' absent -> cost 0 -> excluded
+		new Set(),
+	);
+	assert.deepEqual(result, {
+		id: 'real',
+		gain: 1,
+		cost: 10,
+		chainIds: [],
+		ratio: 0.1,
+	});
+}
+
+// --- findBestValue: higher ratio beats higher raw gain ---
+{
+	const result = findBestValue(
+		[
+			{ id: 'a', gain: 10 },
+			{ id: 'b', gain: 5 },
+		],
+		{},
+		{},
+		{ a: 100, b: 10 },
+		new Set(),
+	);
+	// ratio a = 10/100 = 0.1; ratio b = 5/10 = 0.5 -- b wins despite half the raw gain.
+	assert.deepEqual(result, {
+		id: 'b',
+		gain: 5,
+		cost: 10,
+		chainIds: [],
+		ratio: 0.5,
+	});
+}
+
+// --- findBestValue: ratio+cost tie -> ascending id; a hint discount on the loser flips the
+// winner by improving its ratio ---
+{
+	const candidates = [
+		{ id: 'a', gain: 10 },
+		{ id: 'b', gain: 10 },
+	];
+	const costs = { a: 100, b: 100 };
+	// No hints: exact tie on ratio (0.1) and cost (100) -- ascending id picks 'a'.
+	assert.deepEqual(findBestValue(candidates, {}, {}, costs, new Set()), {
+		id: 'a',
+		gain: 10,
+		cost: 100,
+		chainIds: [],
+		ratio: 0.1,
+	});
+	// Hint discount on 'b' (level 5 -> discountedCost(100,5) = round(100*0.6) = 60) raises its
+	// ratio above 'a's -- the winner flips even though raw gain is identical.
+	assert.deepEqual(findBestValue(candidates, { b: 5 }, {}, costs, new Set()), {
+		id: 'b',
+		gain: 10,
+		cost: 60,
+		chainIds: [],
+		ratio: 10 / 60,
+	});
+}
+
+// --- findBestValue: chain cost -- an unowned gold's cost includes its white prerequisite ---
+{
+	const ladder: LadderIndex = {
+		white: { group: 'g1', rate: 1 },
+		gold: { group: 'g1', rate: 2 },
+	};
+	const costs = { gold: 20, white: 150 };
+
+	// Gold alone: cost is gold's own cost PLUS the unowned white prerequisite's cost, not just its
+	// own price -- matches optimizePurchases/buildGroups' chain-cost semantics.
+	assert.deepEqual(
+		findBestValue([{ id: 'gold', gain: 20 }], {}, ladder, costs, new Set()),
+		{ id: 'gold', gain: 20, cost: 170, chainIds: ['white'], ratio: 20 / 170 },
+	);
+
+	// An OWNED prerequisite is excluded from the chain -- gold's cost is then just its own price.
+	assert.deepEqual(
+		findBestValue(
+			[{ id: 'gold', gain: 20 }],
+			{},
+			ladder,
+			costs,
+			new Set(['white']),
+		),
+		{ id: 'gold', gain: 20, cost: 20, chainIds: [], ratio: 1 },
+	);
+
+	// The chain cost flips the winner vs. what an own-cost-only comparison would pick: gold's own
+	// cost (20) beats x's (10), but gold's REAL chain cost (170, including white) loses to x.
+	const result = findBestValue(
+		[
+			{ id: 'gold', gain: 20 },
+			{ id: 'x', gain: 5 },
+		],
+		{},
+		ladder,
+		{ ...costs, x: 10 },
+		new Set(),
+	);
+	assert.deepEqual(result, {
+		id: 'x',
+		gain: 5,
+		cost: 10,
+		chainIds: [],
+		ratio: 0.5,
+	});
 }
 
 console.log('spOptimizer tests passed');

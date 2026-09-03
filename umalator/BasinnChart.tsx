@@ -157,7 +157,9 @@ const REASON_LABEL: Record<string, string> = {
 
 // Rows the ladder stopped evaluating early (or hasn't reached yet) -- rendered dimmed, and sunk
 // below every surviving row in the default Gain sort (see the `mean` column's accessorFn).
-function isMutedRow(row: ChartRow): boolean {
+// UI-33: exported so app.tsx can reuse the same muted definition when building the chart-wide
+// "Best value" badge candidate pool (a muted row's mean must never win that unprompted claim).
+export function isMutedRow(row: ChartRow): boolean {
 	return (
 		row.status === 'screened' ||
 		row.status === 'inert' ||
@@ -178,12 +180,31 @@ function rowTooltip(row: ChartRow): string {
 	return `${row.n} samples — ${status}${reason ? `: ${reason}` : ''}`;
 }
 
+// UI-33: renders after the name span in both branches below. A plain <span>, not a <button> --
+// the tooltip is decorative detail on an already-identified row, not a control -- but still
+// keyboard-reachable (tabIndex=0) and screen-reader-labeled (aria-label mirrors data-tip) so the
+// numbers aren't hover-only, matching SpOptimizerCard.css's .spOptimizerTip precedent.
+function BestValueBadge(props: { tooltip: string }) {
+	return (
+		<span
+			class="basinnChartBestValueBadge"
+			data-tip={props.tooltip}
+			tabIndex={0}
+			aria-label={props.tooltip}
+		>
+			Best value
+		</span>
+	);
+}
+
 function SkillNameCell(props) {
 	const {
 		id,
 		showUmaIcons = false,
 		showOutfitEpithet = false,
 		showUmaName = false,
+		isBestValue = false,
+		bestValueTooltip = '',
 	} = props;
 
 	if (showUmaIcons) {
@@ -227,6 +248,7 @@ function SkillNameCell(props) {
 							</Fragment>
 						)}
 					</span>
+					{isBestValue && <BestValueBadge tooltip={bestValueTooltip} />}
 				</div>
 			);
 		}
@@ -238,6 +260,7 @@ function SkillNameCell(props) {
 			<span>
 				<Text id={`skillnames.${id}`} />
 			</span>
+			{isBestValue && <BestValueBadge tooltip={bestValueTooltip} />}
 		</div>
 	);
 }
@@ -294,6 +317,8 @@ export function BasinnChart(props) {
 						showUmaIcons={props.showUmaIcons}
 						showOutfitEpithet={props.showOutfitEpithet}
 						showUmaName={props.showUmaName}
+						isBestValue={info.getValue() === props.bestValueId}
+						bestValueTooltip={props.bestValueTooltip}
 					/>
 				),
 				// This vendored table-core fork renamed the standard TanStack `sortingFn` column-def
@@ -366,7 +391,13 @@ export function BasinnChart(props) {
 				sortDescFirst: true,
 			},
 		],
-		[props.showUmaIcons, props.showOutfitEpithet, props.showUmaName],
+		[
+			props.showUmaIcons,
+			props.showOutfitEpithet,
+			props.showUmaName,
+			props.bestValueId,
+			props.bestValueTooltip,
+		],
 	);
 
 	const [sorting, setSorting] = useState<SortingState>([

@@ -8,8 +8,12 @@
 // shopSkillFilter.ts/chartLadder.ts/statisticalAnalysis.ts. umalator/app.tsx owns the JSON/DOM
 // side (skill costs, persisted hint levels, the chart's per-skill gain numbers) and passes plain
 // values in here.
+//
+// UI-33: also hosts findBestValue, the chart-wide "which single skill gives the most length per
+// SP spent" badge computation -- a different question from optimizePurchases' budget-constrained
+// knapsack, but built on the same discountedCost/ladder-chain-cost primitives.
 
-import type { LadderIndex } from './shopSkillFilter';
+import { type LadderIndex, prerequisitesOf } from './shopSkillFilter.ts';
 
 // Shop hint-level discount table, indexed by hint level 0-5 (0 = no hint, 5 = max hint).
 export const HINT_DISCOUNT: readonly number[] = [0, 0.1, 0.2, 0.3, 0.35, 0.4];
@@ -31,6 +35,70 @@ export type CostLookup = { [skillId: string]: number };
 export interface OptimizerCandidate {
 	id: string;
 	gain: number;
+}
+
+// UI-33: the Skill Chart's "Best value" badge -- the single candidate with the highest
+// length-gain-per-SP ratio, chart-wide (not shortlist-scoped like optimizePurchases above).
+export interface BestValue {
+	id: string;
+	gain: number;
+	cost: number; // full chain cost-to-reach (self + unowned cheaper rungs), discounted
+	chainIds: string[]; // unowned prerequisite rungs included in cost (empty for a singleton/white)
+	ratio: number; // gain / cost, lengths per SP
+}
+
+// Picks the candidate with the best length-per-SP ratio, or null if none qualify.
+//
+// The caller is expected to have already dropped muted (screened/inert/pending) rows before this
+// runs -- unlike optimizePurchases, this scans the whole chart (~500+ rows, not a small
+// shortlist), so an early-round noisy mean must not win an unprompted "best in the whole chart"
+// claim.
+//
+// A candidate with gain <= 0 is skipped outright. Cost is the FULL chain cost to reach the skill:
+// its own discounted cost plus every unowned cheaper rung in its ladder group (prerequisitesOf,
+// excludes the rung itself), matching optimizePurchases/buildGroups' chain-cost semantics -- a
+// gold (◎) rung can't be bought without its white prerequisite, so the badge's "SP spent" number
+// has to include that prerequisite's cost too, not just the gold rung's own price. A candidate
+// with cost <= 0 is also skipped: 13 rarity<3 JP skills (and some Global ones) have baseCost: 0 in
+// skill_meta.json, which would otherwise divide by zero or produce an infinite/undefined ratio --
+// excluding them (no badge, rather than an infinite-ratio "best") is the deliberate call here, not
+// an oversight.
+//
+// Ties break by (ratio desc, cost asc, id asc) so the result is deterministic across re-renders.
+export function findBestValue(
+	candidates: OptimizerCandidate[],
+	hints: HintLevels,
+	ladder: LadderIndex,
+	costs: CostLookup,
+	owned: Set<string>,
+): BestValue | null {
+	let best: BestValue | null = null;
+	for (const candidate of candidates) {
+		if (candidate.gain <= 0) continue;
+		const chainIds = prerequisitesOf(candidate.id, ladder).filter(
+			(id) => !owned.has(id),
+		);
+		const ownCost = discountedCost(
+			costs[candidate.id] ?? 0,
+			hints[candidate.id] ?? 0,
+		);
+		const chainCost = chainIds.reduce(
+			(sum, id) => sum + discountedCost(costs[id] ?? 0, hints[id] ?? 0),
+			0,
+		);
+		const cost = ownCost + chainCost;
+		if (cost <= 0) continue;
+		const ratio = candidate.gain / cost;
+		const isBetter =
+			best === null ||
+			ratio > best.ratio ||
+			(ratio === best.ratio &&
+				(cost < best.cost || (cost === best.cost && candidate.id < best.id)));
+		if (isBetter) {
+			best = { id: candidate.id, gain: candidate.gain, cost, chainIds, ratio };
+		}
+	}
+	return best;
 }
 
 // One selectable purchase: every rung actually bought (including gain-less ladder prerequisites),

@@ -77,6 +77,7 @@ import unreleased from '../unreleased.json';
 import {
 	BasinnChart,
 	getActivateableSkills,
+	isMutedRow,
 	isPurpleSkill,
 	umaForUniqueSkill,
 } from './BasinnChart';
@@ -128,10 +129,12 @@ import {
 	shopFilterDirty,
 } from './shopSkillFilter';
 import {
+	type BestValue,
 	buildHintClusters,
 	type CostLookup,
 	discountedCost,
 	expandHints,
+	findBestValue,
 	type HintClusters,
 	type HintLevels,
 	loadShopSkillHints,
@@ -3455,6 +3458,22 @@ function App(props) {
 		}
 		return out;
 	}, [shopFilterActive, shopSkillIds, tableData, ownedSkills]);
+	// UI-33: the "Best value" badge's candidate pool -- chart-wide, unlike optimizerCandidates
+	// above (which is scoped to the shop shortlist). Mode.Chart only: unique skills aren't shop
+	// purchases, so a badge on the Uniques Chart tab would be a length-per-SP claim over a cost
+	// that doesn't apply there. Muted (screened/inert/pending) rows are excluded -- see
+	// isMutedRow's own comment -- so an early-round noisy mean can't win an unprompted "best in the
+	// whole chart" claim; owned skills are excluded since there's nothing left to badge them for.
+	const bestValueCandidates = useMemo(() => {
+		if (mode !== Mode.Chart) return [];
+		const out: OptimizerCandidate[] = [];
+		for (const row of tableData.values()) {
+			if (ownedSkills.has(row.id)) continue;
+			if (isMutedRow(row)) continue;
+			if (row.statistics) out.push({ id: row.id, gain: row.statistics.mean });
+		}
+		return out;
+	}, [mode, tableData, ownedSkills]);
 	// tableData updates many times per second while a chart streams in, which would otherwise
 	// re-run optimizePurchases' DFS on every batch. Freeze on the last-computed result (via this
 	// ref) while isSimulationRunning is true; a fresh run's final tableData recomputes once
@@ -3496,6 +3515,34 @@ function App(props) {
 	useEffect(() => {
 		setSelectedBuyOption(null);
 	}, [purchaseOptionsSignature]);
+	// UI-33: same freeze-while-streaming treatment as purchaseOptionsRef/purchaseResult above --
+	// findBestValue scans the whole chart (~500+ rows), so re-running it on every incoming batch
+	// would be wasted work; the badge just holds its last-computed answer until the run settles.
+	const bestValueRef = useRef<BestValue | null>(null);
+	const bestValue = useMemo(() => {
+		if (isSimulationRunning) return bestValueRef.current;
+		const computed = findBestValue(
+			bestValueCandidates,
+			expandedShopHints,
+			SKILL_LADDER,
+			SKILL_BASE_COST,
+			ownedSkills,
+		);
+		bestValueRef.current = computed;
+		return computed;
+	}, [
+		isSimulationRunning,
+		bestValueCandidates,
+		expandedShopHints,
+		ownedSkills,
+	]);
+	const bestValueTooltip = useMemo(() => {
+		if (!bestValue) return '';
+		const perHundred = (bestValue.ratio * 100).toFixed(2);
+		const chainNote =
+			bestValue.chainIds.length > 0 ? ' — includes ○ prerequisite' : '';
+		return `Best value in this chart: +${bestValue.gain.toFixed(2)} L for ${bestValue.cost} SP (${perHundred} L per 100 SP)${chainNote}`;
+	}, [bestValue]);
 	const highlightedBuySkills = useMemo(() => {
 		if (selectedBuyOption == null) return new Set<string>();
 		const option = purchaseOptions[selectedBuyOption];
@@ -5340,6 +5387,8 @@ function App(props) {
 							showUmaIcons={mode == Mode.UniquesChart}
 							courseDistance={course.distance}
 							expandedContent={createExpandedContent}
+							bestValueId={bestValue?.id ?? null}
+							bestValueTooltip={bestValueTooltip}
 						/>
 						<button
 							class={`basinnChartRefresh${dirty ? '' : ' hidden'}`}
