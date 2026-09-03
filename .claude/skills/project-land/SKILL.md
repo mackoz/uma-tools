@@ -358,6 +358,6 @@ touched, not all three (the others were never involved):
   check). Single-repo-plans has nothing to wait on at all — `uma-tools-plans` has no Pages
   deploy (no `.github/` workflow there).
 
-Report back to the user: which PRs merged and their merge commit SHAs, and where the ticket
+Report back to the user: which PRs merged and their squash commit SHAs, and where the ticket
 ended up. Don't just say "landed" — the SHAs are what someone would need to bisect against
 later.

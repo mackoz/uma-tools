@@ -10,7 +10,7 @@ Reviews one **linked group** of open PRs across the three repos this project spa
 many repos and PRs that group actually touches — in dependency order, recording each repo's
 findings, then runs a dedicated cross-repo synthesis pass over the collected findings whenever
 two or more repos are represented in the group, to catch what no single-repo review can: an
-engine PR whose merge commit the code PR's gitlink must record, an engine signature change
+engine PR whose squash-merge commit the code PR's gitlink must record, an engine signature change
 `uma-tools` depends on, a doc claim in `uma-tools-plans` a code change makes stale.
 
 Discovery no longer assumes "one repo, one PR, all PRs are the same change" — see Step 1's
@@ -343,7 +343,7 @@ to understand after seeing what changed underneath it.
 
    "Cross-repo invariants at risk" means: does this PR's change depend on, or promise
    something about, code that lives in one of the *other* two repos? Concretely, watch
-   for: a gitlink bump that must match a specific engine merge commit; an engine function
+   for: a gitlink bump that must match a specific engine squash-merge commit; an engine function
    signature or numeric-output change that `umalator/compare.ts`, `simulator.worker.ts`,
    or `uma-skill-tools/tools/` call; a change to `wq.py`/`verify.mjs` (the paired-merge
    machinery itself); a claim in `plans/work-queue/`, `engine-mechanics.md`, or a port
