@@ -78,6 +78,7 @@ import {
 	BasinnChart,
 	getActivateableSkills,
 	isPurpleSkill,
+	umaForUniqueSkill,
 } from './BasinnChart';
 import {
 	type AnalysisPresetName,
@@ -2206,6 +2207,53 @@ enum Mode {
 	Compare,
 	Chart,
 	UniquesChart,
+	CourseChart,
+}
+
+// Course Chart (UI-23): every candidate outfit is compared against a fixed, skill-less template
+// -- normalized stats AND aptitude -- so the only thing varying between rows is that outfit's own
+// native unique. See docs/adr/0017-course-chart-neutral-template.md for why aptitude is
+// normalized instead of per-outfit (no aptitude data exists in this fork's umas.json, and
+// aptitude is a preparation variable in-game via inheritance) and why no HP policy is requested.
+const COURSE_CHART_TEMPLATE_STATS = Object.freeze({
+	speed: 1500,
+	stamina: 1200,
+	power: 1200,
+	guts: 600,
+	wisdom: 1200,
+});
+
+const COURSE_CHART_STYLES = ['Nige', 'Senkou', 'Sasi', 'Oikomi'] as const;
+type CourseChartStyle = (typeof COURSE_CHART_STYLES)[number];
+
+// Not typed as Record<K, V> -- that identifier collides project-wide with Immutable.js's ambient
+// Record<TProps> (used for HorseState) once both are in scope; see ui-components/Tabs.tsx's own
+// note on the same trap.
+const COURSE_CHART_STYLE_LABEL: { [key in CourseChartStyle]: string } =
+	CC_GLOBAL
+		? {
+				Nige: 'Front Runner',
+				Senkou: 'Pace Chaser',
+				Sasi: 'Late Surger',
+				Oikomi: 'End Closer',
+			}
+		: {
+				Nige: 'Nige (Front Runner)',
+				Senkou: 'Senkou (Pace Chaser)',
+				Sasi: 'Sasi (Late Surger)',
+				Oikomi: 'Oikomi (End Closer)',
+			};
+
+function courseChartTemplate(strategy: CourseChartStyle): HorseState {
+	return new HorseState({
+		...COURSE_CHART_TEMPLATE_STATS,
+		strategy,
+		distanceAptitude: 'S',
+		surfaceAptitude: 'A',
+		strategyAptitude: 'A',
+		mood: 2 as Mood,
+		skills: SkillSet([]),
+	});
 }
 
 const CHART_ICON_TYPE_FILTERS = [
@@ -2291,6 +2339,7 @@ enum UiStateMsg {
 	SetModeCompare,
 	SetModeChart,
 	SetModeUniquesChart,
+	SetModeCourseChart,
 	SetCurrentIdx0,
 	SetCurrentIdx1,
 	SetCurrentIdx2,
@@ -2309,6 +2358,13 @@ function nextUiState(state: typeof DEFAULT_UI_STATE, msg: UiStateMsg) {
 			return {
 				...state,
 				mode: Mode.UniquesChart,
+				currentIdx: 0,
+				expanded: false,
+			};
+		case UiStateMsg.SetModeCourseChart:
+			return {
+				...state,
+				mode: Mode.CourseChart,
 				currentIdx: 0,
 				expanded: false,
 			};
@@ -3453,6 +3509,73 @@ function App(props) {
 		new Map(),
 	);
 
+	// --- Course Chart (UI-23) coordinator state ---
+	// RUN computes only the currently selected style tab, so chartRunRef/jobIdRef/detailCacheRef
+	// above stay single-run as-is; this cache is purely what lets an already-computed style's
+	// results survive switching to another style and back. courseChartCacheKey() below is
+	// deliberately NOT keyed on uma1 -- this mode's whole point is independence from it.
+	const [courseChartStyle, setCourseChartStyle] =
+		useState<CourseChartStyle>('Nige');
+	const courseChartRunsRef = useRef<
+		Map<
+			CourseChartStyle,
+			{
+				run: ChartRunState;
+				table: Map<string, ChartRow>;
+				cacheKey: string;
+				complete: boolean;
+			}
+		>
+	>(new Map());
+
+	function courseChartCacheKey(): string {
+		return JSON.stringify([
+			courseId,
+			racedef.toJS(),
+			analysisPreset,
+			chartPruning,
+			showUnreleasedUmas,
+			analysisMode,
+		]);
+	}
+
+	// Switching style tabs while idle restores that style's cached table (if any) instead of
+	// leaving the previous style's rows on screen under the new tab, and clears every piece of
+	// state that's keyed by skill id alone and would otherwise leak a trace/selection from one
+	// style's race into another's (the same unique id appears in all four style tables).
+	// detailCacheRef/selectedSkillId are cleared here; the expanded row itself and the
+	// results/runData/chartData state a detail fetch populates are reset by remounting BasinnChart
+	// with key={courseChartStyle} at the render site below, rather than here -- that state lives in
+	// a shared reducer (setResults is literally setSimState, the same dispatch Compare mode uses)
+	// whose non-numeric, non-string branch expects a full {results, runData} payload, not a bare
+	// null/clear.
+	function switchCourseChartStyle(style: CourseChartStyle) {
+		if (isSimulationRunning) return;
+		setCourseChartStyle(style);
+		const cached = courseChartRunsRef.current.get(style);
+		chartRunRef.current = cached?.run ?? null;
+		setTableData(cached?.table ?? new Map());
+		detailCacheRef.current.clear();
+		selectedSkillIdRef.current = '';
+		setSelectedSkillId('');
+	}
+
+	// Keeps the active style's cache entry's `table`/`complete` fields mirroring whatever
+	// doBasinnChart/the streaming pool handler just wrote into tableData/isSimulationRunning --
+	// `cacheKey` is deliberately left untouched here (only doBasinnChart's CourseChart branch
+	// sets it, once, when the run starts) so a course/racedef/preset/etc change mid-run is still
+	// visible as a stale cache on the next render, instead of this effect silently absorbing it.
+	useEffect(() => {
+		if (mode !== Mode.CourseChart) return;
+		const entry = courseChartRunsRef.current.get(courseChartStyle);
+		if (!entry || entry.run !== chartRunRef.current) return;
+		courseChartRunsRef.current.set(courseChartStyle, {
+			...entry,
+			table: tableData,
+			complete: !isSimulationRunning,
+		});
+	}, [tableData, isSimulationRunning, mode, courseChartStyle]);
+
 	const poolRef = useRef<WorkerPool | null>(null);
 	if (poolRef.current == null) {
 		poolRef.current = createWorkerPool(4, './simulator.worker.js');
@@ -4174,6 +4297,32 @@ function App(props) {
 		return uma.set('skills', filteredSkills);
 	}
 
+	// Course Chart's candidate pool: one native unique per released outfit. Deliberately its own
+	// filter, not getUniqueSkills() -- that one filters by unreleasedSkillIds (46 skill ids),
+	// but a Course Chart row's identity is the outfit, so it must filter by unreleasedOutfitIds
+	// (23 outfit ids) instead; the two sets don't correspond 1:1. Rarity-6 evolved uniques are
+	// excluded incidentally, not by a rarity check of their own: their id decodes (via
+	// umaForUniqueSkill) to a 9-character pseudo-outfit that can never match a 6-character
+	// umas.json key -- don't "fix" that filter without checking this comment first.
+	function getCourseChartCandidates(): Array<{
+		outfitId: string;
+		skillId: string;
+	}> {
+		// Cast like SKILL_LADDER/SKILL_RARITY's builder above does for the same skilldata object --
+		// a plain `string` id (from Object.keys) can't index its exact-literal inferred type.
+		const data = skilldata as { [key: string]: { rarity: number } };
+		const candidates: Array<{ outfitId: string; skillId: string }> = [];
+		for (const id of Object.keys(data)) {
+			const skill = data[id];
+			if (skill.rarity < 4 || !id.startsWith('1')) continue;
+			const outfitId = umaForUniqueSkill(id);
+			if (!outfitId) continue;
+			if (!showUnreleasedUmas && unreleasedOutfitIds.has(outfitId)) continue;
+			candidates.push({ outfitId, skillId: id });
+		}
+		return candidates;
+	}
+
 	// The chart's two models differ only in the multi-uma jostling flags and position keeping.
 	// Both request `mode: 'compare'` -- that's what gives the chart a real HP policy
 	// (RaceSolverBuilder.ts gates GameHpPolicy on exactly this string) instead of the no-op policy
@@ -4200,6 +4349,37 @@ function App(props) {
 		};
 	}
 
+	// Course Chart's options differ from buildChartOptions() above in exactly two places -- kept
+	// as a separate function, not a parameterized buildChartOptions, so both this mode's
+	// divergence and ADR-0009's "real HP, always" stance for the other two chart models stay
+	// legible at both call sites. See docs/adr/0017-course-chart-neutral-template.md.
+	//  - No `mode` field: omitting it (instead of 'compare') selects NoopHpPolicy
+	//    (RaceSolverBuilder.ts) -- every candidate gets a guaranteed full spurt, no HP-gated skill
+	//    condition can fire -- AND, as a second, easy-to-miss consequence of the same omission,
+	//    RaceSolver.ts's posKeepEnd drops from 10 sections to 3 (its own "skill chart" setting,
+	//    there to stop position keeping from skewing chart results).
+	//  - `skillWisdomCheck: false` is hardcoded, not the user's Settings toggle: deterministic
+	//    activation once a trigger condition is met, no proc-chance randomness, so results depend
+	//    only on the unique's trigger and effect, never on any per-run wisdom-check draw.
+	// `syncRng: true` must stay -- compare.ts gates desync() on `mode === 'compare' && !syncRng`,
+	// a no-op today since `mode` is never 'compare' here, but it must stay a no-op.
+	function buildCourseChartOptions(analysisMode: 'controlled' | 'full') {
+		const isFull = analysisMode === 'full';
+		return {
+			seed,
+			skillWisdomCheck: false,
+			posKeepMode: isFull ? posKeepMode : PosKeepMode.Approximate,
+			pacemakerCount:
+				isFull && posKeepMode === PosKeepMode.Virtual ? pacemakerCount : 1,
+			rushedKakari: isFull ? rushedKakari : false,
+			competeFight: isFull ? competeFight : false,
+			leadCompetition: isFull ? leadCompetition : false,
+			duelingRates: isFull ? duelingRates : undefined,
+			laneMovement: false,
+			syncRng: true,
+		};
+	}
+
 	function doBasinnChart() {
 		postEvent('doBasinnChart', {});
 		postEvent('shopSkillFilter', {
@@ -4211,7 +4391,10 @@ function App(props) {
 		setSimulationError('');
 		poolRef.current?.cancelAll();
 
-		const params = racedefToParams(racedef, uma1.strategy);
+		const params =
+			mode === Mode.CourseChart
+				? racedefToParams(racedef, courseChartStyle)
+				: racedefToParams(racedef, uma1.strategy);
 
 		let skills: string[];
 		let uma: any;
@@ -4222,11 +4405,24 @@ function App(props) {
 			);
 			const umaWithoutUniques = removeUniqueSkills(uma1);
 			uma = umaWithoutUniques.toJS();
+		} else if (mode === Mode.CourseChart) {
+			const template = courseChartTemplate(courseChartStyle);
+			const candidateSkillIds = getCourseChartCandidates().map(
+				(c) => c.skillId,
+			);
+			skills = getActivateableSkills(
+				candidateSkillIds,
+				template,
+				course,
+				params,
+			).filter((id) => !isPurpleSkill(id));
+			uma = template.toJS();
 		} else {
 			// computeChartSkillPool already applies the purple-skill exclusion (folded into its
 			// `all` step, ahead of getActivateableSkills -- order doesn't matter, isPurpleSkill
-			// is independent of activateability) -- unlike the UniquesChart branch above, which
-			// still needs its own explicit filter since it doesn't go through that helper.
+			// is independent of activateability) -- unlike the UniquesChart/CourseChart branches
+			// above, which still need their own explicit filter since neither goes through that
+			// helper.
 			skills = computeChartSkillPool(uma1, course).procable;
 			uma = uma1.toJS();
 		}
@@ -4266,7 +4462,10 @@ function App(props) {
 			racedef: params,
 			uma,
 			pacer: pacer.toJS(),
-			analysisOptions: buildChartOptions(analysisMode),
+			analysisOptions:
+				mode === Mode.CourseChart
+					? buildCourseChartOptions(analysisMode)
+					: buildChartOptions(analysisMode),
 			baseSeed: seed,
 			roundIndex: 0,
 			roundParticipants: skills.slice(),
@@ -4284,6 +4483,19 @@ function App(props) {
 		setIsSimulationRunning(true);
 		updateSimulationProgress(run);
 
+		if (mode === Mode.CourseChart) {
+			// Cache key is captured once, here, at run start -- not recomputed continuously -- so
+			// a course/racedef/preset/etc change made while this run is still streaming correctly
+			// shows up as a stale cache (dirty) on the next render rather than silently tracking
+			// whatever the live inputs happen to be by the time the run finishes.
+			courseChartRunsRef.current.set(courseChartStyle, {
+				run,
+				table: new Map(),
+				cacheKey: courseChartCacheKey(),
+				complete: false,
+			});
+		}
+
 		const pool = poolRef.current;
 		if (pool) {
 			for (let w = 0; w < pool.size; ++w) dispatchNextBatch(w);
@@ -4296,6 +4508,33 @@ function App(props) {
 	useEffect(() => {
 		selectedSkillIdRef.current = selectedSkillId;
 	}, [selectedSkillId]);
+
+	// Nothing previously cleared tableData on a *mode* switch (only a fresh doBasinnChart run
+	// did) -- Chart -> Uma Chart would show the old Chart rows, now under Uma Chart's uma-icon
+	// rendering, until the next run. Harmless-looking before Course Chart existed; a third chart
+	// mode with its own per-style semantics makes the staleness obvious enough to fix here rather
+	// than carry forward. Entering Course Chart restores whatever the active style's own cache
+	// holds (possibly nothing); every other mode just starts from an empty table.
+	// Safe to null chartRunRef.current unconditionally here because #modeTabs disables every item
+	// while isSimulationRunning, so this effect can never fire mid-run -- without that guard, a
+	// mode switch mid-run would orphan the run: chart-batch-chunk/-done/-error all bail on a null
+	// chartRunRef.current, so finishRound() (the only path that clears isSimulationRunning for a
+	// chart run) would never fire, stranding it true app-wide.
+	useEffect(() => {
+		if (mode === Mode.CourseChart) {
+			const cached = courseChartRunsRef.current.get(courseChartStyle);
+			chartRunRef.current = cached?.run ?? null;
+			setTableData(cached?.table ?? new Map());
+		} else {
+			chartRunRef.current = null;
+			setTableData(new Map());
+		}
+		detailCacheRef.current.clear();
+		selectedSkillIdRef.current = '';
+		setSelectedSkillId('');
+		// Deliberately just [mode] -- a style switch within Course Chart is handled by
+		// switchCourseChartStyle instead, not by this effect re-running.
+	}, [mode]);
 
 	function basinnChartSelection(skillId: string) {
 		// selectedSkillIdRef is also updated here, synchronously, not only through the
@@ -5068,6 +5307,69 @@ function App(props) {
 				</div>
 			</div>
 		);
+	} else if (mode == Mode.CourseChart) {
+		// Style-tab row is hoisted out of any tableData.size gate (unlike the Chart/UniquesChart
+		// branch above, which only renders at all once it has rows) -- otherwise switching to a
+		// not-yet-run style would unmount the tabs themselves along with the table, stranding the
+		// user with no way back to a style that does have results.
+		const courseChartEntry = courseChartRunsRef.current.get(courseChartStyle);
+		const courseChartDirty =
+			courseChartEntry == null ||
+			courseChartEntry.cacheKey !== courseChartCacheKey();
+		resultsPane = (
+			<div id="resultsPaneWrapper">
+				<div id="resultsPane" class="mode-chart">
+					<Tabs
+						id="courseChartStyleTabs"
+						variant="underline"
+						items={COURSE_CHART_STYLES.map((s) => ({
+							key: s,
+							label: COURSE_CHART_STYLE_LABEL[s],
+							disabled: isSimulationRunning,
+						}))}
+						selected={courseChartStyle}
+						onSelect={(key) => switchCourseChartStyle(key as CourseChartStyle)}
+					/>
+					{tableData.size > 0 ? (
+						<div class="basinnChartWrapperWrapper">
+							<BasinnChart
+								key={courseChartStyle}
+								data={Array.from(tableData.values())}
+								dirty={courseChartDirty}
+								hidden={new Set()}
+								highlighted={new Set()}
+								onSelectionChange={basinnChartSelection}
+								onDblClickRow={addSkillFromTable}
+								onInfoClick={showPopover}
+								showUmaIcons={true}
+								showOutfitEpithet={true}
+								showUmaName={true}
+								courseDistance={course.distance}
+								expandedContent={createExpandedContent}
+							/>
+							<button
+								class={`basinnChartRefresh${courseChartDirty ? '' : ' hidden'}`}
+								onClick={doBasinnChart}
+								disabled={isSimulationRunning}
+							>
+								⟲
+							</button>
+							<div
+								class={`basinnChartRefreshText${courseChartDirty ? '' : ' hidden'}`}
+							>
+								Course, race conditions, or settings have changed -- refresh is
+								required
+							</div>
+						</div>
+					) : (
+						<div class="courseChartEmptyState">
+							Press RUN to rank every released outfit's native unique for{' '}
+							{COURSE_CHART_STYLE_LABEL[courseChartStyle]} on this course.
+						</div>
+					)}
+				</div>
+			</div>
+		);
 	} else {
 		resultsPane = null;
 	}
@@ -5496,9 +5798,11 @@ function App(props) {
 							<div
 								id="topPane"
 								ref={topPaneRef}
-								class={`${chartData ? 'hasResults' : ''} ${(mode == Mode.Chart || mode == Mode.UniquesChart) && !isMobile && topPaneHeight != null ? 'chart-split' : ''}`}
+								class={`${chartData ? 'hasResults' : ''} ${(mode == Mode.Chart || mode == Mode.UniquesChart || mode == Mode.CourseChart) && !isMobile && topPaneHeight != null ? 'chart-split' : ''}`}
 								style={
-									(mode == Mode.Chart || mode == Mode.UniquesChart) &&
+									(mode == Mode.Chart ||
+										mode == Mode.UniquesChart ||
+										mode == Mode.CourseChart) &&
 									!isMobile &&
 									topPaneHeight != null
 										? { height: topPaneHeight + 'px' }
@@ -5509,16 +5813,35 @@ function App(props) {
 									id="modeTabs"
 									variant="underline"
 									items={[
-										{ key: 'compare', label: 'Compare' },
-										{ key: 'chart', label: 'Skill Chart' },
-										{ key: 'uniques', label: 'Uma Chart' },
+										{
+											key: 'compare',
+											label: 'Compare',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'chart',
+											label: 'Skill Chart',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'uniques',
+											label: 'Uma Chart',
+											disabled: isSimulationRunning,
+										},
+										{
+											key: 'course',
+											label: 'Course Chart',
+											disabled: isSimulationRunning,
+										},
 									]}
 									selected={
 										mode == Mode.Compare
 											? 'compare'
 											: mode == Mode.Chart
 												? 'chart'
-												: 'uniques'
+												: mode == Mode.UniquesChart
+													? 'uniques'
+													: 'course'
 									}
 									onSelect={(key) =>
 										updateUiState(
@@ -5526,7 +5849,9 @@ function App(props) {
 												? UiStateMsg.SetModeCompare
 												: key === 'chart'
 													? UiStateMsg.SetModeChart
-													: UiStateMsg.SetModeUniquesChart,
+													: key === 'uniques'
+														? UiStateMsg.SetModeUniquesChart
+														: UiStateMsg.SetModeCourseChart,
 										)
 									}
 								/>
@@ -5562,7 +5887,9 @@ function App(props) {
 											Run Once
 										</button>
 									)}
-									{(mode == Mode.Chart || mode == Mode.UniquesChart) &&
+									{(mode == Mode.Chart ||
+										mode == Mode.UniquesChart ||
+										mode == Mode.CourseChart) &&
 										isSimulationRunning && (
 											<button id="stopChart" onClick={stopChart} tabindex={1}>
 												Stop
@@ -5626,14 +5953,16 @@ function App(props) {
 										pacer={pacer}
 										controls={
 											<div class="racetrackControls">
-												<label>
-													<input
-														type="checkbox"
-														checked={showHp}
-														onClick={toggleShowHp}
-													/>{' '}
-													Show HP
-												</label>
+												{mode != Mode.CourseChart && (
+													<label>
+														<input
+															type="checkbox"
+															checked={showHp}
+															onClick={toggleShowHp}
+														/>{' '}
+														Show HP
+													</label>
+												)}
 												<label>
 													<input
 														type="checkbox"
@@ -5659,7 +5988,11 @@ function App(props) {
 											width={960}
 											height={250}
 											xOffset={20}
-											showHp={showHp}
+											// Course Chart requests no HP policy (NoopHpPolicy), so a row's trace
+											// has no real hp series to draw -- force this off regardless of a
+											// showHp toggle left on from another mode, rather than let VelocityLines
+											// draw a NaN path through hpY(undefined).
+											showHp={mode != Mode.CourseChart && showHp}
 											showPoskeepGap={showPoskeepGap}
 											showLanes={mode == Mode.Compare ? showLanes : false}
 											horseLane={course.horseLane}
@@ -5762,9 +6095,17 @@ function App(props) {
 									</div>
 								</div>
 							</div>
-							{(mode == Mode.Chart || mode == Mode.UniquesChart) && (
+							{(mode == Mode.Chart ||
+								mode == Mode.UniquesChart ||
+								mode == Mode.CourseChart) && (
 								<div id="chartRunSettings">
-									<label title="Controlled uses a real HP/spurt/recovery budget with simplified position keeping and no multi-uma jostling (Rushed, dueling, compete fight, lead competition all off), for a cleaner per-skill comparison. Full race adds your own Position Keeping, Virtual pacer, and jostling settings for a more realistic but noisier race.">
+									<label
+										title={
+											mode == Mode.CourseChart
+												? "Controlled uses simplified position keeping and no multi-uma jostling (Rushed, dueling, compete fight, lead competition all off), for a cleaner comparison -- Course Chart never simulates an HP/spurt/recovery budget, in either model (see the mode's own note above the table). Full race adds your own Position Keeping, Virtual pacer, and jostling settings for a more realistic but noisier race."
+												: 'Controlled uses a real HP/spurt/recovery budget with simplified position keeping and no multi-uma jostling (Rushed, dueling, compete fight, lead competition all off), for a cleaner per-skill comparison. Full race adds your own Position Keeping, Virtual pacer, and jostling settings for a more realistic but noisier race.'
+										}
+									>
 										Model{' '}
 										<select
 											value={analysisMode}
@@ -5926,7 +6267,9 @@ function App(props) {
 									/>
 								</div>
 							)}
-							{(mode == Mode.Chart || mode == Mode.UniquesChart) &&
+							{(mode == Mode.Chart ||
+								mode == Mode.UniquesChart ||
+								mode == Mode.CourseChart) &&
 								!isMobile &&
 								resultsPane != null && (
 									<div

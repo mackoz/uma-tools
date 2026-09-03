@@ -65,7 +65,7 @@ export function isHpOnlySkill(id: string): boolean {
 	);
 }
 
-function umaForUniqueSkill(skillId: string): string | null {
+export function umaForUniqueSkill(skillId: string): string | null {
 	const sid = parseInt(skillId, 10);
 	if (sid < 100000 || sid >= 200000) return null;
 
@@ -179,16 +179,53 @@ function rowTooltip(row: ChartRow): string {
 }
 
 function SkillNameCell(props) {
-	const { id, showUmaIcons = false } = props;
+	const {
+		id,
+		showUmaIcons = false,
+		showOutfitEpithet = false,
+		showUmaName = false,
+	} = props;
 
 	if (showUmaIcons) {
-		const umaId = umaForUniqueSkill(id);
-		if (umaId && icons[umaId]) {
+		const outfitId = umaForUniqueSkill(id);
+		if (outfitId && icons[outfitId]) {
+			// Distinguishes two outfits of the same character (Course Chart's candidate pool is
+			// one row per outfit, not per character) -- umas.json keys the epithet/name by outfit
+			// under the base character id, which is the outfitId's own first 4 characters. Cast
+			// like umaForUniqueSkill() above does for the same umas object -- a plain `string` id
+			// can't index its exact-literal inferred type.
+			const umasById = umas as {
+				[key: string]: { name: string[]; outfits: { [key: string]: string } };
+			};
+			const baseUmaId = outfitId.slice(0, 4);
+			const epithet = showOutfitEpithet
+				? umasById[baseUmaId]?.outfits[outfitId]
+				: null;
+			// Every candidate Course Chart can actually show has a non-empty name[1] (checked
+			// against both umas.json files) -- the `?.` here is defensive for the icon-resolves-
+			// but-umas-entry-somehow-missing case, not a real fallback this pool exercises. JP rows
+			// end up mixed-script (JP epithet, English name) -- matches HorseDef.tsx's own
+			// uma-picker suggestion list, not a new inconsistency.
+			const umaName = showUmaName ? umasById[baseUmaId]?.name[1] : null;
 			return (
 				<div class="chartSkillName">
-					<img src={icons[umaId]} />
+					<img src={icons[outfitId]} />
 					<span>
-						<Text id={`skillnames.${id}`} />
+						{umaName ? (
+							<Fragment>
+								{epithet && (
+									<span class="chartSkillOutfitEpithet">{epithet} </span>
+								)}
+								{umaName}
+							</Fragment>
+						) : (
+							<Fragment>
+								<Text id={`skillnames.${id}`} />
+								{epithet && (
+									<span class="chartSkillOutfitEpithet"> {epithet}</span>
+								)}
+							</Fragment>
+						)}
 					</span>
 				</div>
 			);
@@ -203,6 +240,23 @@ function SkillNameCell(props) {
 			</span>
 		</div>
 	);
+}
+
+// Course Chart's own sort key for the Skill/Uma column: when showUmaName is set, sort by the
+// resolved uma's English name instead of the skill name, so the column stays consistent with what
+// it visibly displays (see SkillNameCell above). A single per-row key rather than a whole-
+// comparator branch, so the two id-spaces (uma name vs. skill name) never mix mid-comparison and
+// the ordering stays a valid total order. Falls back to the existing skillnames[id] sort if a
+// candidate somehow doesn't resolve to a named uma -- not a live case for Course Chart's actual
+// candidate pool (see the comment in SkillNameCell), but keeps this total regardless.
+function skillSortKey(id: string, showUmaName: boolean): string {
+	if (showUmaName) {
+		const outfitId = umaForUniqueSkill(id);
+		const umasById = umas as { [key: string]: { name: string[] } };
+		const name = outfitId && umasById[outfitId.slice(0, 4)]?.name?.[1];
+		if (name) return name;
+	}
+	return String(skillnames[id]);
 }
 
 // Only supplies the label text and its descriptive tooltip -- the click-to-sort handler lives on
@@ -230,19 +284,26 @@ export function BasinnChart(props) {
 	const columns = useMemo(
 		() => [
 			{
-				header: headerLabel('Skill', 'Sort alphabetically by skill name'),
+				header: props.showUmaName
+					? headerLabel('Uma', 'Sort alphabetically by Uma name')
+					: headerLabel('Skill', 'Sort alphabetically by skill name'),
 				accessorKey: 'id',
 				cell: (info) => (
 					<SkillNameCell
 						id={info.getValue()}
 						showUmaIcons={props.showUmaIcons}
+						showOutfitEpithet={props.showOutfitEpithet}
+						showUmaName={props.showUmaName}
 					/>
 				),
 				// This vendored table-core fork renamed the standard TanStack `sortingFn` column-def
 				// property to `sortFn` (see vendor/table-core/features/row-sorting) -- the old name was
 				// silently ignored, falling back to the default sort (by raw id), not skill name.
 				sortFn: (a, b, _) =>
-					skillnames[a.getValue('id')] < skillnames[b.getValue('id')] ? -1 : 1,
+					skillSortKey(a.getValue('id'), props.showUmaName) <
+					skillSortKey(b.getValue('id'), props.showUmaName)
+						? -1
+						: 1,
 			},
 			{
 				header: headerLabel(
@@ -305,7 +366,7 @@ export function BasinnChart(props) {
 				sortDescFirst: true,
 			},
 		],
-		[props.showUmaIcons],
+		[props.showUmaIcons, props.showOutfitEpithet, props.showUmaName],
 	);
 
 	const [sorting, setSorting] = useState<SortingState>([

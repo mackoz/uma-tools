@@ -138,6 +138,33 @@ export const LIMITATIONS: InfoEntry[] = [
 			</p>
 		),
 	},
+	{
+		summary:
+			'The Course Chart never tracks HP, so every candidate full-spurts and Skill Wit Check is always off.',
+		body: (
+			<Fragment>
+				<p>
+					Unlike the Skill Chart and Uma Chart, the Course Chart requests no
+					stamina model at all -- see this app's own docs (ADR-0017) for why.
+					Every candidate reaches the final straight with a guaranteed full
+					spurt, HP-only recovery skills and any skill conditioned on a specific
+					HP percentage have nothing real to trigger on, and Skill Wit Check is
+					forced off regardless of your Settings toggle.
+				</p>
+				<p>
+					The biggest effect of this is on skills conditioned on the final spurt
+					itself (e.g. "final spurt" / <code>is_lastspurt</code> conditions):
+					since every candidate spurts from the same point regardless of its
+					actual stamina, these skills activate more reliably here than they
+					would in a real race where a stamina-light build might not reach a
+					full spurt at all. A handful of other candidates -- mostly ones whose
+					only effect is HP recovery, or whose trigger condition itself checks
+					an HP percentage -- read as having no effect in this mode for the same
+					reason.
+				</p>
+			</Fragment>
+		),
+	},
 ];
 
 // Known-wrong results and outright failures, shown in the "Known bugs" panel. Unlike

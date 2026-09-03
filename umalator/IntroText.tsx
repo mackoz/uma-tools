@@ -66,6 +66,27 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-02</summary>
+						<ul>
+							<li>
+								New <strong>Course Chart</strong> tab, alongside Skill Chart and
+								Uma Chart: ranks every released outfit's own native unique for a
+								course and run style, completely independent of your Uma 1 build
+								— pick one of the four style tabs (Nige/Senkou/Sasi/Oikomi) and
+								press Run to see which uma's unique actually pulls its weight
+								here. Rows are labeled by outfit and character name, not the
+								unique's own name — click a row's info icon for the skill
+								details. Every candidate is compared on the same fixed, neutral
+								stat template and normalized aptitude, so the ranking isn't
+								confounded by your own stat or skill choices the way the
+								existing Uma Chart's is. This mode never tracks HP — every
+								candidate gets a guaranteed full spurt and Skill Wit Check is
+								always off — see the Limitations panel for what that means for
+								recovery skills and final-spurt-conditioned uniques.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-01</summary>
 						<ul>
 							<li>
