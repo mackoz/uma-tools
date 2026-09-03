@@ -512,10 +512,23 @@ function Histogram(props) {
 	const xH = 20;
 	const yW = 40;
 
+	// No Preact error boundary sits above BasinnChartPopover's call site (UI-32), so a bad
+	// dereference of `data` here doesn't just fail this component -- it silently unmounts the
+	// whole popover, including ExpandedSkillDetails, which has nothing to do with `data` at all.
+	// Guard exhaustively rather than assuming a well-formed array: `data` can be null/empty (no
+	// samples yet, e.g. a screened-out row), and TypedArray sort() puts NaN last, so a single NaN
+	// sample would otherwise slip past a bare length check and poison the domain via
+	// Math.ceil(NaN).
+	const empty =
+		data == null ||
+		data.length === 0 ||
+		!Number.isFinite(data[0]) ||
+		!Number.isFinite(data[data.length - 1]);
+
 	const x = d3
 		.scaleLinear()
 		.domain(
-			data[0] == 0 && data[data.length - 1] == 0
+			empty || (data[0] == 0 && data[data.length - 1] == 0)
 				? [-1, 1]
 				: [Math.min(0, Math.floor(data[0])), Math.ceil(data[data.length - 1])],
 		)
@@ -525,10 +538,10 @@ function Histogram(props) {
 		.value(id)
 		.domain(x.domain())
 		.thresholds(x.ticks(30));
-	const buckets = bucketize(data);
+	const buckets = empty ? [] : bucketize(data);
 	const y = d3
 		.scaleLinear()
-		.domain([0, d3.max(buckets, (b) => b.length)])
+		.domain([0, empty ? 1 : d3.max(buckets, (b) => b.length)])
 		.range([height - xH, xH]);
 
 	useEffect(() => {
@@ -554,6 +567,16 @@ function Histogram(props) {
 	return (
 		<svg id="histogram" width={width} height={height}>
 			<g>{rects}</g>
+			{empty && (
+				<text
+					x={width / 2}
+					y={height / 2}
+					text-anchor="middle"
+					fill="var(--muted-2)"
+				>
+					no distribution data
+				</text>
+			)}
 			<g ref={axes}></g>
 		</svg>
 	);
@@ -3959,8 +3982,15 @@ function App(props) {
 		const run = chartRunRef.current;
 		const acc = run?.accumulators.get(skillId);
 		if (!acc) return;
+		// This state's `results` is documented and consumed elsewhere as sorted (see
+		// compare.ts's runComparisonBlock, which sorts before storing) -- keep the contract here
+		// too rather than handing out an unsorted array (UI-32). Sort the Float32Array first:
+		// plain Array.prototype.sort() with no comparator is lexicographic, so sorting only after
+		// Array.from would silently reorder by string comparison instead of numerically.
+		const sorted = acc.lengths();
+		sorted.sort();
 		setResults({
-			results: Array.from(acc.lengths()),
+			results: Array.from(sorted),
 			runData: {
 				minrun: runs.minrun ?? null,
 				maxrun: runs.maxrun ?? null,
@@ -4684,13 +4714,6 @@ function App(props) {
 		}
 	}
 
-	const mid = Math.floor(results.length / 2);
-	const median =
-		results.length % 2 == 0
-			? (results[mid - 1] + results[mid]) / 2
-			: results[mid];
-	const mean = results.reduce((a, b) => a + b, 0) / results.length;
-
 	const colors = [
 		{ stroke: '#2a77c5', fill: 'rgba(42, 119, 197, 0.5)' },
 		{ stroke: '#c52a2a', fill: 'rgba(197, 42, 42, 0.5)' },
@@ -5133,6 +5156,24 @@ function App(props) {
 		},
 		[tableData, isSimulationRunning, displaying],
 	);
+
+	// ChartRow (tableData's row shape) carries only aggregated statistics -- the raw per-scenario
+	// length gains this popover's histogram needs live in the run's SkillAccumulator, the same
+	// source createExpandedContent and requestChartDetail already read from chartRunRef (UI-32).
+	// Sorted ascending because Histogram derives its x-domain from data[0]/data[data.length-1].
+	// Keyed on tableData, not just popoverSkill, because tableData is the render-visible proxy for
+	// the ref's mutation -- refreshTableRowsNow hands back a fresh Map on every refresh, including
+	// from refineSkill -- so the histogram tracks rounds landing and refined samples arriving while
+	// the popover is open. Recomputing (concatenate + sort) on every such refresh is negligible
+	// next to the summarizeLengths() already done per row per refresh.
+	const popoverResults = useMemo(() => {
+		if (!popoverSkill) return null;
+		const acc = chartRunRef.current?.accumulators.get(popoverSkill);
+		if (!acc || acc.n === 0) return null;
+		const sorted = acc.lengths(); // always a fresh array (chartLadder's concatFloat32)
+		sorted.sort(); // TypedArray sort() is numeric-ascending by default, unlike Array's
+		return sorted;
+	}, [popoverSkill, tableData]);
 
 	const compareResults: CompareResults | null =
 		results.length > 0 && runData && staminaStats && firstUmaStats
@@ -6396,10 +6437,10 @@ function App(props) {
 								)}
 							</>
 						)}
-						{popoverSkill && (
+						{popoverSkill && tableData.has(popoverSkill) && (
 							<BasinnChartPopover
 								skillid={popoverSkill}
-								results={tableData.get(popoverSkill).results}
+								results={popoverResults}
 								courseDistance={course.distance}
 							/>
 						)}
