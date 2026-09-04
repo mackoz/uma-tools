@@ -458,6 +458,11 @@ export function HorseDef(props) {
 				.set('skills', newSkills)
 				.set('forcedSkillPositions', newForcedPositions),
 		);
+		// UI-35: optional, no-op by default -- lets the app.tsx caller post a selectUma telemetry
+		// event without this shared component importing telemetry itself (see CLAUDE.md's
+		// components/-is-shared rule). Not called for a clear (id === '', from UmaSelector's
+		// handleBlur) -- that isn't really "selecting" an uma.
+		if (id) props.onUmaSelected?.(id);
 	}
 
 	function openSkillPicker(e) {
@@ -475,6 +480,8 @@ export function HorseDef(props) {
 			newSkills = state.skills.set(groupId, skillId);
 		}
 		setState(withSkillsSynced(state, newSkills));
+		// UI-35: same optional/no-op telemetry hook as onUmaSelected above.
+		props.onSkillEvent?.(skillId, 'add', 'picker');
 	}
 
 	function handleSkillClick(e) {
@@ -495,6 +502,8 @@ export function HorseDef(props) {
 					state.forcedSkillPositions.delete(skillId),
 				),
 			);
+			// UI-35: same optional/no-op telemetry hook as onUmaSelected above.
+			props.onSkillEvent?.(skillId, 'remove', 'list');
 		} else if (se.classList.contains('expandedSkill')) {
 			setExpanded(expanded.delete(se.dataset.skillid));
 		} else {

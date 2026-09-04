@@ -243,6 +243,12 @@ interface ChartRunState {
 	// fresh block at ladder-round-index (preset.rounds.length + this count), so repeated refines
 	// of the same skill never reuse a scenario block.
 	refineCounts: Map<string, number>;
+	// UI-35: which chart tab launched this run and when -- read back by finishRound()/stopChart()
+	// for the chartCompleted/chartStopped telemetry events. Captured once at run creation (not read
+	// live off the `mode` state variable) so the event always reports the mode the run actually ran
+	// under, even though in practice mode tabs are disabled for the run's whole lifetime anyway.
+	startTime: number;
+	mode: Mode;
 }
 
 function formatEstimatedRuntime(ms: number): string {
@@ -2139,7 +2145,10 @@ function RacePresets(props) {
 			id={id}
 			onChange={(e) => {
 				const i = +e.currentTarget.value;
-				i > -1 && props.set(presets[i].courseId, presets[i].racedef);
+				if (i > -1) {
+					postEvent('selectPreset', { presetId: presets[i].id });
+					props.set(presets[i].courseId, presets[i].racedef);
+				}
 			}}
 		>
 			<option value="-1"></option>
@@ -2229,6 +2238,20 @@ enum Mode {
 	Chart,
 	UniquesChart,
 	CourseChart,
+}
+
+// UI-35: the three chart tabs' telemetry mode label -- shared by doBasinnChart/finishRound/
+// stopChart's chartCompleted/chartStopped events. Mode.Compare isn't a chart tab and has no
+// telemetry mode label of its own (doComparison/doRunOnce report their own event shape instead).
+function chartModeKey(mode: Mode): 'skill' | 'uniques' | 'course' {
+	switch (mode) {
+		case Mode.UniquesChart:
+			return 'uniques';
+		case Mode.CourseChart:
+			return 'course';
+		default:
+			return 'skill';
+	}
 }
 
 // Course Chart (UI-23): every candidate outfit is compared against a fixed, skill-less template
@@ -2509,12 +2532,15 @@ function ImportDialog({
 			const umas = await decodeRoster(b64Input.trim());
 			if (!umas || umas.length === 0) {
 				setError('Could not decode — check the code and try again.');
+				postEvent('importBuild', { source: 'clipboard', ok: false });
 				return;
 			}
+			postEvent('importBuild', { source: 'clipboard', ok: true });
 			onImport(umaStateToHorseState(decodedUmaToUmaState(umas[0])));
 			onClose();
 		} catch (e: any) {
 			setError('Decode failed: ' + (e?.message ?? 'Unknown error'));
+			postEvent('importBuild', { source: 'clipboard', ok: false });
 		} finally {
 			setLoading(false);
 		}
@@ -2522,6 +2548,7 @@ function ImportDialog({
 
 	async function handleJsonFile() {
 		const uma = await importHorseJson();
+		postEvent('importBuild', { source: 'file', ok: !!uma });
 		if (uma) {
 			onImport(umaStateToHorseState({ ...uma, mood: 2 }));
 			onClose();
@@ -2617,23 +2644,27 @@ function HorseSaveLoadActions({
 	function handleSaveConfirm() {
 		const name = saveModalName.trim();
 		if (!name) return;
+		postEvent('saveBuild', { method: 'new' });
 		saveHorseSlot(name, horseStateToUmaState(state));
 		refreshSlots();
 		setIsSaveModalOpen(false);
 	}
 
 	function handleSaveOverwrite(name: string) {
+		postEvent('saveBuild', { method: 'overwrite' });
 		saveHorseSlot(name, horseStateToUmaState(state));
 		refreshSlots();
 	}
 
 	async function handleDownloadJson() {
+		postEvent('exportBuild', { format: 'json' });
 		downloadHorseJson(horseStateToUmaState(state));
 	}
 
 	async function handleCopyToClipboard() {
 		const ok = await copyHorseToClipboard(horseStateToUmaState(state));
 		if (ok) {
+			postEvent('exportBuild', { format: 'clipboard' });
 			setCopyFeedback(true);
 			setTimeout(() => setCopyFeedback(false), 1500);
 		}
@@ -2645,6 +2676,7 @@ function HorseSaveLoadActions({
 
 	async function handlePasteFromClipboard() {
 		const uma = await pasteHorseFromClipboard();
+		postEvent('importBuild', { source: 'clipboard', ok: !!uma });
 		if (uma) setState(umaStateToHorseState(uma));
 	}
 
@@ -2710,6 +2742,7 @@ function HorseSaveLoadActions({
 					...savedSlots.map((name) => ({
 						label: name,
 						onClick: () => {
+							postEvent('loadBuild', {});
 							const uma = loadHorseSlot(name);
 							if (uma) setState(umaStateToHorseState(uma));
 						},
@@ -2757,7 +2790,24 @@ function HorseSaveLoadActions({
 			<OCRModal
 				isOpen={isOCRModalOpen}
 				onClose={() => setIsOCRModalOpen(false)}
-				onConfirm={(uma) => setState(umaStateToHorseState(uma))}
+				onConfirm={(uma) => {
+					setState(umaStateToHorseState(uma));
+					// UI-35: extraction succeeded, but if the outfit/character name couldn't be
+					// mapped to a real outfitId, the load is unusable in practice -- report that as
+					// a failure (parse-fail), not a completion, even though OCRModal itself still
+					// treats it as its own "confirm" success path.
+					if (uma.outfitId) {
+						postEvent('ocrImportCompleted', { umaCount: 1 });
+						postEvent('importBuild', { source: 'ocr', ok: true });
+					} else {
+						postEvent('ocrImportFailed', { reason: 'parse-fail' });
+						postEvent('importBuild', { source: 'ocr', ok: false });
+					}
+				}}
+				onError={(reason) => {
+					postEvent('ocrImportFailed', { reason });
+					postEvent('importBuild', { source: 'ocr', ok: false });
+				}}
 			/>
 			{isImportDialogOpen && (
 				<ImportDialog
@@ -3065,6 +3115,7 @@ function App(props) {
 		);
 	}, [shopSkillIds]);
 	const changeShopHint = useCallback((id: string, level: number) => {
+		postEvent('hintLevelSet', { skillId: id, level });
 		const key = HINT_CLUSTERS[id] ?? id;
 		setShopSkillHints((h) =>
 			(h[key] ?? 0) === level ? h : { ...h, [key]: level },
@@ -3231,14 +3282,23 @@ function App(props) {
 	}
 
 	function handleSyncRngToggle() {
+		postEvent('settingChanged', { setting: 'syncRng', value: !syncRng });
 		toggleSyncRng(null);
 	}
 
 	function handleSkillWisdomCheckToggle() {
+		postEvent('settingChanged', {
+			setting: 'skillWitCheck',
+			value: !skillWisdomCheck,
+		});
 		toggleSkillWisdomCheck(null);
 	}
 
 	function handleRushedKakariToggle() {
+		postEvent('settingChanged', {
+			setting: 'rushedKakari',
+			value: !rushedKakari,
+		});
 		toggleRushedKakari(null);
 	}
 
@@ -3515,6 +3575,32 @@ function App(props) {
 	useEffect(() => {
 		setSelectedBuyOption(null);
 	}, [purchaseOptionsSignature]);
+	// UI-35: SpOptimizerCard's onSelect wrapper -- reports which Buy list option the user picked,
+	// alongside its own shape (skillCount/totalSP), not just the raw index.
+	function handleBuyListSelect(optionIdx: number | null) {
+		if (optionIdx != null) {
+			const option = purchaseOptions[optionIdx];
+			if (option) {
+				postEvent('buyListSelected', {
+					optionIdx,
+					skillCount: option.skillIds.length,
+					totalSP: option.totalCost,
+				});
+			}
+		}
+		setSelectedBuyOption(optionIdx);
+	}
+	// UI-35: ShopSkillFilter's budget input wrapper -- optionsShown reports the option count as of
+	// the moment the user changed the budget (the pre-recompute value; purchaseOptions itself
+	// recomputes from the new budget on the next render), a fine approximation for a coarse
+	// usage-analytics event.
+	function handleSpBudgetChange(budget: number) {
+		postEvent('spOptimizerUsed', {
+			budget,
+			optionsShown: purchaseOptions.length,
+		});
+		setSpBudget(budget);
+	}
 	// UI-33: same freeze-while-streaming treatment as purchaseOptionsRef/purchaseResult above --
 	// findBestValue scans the whole chart (~500+ rows), so re-running it on every incoming batch
 	// would be wasted work; the badge just holds its last-computed answer until the run settles.
@@ -3908,12 +3994,24 @@ function App(props) {
 			// course/racedef/uma, etc -- stays in chartRunRef so finished rows can still be
 			// expanded (requestChartDetail) or refined (refineSkill); only a new run or an
 			// explicit Stop replaces it.
+			postEvent('chartCompleted', {
+				mode: chartModeKey(run.mode),
+				durationMs: Date.now() - run.startTime,
+				survivorCount: decisions.filter((d) => d.status === 'final').length,
+			});
 			setIsSimulationRunning(false);
 			setSimulationProgress(null);
 		}
 	}
 
 	function stopChart() {
+		const run = chartRunRef.current;
+		if (run) {
+			postEvent('chartStopped', {
+				mode: chartModeKey(run.mode),
+				elapsedMs: Date.now() - run.startTime,
+			});
+		}
 		poolRef.current?.cancelAll();
 		setIsSimulationRunning(false);
 		setSimulationProgress(null);
@@ -4290,6 +4388,27 @@ function App(props) {
 		setUma2(uma1);
 	}
 
+	// UI-35: app.tsx-side handlers for HorseDef's onUmaSelected/onSkillEvent optional props (see
+	// components/HorseDef.tsx) -- kept here, not inside the shared component, per CLAUDE.md's rule
+	// that telemetry.ts is never imported outside umalator/.
+	function handleUmaSelected(
+		slot: 'uma1' | 'uma2' | 'pacer',
+		outfitId: string,
+	) {
+		postEvent('selectUma', {
+			outfitId,
+			slot,
+			unreleased: unreleasedOutfitIds.has(outfitId),
+		});
+	}
+	function handleSkillEvent(
+		skillId: string,
+		action: 'add' | 'remove',
+		via: 'picker' | 'list',
+	) {
+		postEvent(action === 'add' ? 'addSkill' : 'removeSkill', { skillId, via });
+	}
+
 	const strings = {
 		skillnames: {},
 		tracknames: TRACKNAMES_en,
@@ -4300,8 +4419,31 @@ function App(props) {
 		strings.skillnames[id] = skillnames[id][langid];
 	});
 
+	// UI-35: the RacePresets dropdown doesn't track "currently selected preset" as its own state --
+	// like RacePresets itself, this re-derives it by matching the live courseId/racedef against the
+	// preset list, for doComparison/doRunOnce's telemetry payload.
+	function currentPresetId(): number | null {
+		const p = presets.find(
+			(p) => p.courseId === courseId && p.racedef.equals(racedef),
+		);
+		// RawPreset.id is optional (racePresets.ts: some JP entries carry neither id nor name,
+		// a known pre-existing gap -- see UI-31's follow-up ticket), so a matched preset can still
+		// yield no id.
+		return p?.id ?? null;
+	}
+
 	function doComparison() {
-		postEvent('doComparison', {});
+		postEvent('doComparison', {
+			presetId: currentPresetId(),
+			courseId,
+			strategy1: uma1.strategy,
+			strategy2: uma2.strategy,
+			samples: nsamples,
+			posKeepMode,
+			syncRng,
+			skillCount1: uma1.skills.size,
+			skillCount2: uma2.skills.size,
+		});
 		setSimulationError('');
 		setIsSimulationRunning(true);
 		setSimulationProgress(null);
@@ -4331,7 +4473,17 @@ function App(props) {
 	}
 
 	function doRunOnce() {
-		postEvent('doRunOnce', {});
+		postEvent('doRunOnce', {
+			presetId: currentPresetId(),
+			courseId,
+			strategy1: uma1.strategy,
+			strategy2: uma2.strategy,
+			samples: 1, // doRunOnce always sends nsamples: 1 below, regardless of the configured nsamples
+			posKeepMode,
+			syncRng,
+			skillCount1: uma1.skills.size,
+			skillCount2: uma2.skills.size,
+		});
 		setSimulationError('');
 		setIsSimulationRunning(true);
 		const effectiveSeed = seed + runOnceCounter;
@@ -4462,11 +4614,22 @@ function App(props) {
 	}
 
 	function doBasinnChart() {
-		postEvent('doBasinnChart', {});
-		postEvent('shopSkillFilter', {
-			count: shopSkillIds.length,
-			enabled: shopFilterActive,
-		});
+		// UI-35: shopSkillFilter previously fired unconditionally here, meaning every Uniques/Course
+		// Chart run also posted a "shop filter" event with count 0/enabled false -- meaningless
+		// pollution for tabs where the shop shortlist feature doesn't apply (it's Mode.Chart-only,
+		// same as the shortlist state itself; see the `mode === Mode.Chart` guard further down this
+		// function). Guarded to Mode.Chart below instead of firing here.
+		if (mode === Mode.Chart) {
+			postEvent('shopSkillFilter', {
+				count: shopSkillIds.length,
+				enabled: shopFilterActive,
+				goldCount: shopSkillIds.filter((id) => matchRarity(id, 'gold')).length,
+				hintedCount: shopSkillIds.filter(
+					(id) => (expandedShopHints[id] ?? 0) > 0,
+				).length,
+				budgetSet: spBudget > 0,
+			});
+		}
 		setLastRunChartUma(uma1);
 		setLastRunChartCourseId(courseId);
 		setSimulationError('');
@@ -4534,6 +4697,27 @@ function App(props) {
 		setLastRunChartIconTypes(new Set(activeChartIconTypes));
 		setLastRunChartRarity(chartRarity);
 
+		postEvent('doBasinnChart', {
+			mode: chartModeKey(mode),
+			courseId,
+			...(mode === Mode.CourseChart
+				? {
+						style: courseChartStyle,
+						outfitCount: skills.length,
+						unreleasedIncluded: showUnreleasedUmas,
+					}
+				: mode === Mode.UniquesChart
+					? {}
+					: {
+							analysisMode,
+							analysisPreset,
+							pruning: chartPruning,
+							rarityFilter: chartRarity,
+							witCheck: skillWisdomCheck,
+							skillCount: skills.length,
+						}),
+		});
+
 		const preset = derivePreset(CHART_LADDERS[analysisPreset], chartPruning);
 		const jobId = ++jobIdRef.current;
 		const run: ChartRunState = {
@@ -4557,6 +4741,8 @@ function App(props) {
 			accumulators: new Map(),
 			finalizedRows: new Map(),
 			refineCounts: new Map(),
+			startTime: Date.now(),
+			mode,
 		};
 		chartRunRef.current = run;
 		detailCacheRef.current.clear();
@@ -4679,7 +4865,7 @@ function App(props) {
 	}
 
 	function addSkillFromTable(skillId) {
-		postEvent('addSkillFromTable', { skillId });
+		postEvent('addSkill', { skillId, via: 'table' });
 		// withSkillsSynced, not a bare `.set('skills', ...)` -- adding 大逃げ/Runaway from the Skill
 		// Chart's candidate table must switch strategy to Oonige too, same as the picker (UI-25 code
 		// review: this call site was originally missed, relying on HorseDef's own reconcile effect to
@@ -4693,7 +4879,15 @@ function App(props) {
 	}
 
 	function showPopover(skillId) {
-		postEvent('showPopover', { skillId });
+		postEvent('showPopover', {
+			skillId,
+			context:
+				mode === Mode.CourseChart
+					? 'courseChart'
+					: mode === Mode.UniquesChart
+						? 'umaChart'
+						: 'skillChart',
+		});
 		setPopoverSkill(skillId);
 	}
 
@@ -5367,7 +5561,7 @@ function App(props) {
 							options={purchaseOptions}
 							truncated={purchaseResult.truncated}
 							selectedIndex={selectedBuyOption}
-							onSelect={setSelectedBuyOption}
+							onSelect={handleBuyListSelect}
 							costOf={buyCostOf}
 						/>
 					)}
@@ -5486,6 +5680,8 @@ function App(props) {
 					courseDistance={course.distance}
 					tabstart={() => 4}
 					onResetAll={resetAllUmas}
+					onUmaSelected={(id: string) => handleUmaSelected('uma1', id)}
+					onSkillEvent={handleSkillEvent}
 					runData={mode == Mode.Compare ? runData : null}
 					umaIndex={mode == Mode.Compare ? 0 : null}
 					hiddenOutfitIds={showUnreleasedUmas ? undefined : unreleasedOutfitIds}
@@ -5527,6 +5723,8 @@ function App(props) {
 						courseDistance={course.distance}
 						tabstart={() => 4 + horseDefTabs()}
 						onResetAll={resetAllUmas}
+						onUmaSelected={(id: string) => handleUmaSelected('uma2', id)}
+						onSkillEvent={handleSkillEvent}
 						runData={runData}
 						umaIndex={1}
 						hiddenOutfitIds={
@@ -5554,6 +5752,8 @@ function App(props) {
 						courseDistance={course.distance}
 						tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()}
 						onResetAll={resetAllUmas}
+						onUmaSelected={(id: string) => handleUmaSelected('pacer', id)}
+						onSkillEvent={handleSkillEvent}
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}
@@ -5592,7 +5792,13 @@ function App(props) {
 							<input
 								type="checkbox"
 								checked={showUnreleasedUmas}
-								onClick={() => setShowUnreleasedUmas((v) => !v)}
+								onClick={() => {
+									postEvent('settingChanged', {
+										setting: 'showUnreleasedUmas',
+										value: !showUnreleasedUmas,
+									});
+									setShowUnreleasedUmas((v) => !v);
+								}}
 							/>
 							<span class="toggleTrack"></span>
 						</label>
@@ -5722,7 +5928,13 @@ function App(props) {
 							<input
 								type="checkbox"
 								checked={leadCompetition}
-								onClick={() => setLeadCompetition(!leadCompetition)}
+								onClick={() => {
+									postEvent('settingChanged', {
+										setting: 'spotStruggle',
+										value: !leadCompetition,
+									});
+									setLeadCompetition(!leadCompetition);
+								}}
 							/>
 							<span class="toggleTrack"></span>
 						</label>
@@ -5734,7 +5946,13 @@ function App(props) {
 								<input
 									type="checkbox"
 									checked={competeFight}
-									onClick={() => setCompeteFight(!competeFight)}
+									onClick={() => {
+										postEvent('settingChanged', {
+											setting: 'dueling',
+											value: !competeFight,
+										});
+										setCompeteFight(!competeFight);
+									}}
 								/>
 								<span class="toggleTrack"></span>
 							</label>
@@ -5772,6 +5990,17 @@ function App(props) {
 		</>
 	);
 
+	// UI-35: #modeTabs' selected key, also read by its onSelect handler for switchMode's `from`
+	// property -- one derivation instead of two copies of the same ternary drifting apart.
+	const currentModeTabKey =
+		mode == Mode.Compare
+			? 'compare'
+			: mode == Mode.Chart
+				? 'chart'
+				: mode == Mode.UniquesChart
+					? 'uniques'
+					: 'course';
+
 	return (
 		<Language.Provider value={props.lang}>
 			<IntlProvider definition={strings}>
@@ -5788,7 +6017,13 @@ function App(props) {
 					/>
 					<button
 						id="themeToggle"
-						onClick={() => setDarkMode((d) => !d)}
+						onClick={() => {
+							postEvent('settingChanged', {
+								setting: 'darkMode',
+								value: !darkMode,
+							});
+							setDarkMode((d) => !d);
+						}}
 						title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
 					>
 						{darkMode ? (
@@ -5936,16 +6171,12 @@ function App(props) {
 											disabled: isSimulationRunning,
 										},
 									]}
-									selected={
-										mode == Mode.Compare
-											? 'compare'
-											: mode == Mode.Chart
-												? 'chart'
-												: mode == Mode.UniquesChart
-													? 'uniques'
-													: 'course'
-									}
-									onSelect={(key) =>
+									selected={currentModeTabKey}
+									onSelect={(key) => {
+										postEvent('switchMode', {
+											mode: key,
+											from: currentModeTabKey,
+										});
 										updateUiState(
 											key === 'compare'
 												? UiStateMsg.SetModeCompare
@@ -5954,8 +6185,8 @@ function App(props) {
 													: key === 'uniques'
 														? UiStateMsg.SetModeUniquesChart
 														: UiStateMsg.SetModeCourseChart,
-										)
-									}
+										);
+									}}
 								/>
 								<div id="runBar">
 									{mode == Mode.Compare ? (
@@ -6283,7 +6514,7 @@ function App(props) {
 										onClear={() => setShopSkillIds([])}
 										wontProcCount={shopSkillPartition.wontProc.length}
 										budget={spBudget}
-										onBudgetChange={setSpBudget}
+										onBudgetChange={handleSpBudgetChange}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
@@ -6330,6 +6561,16 @@ function App(props) {
 									<SkillPickerModal
 										isOpen={shopPickerOpen}
 										onClose={() => {
+											postEvent('shopPoolUpdated', {
+												count: shopSkillIds.length,
+												goldCount: shopSkillIds.filter((id) =>
+													matchRarity(id, 'gold'),
+												).length,
+												whiteCount: shopSkillIds.filter((id) =>
+													matchRarity(id, 'white'),
+												).length,
+												showAllUsed: shopPickerShowAll,
+											});
 											setShopPickerOpen(false);
 											setShopPickerShowAll(false);
 										}}
