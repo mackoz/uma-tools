@@ -39,3 +39,4 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0015](0015-sp-optimizer-additive-knapsack.md) | The SP optimizer estimates purchase sets via an additive knapsack, not full-set re-simulation | Accepted |
 | [0016](0016-cm-preset-schedule-fixed-utc-anchoring.md) | The default CM preset's switchover is anchored to a fixed UTC instant, not each viewer's local midnight | Accepted |
 | [0017](0017-course-chart-neutral-template.md) | Course Chart compares every candidate against a fixed, skill-less template — normalized aptitude, no HP policy, wit check forced off | Accepted |
+| [0018](0018-vitest-test-runner.md) | Adopt Vitest as the test runner; bump CI Node 20 → 22 | Accepted |

@@ -83,9 +83,9 @@ story below for why that guarantee matters. A plain JSON file can't offer this: 
 widens every JSON value to `string`, so even a *correct* `presets.json` could only be consumed via
 an unchecked `as` cast. Being `.ts` also means the file can carry comments (the estimation
 rationale below) next to the data they explain, and — because the file holds no runtime `enum`
-import, only literal string types that are erased at compile time — it stays importable by
-`node --experimental-strip-types`, so `umalator/racePresets.test.ts` validates the real files
-(every entry's enum-name fields, and that every date parses) as part of `npm run test`.
+import, only literal string types that are erased at compile time — it stays importable under
+Vitest, so `umalator/racePresets.test.ts` validates the real files (every entry's enum-name
+fields, and that every date parses) as part of `npm run test` (`vitest run`).
 
 `umalator-global/build.mjs`'s `redirectData` esbuild plugin redirects a `presets.ts` import to
 `umalator-global/presets.ts`, exactly like it already does for `umas.json`/`unreleased.json`.

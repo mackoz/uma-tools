@@ -14,9 +14,8 @@
 // `resolveJsonModule` widens every value to `string`, so even a *correct* JSON file can only be
 // consumed via an unchecked `as` cast, and a mistyped enum name would surface only as a runtime
 // throw in the browser. `satisfies` catches it at the exact line at compile time, and -- because
-// this file holds no runtime `enum` import -- stays importable by
-// `node --experimental-strip-types`, so umalator/racePresets.test.ts can validate these entries
-// for real.
+// this file holds no runtime `enum` import -- stays importable under Vitest, so
+// umalator/racePresets.test.ts can validate these entries for real.
 import type { RawPreset } from './umalator/racePresets';
 
 // JP entries currently carry no `id`/`name` -- upstream doesn't label them the way Global's
