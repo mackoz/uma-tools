@@ -587,7 +587,7 @@ Compare mode.
 ## Verification
 
 ```sh
-npm run test                             # statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, and histogramData.ts unit tests (vitest run)
+npm run test                             # statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts, and BasinnChart.tsx unit tests (vitest run)
 npm --prefix uma-skill-tools test        # engine tests, including activation-sampling stability
 cd umalator && node build.mjs            # JP app build
 cd umalator-global && node build.mjs     # Global app build
