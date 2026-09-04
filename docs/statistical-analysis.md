@@ -436,6 +436,13 @@ dirty.
 6. Expanding a row shows the same detail view as the other chart modes, minus a **Show HP**
    toggle — Course Chart never tracks HP (ADR-0017), so there's no HP series to plot.
 
+A row whose unique's trigger requires a *different* skill to have already activated (UI-34; the
+`ADR-0017` amendment has the full rationale) carries a **Conditional** badge next to the skill
+name. Since each candidate carries only its own native unique, that trigger can never be
+satisfied literally — the chart models an approximate activation point instead of leaving the
+row stuck at a permanent 0%. Hover or focus the badge for what it means; click the row's info
+icon for the unique's real, full condition text.
+
 ## SP-budget optimizer (Buy list card)
 
 Once the Shop Skills shortlist (step 3 above) is active, a **Buy list** card renders above the
@@ -580,7 +587,7 @@ Compare mode.
 ## Verification
 
 ```sh
-npm run test                             # statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, and histogramData.ts unit tests (vitest run)
+npm run test                             # statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts, and BasinnChart.tsx unit tests (vitest run)
 npm --prefix uma-skill-tools test        # engine tests, including activation-sampling stability
 cd umalator && node build.mjs            # JP app build
 cd umalator-global && node build.mjs     # Global app build

@@ -18,6 +18,7 @@ import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
 import {
 	buildBaseStats,
 	buildSkillData,
+	conditionsWithActivateCountsAsRandom,
 	Perspective,
 } from '../uma-skill-tools/RaceSolverBuilder';
 import { Region, RegionList } from '../uma-skill-tools/Region';
@@ -65,6 +66,30 @@ export function isHpOnlySkill(id: string): boolean {
 	);
 }
 
+// UI-34: true for a skill whose trigger requires a *different* skill to have already activated
+// (activate_count_*/is_activate_any_skill -- see conditionsWithActivateCountsAsRandom above and
+// ADR-0010 in uma-skill-tools). Course Chart equips each candidate with only its own native
+// unique, so these conditions can never be satisfied literally -- withActivateCountsAsRandom()
+// models them instead, at varying fidelity (see ConditionalBadge's tooltip). Purely a display
+// classification -- doesn't affect which skills get simulated, only whether the row gets the
+// Conditional badge below.
+//
+// Checks every() alternative, not some(): buildSkillData (RaceSolverBuilder.ts) only ever skips
+// a later alternative in favor of an earlier one that already placed a trigger -- it falls
+// through to a later, ungated alternative whenever an earlier gated one's own region comes up
+// empty for an unrelated reason (e.g. JP's 101051, whose gated alt0 also requires
+// distance_type==3 and so is skipped -- and its ungated alt1 placed instead -- on every other
+// course type). A some() check would badge that row as modeled even on courses where the
+// activated trigger isn't gated at all; every() only badges a row when there's no ungated
+// alternative for the engine to fall back to.
+export function hasModeledActivationGate(id: string): boolean {
+	const skill = (skilldata as any)[id];
+	if (!skill) return false;
+	return skill.alternatives.every((alt: any) =>
+		/activate_count_\w+|is_activate_any_skill/.test(alt.condition),
+	);
+}
+
 export function umaForUniqueSkill(skillId: string): string | null {
 	const sid = parseInt(skillId, 10);
 	if (sid < 100000 || sid >= 200000) return null;
@@ -86,13 +111,20 @@ export function umaForUniqueSkill(skillId: string): string | null {
 	return null;
 }
 
+// UI-34: built once at module load, like RaceSolverBuilder.ts's own acrParser -- Course Chart's
+// getActivateableSkills call site (app.tsx) passes this so its candidate prefilter agrees with
+// what runComparisonBlock() will actually simulate (buildCourseChartOptions's
+// activateCountsAsRandom flag). Skill Chart/Uma Chart don't import this -- they keep the default
+// parser via getActivateableSkills's own default param below.
+export const acrParser = getParser(conditionsWithActivateCountsAsRandom);
+
 export function getActivateableSkills(
 	skills: string[],
 	horse: HorseState,
 	course: CourseData,
 	racedef: RaceParameters,
+	parser: { parse: any; tokenize: any } = getParser(),
 ) {
-	const parser = getParser();
 	const h2 = buildBaseStats(horse, horse.mood);
 	const wholeCourse = new RegionList();
 	wholeCourse.push(new Region(0, course.distance));
@@ -197,6 +229,27 @@ function BestValueBadge(props: { tooltip: string }) {
 	);
 }
 
+// UI-34: renders alongside BestValueBadge above (same shape -- focusable, keyboard/screen-reader
+// accessible span, not a button) whenever hasModeledActivationGate(id) is true and the caller
+// opted in via showConditionalBadge. Distinct color token from BestValueBadge (see
+// BasinnChart.css) so it reads as a caveat, not a commendation.
+function ConditionalBadge() {
+	const tooltip =
+		'This unique only triggers after other skills have activated. With one skill equipped ' +
+		"that can't happen, so the chart models the trigger point instead — treat the gain as " +
+		'approximate. Click the icon for the full condition.';
+	return (
+		<span
+			class="basinnChartConditionalBadge"
+			data-tip={tooltip}
+			tabIndex={0}
+			aria-label={tooltip}
+		>
+			Conditional
+		</span>
+	);
+}
+
 function SkillNameCell(props) {
 	const {
 		id,
@@ -205,7 +258,9 @@ function SkillNameCell(props) {
 		showUmaName = false,
 		isBestValue = false,
 		bestValueTooltip = '',
+		showConditionalBadge = false,
 	} = props;
+	const isConditional = showConditionalBadge && hasModeledActivationGate(id);
 
 	if (showUmaIcons) {
 		const outfitId = umaForUniqueSkill(id);
@@ -249,6 +304,7 @@ function SkillNameCell(props) {
 						)}
 					</span>
 					{isBestValue && <BestValueBadge tooltip={bestValueTooltip} />}
+					{isConditional && <ConditionalBadge />}
 				</div>
 			);
 		}
@@ -261,6 +317,7 @@ function SkillNameCell(props) {
 				<Text id={`skillnames.${id}`} />
 			</span>
 			{isBestValue && <BestValueBadge tooltip={bestValueTooltip} />}
+			{isConditional && <ConditionalBadge />}
 		</div>
 	);
 }
@@ -319,6 +376,7 @@ export function BasinnChart(props) {
 						showUmaName={props.showUmaName}
 						isBestValue={info.getValue() === props.bestValueId}
 						bestValueTooltip={props.bestValueTooltip}
+						showConditionalBadge={props.showConditionalBadge}
 					/>
 				),
 				// This vendored table-core fork renamed the standard TanStack `sortingFn` column-def
@@ -397,6 +455,7 @@ export function BasinnChart(props) {
 			props.showUmaName,
 			props.bestValueId,
 			props.bestValueTooltip,
+			props.showConditionalBadge,
 		],
 	);
 

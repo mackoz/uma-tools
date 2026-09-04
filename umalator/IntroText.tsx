@@ -79,6 +79,16 @@ export function IntroText(props) {
 								for the badge, and it holds steady while a chart run is still
 								streaming in.
 							</li>
+							<li>
+								Fixed: several Course Chart uniques whose trigger requires a{' '}
+								<em>different</em> skill to have already activated (a combo
+								mechanic) used to read a permanent 0% — since each candidate is
+								equipped with only its own native unique, that trigger could
+								never be satisfied for real. The chart now models an approximate
+								activation point for these instead, and flags the affected rows
+								with a <strong>Conditional</strong> badge next to the skill name
+								so the estimate isn't presented as exact.
+							</li>
 						</ul>
 					</details>
 					<details class="release">

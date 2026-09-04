@@ -8,7 +8,8 @@
 //   node scripts/verify.mjs --skip-gitlink   skip the gitlink-drift check (e.g. on a flaky/offline connection)
 //
 // The tests stage runs `npm run test` (`vitest run` against statisticalAnalysis.ts,
-// chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts).
+// chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts,
+// BasinnChart.tsx).
 // The smoke stage runs
 // scripts/smoke.mjs (Playwright chromium against the umalator-global dev server, light + dark);
 // it reports SKIPPED when playwright isn't installed. The docs stage runs a strict build of the
@@ -224,9 +225,10 @@ function runGitlink() {
 }
 
 // The unit test suite (statisticalAnalysis.ts, chartLadder.ts, shopSkillFilter.ts,
-// spOptimizer.ts, racePresets.ts, histogramData.ts), run via `vitest run`. `npm run test` was,
-// until this stage existed, defined in package.json but never invoked by verify -- a broken
-// test could pass CI silently. A non-zero exit here means at least one test failed.
+// spOptimizer.ts, racePresets.ts, histogramData.ts, BasinnChart.tsx), run via `vitest run`.
+// `npm run test` was, until this stage existed, defined in package.json but never invoked by
+// verify -- a broken test could pass CI silently. A non-zero exit here means at least one test
+// failed.
 function runTests() {
 	const r = spawnSync('npm', ['run', 'test'], { cwd: root, encoding: 'utf8' });
 	if (r.status === 0) return { label: 'tests OK', ok: true };

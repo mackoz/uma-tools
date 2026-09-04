@@ -162,6 +162,20 @@ export const LIMITATIONS: InfoEntry[] = [
 					an HP percentage -- read as having no effect in this mode for the same
 					reason.
 				</p>
+				<p>
+					A separate, unrelated consequence of the same single-skill design:
+					each candidate is equipped with only its own native unique, so any
+					unique whose trigger requires a <em>different</em> skill to have
+					already activated (an in-game combo mechanic) can't literally satisfy
+					that condition here. The chart models these instead of leaving them
+					stuck at a permanent 0% -- rows affected by this carry a{' '}
+					<strong>Conditional</strong> badge next to the skill name. Treat their
+					activation rate and gain as an approximation, not a measured value --
+					in particular, a skill gated on "healed at least once" and one gated
+					on "healed at least three times" are modeled identically here, since
+					the model has no way to distinguish how many prior activations
+					actually occurred.
+				</p>
 			</Fragment>
 		),
 	},

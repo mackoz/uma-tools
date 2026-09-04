@@ -250,6 +250,56 @@
 	outline-offset: 1px;
 }
 
+/* UI-34: "Conditional" badge on a Course Chart row whose native unique's trigger is gated on a
+   prior skill's activation (activate_count_ names, or is_activate_any_skill) -- a caveat, not a
+   commendation like Best value above, so it reuses the same shape (identical rule structure,
+   duplicated rather than shared for the same independent-stylability reason as UI-33's own
+   comment above) but with --warning instead of --accent for the background/border tint. Text
+   stays var(--fg) though, same as Best value -- a first attempt at --muted-2 here measured
+   ~4.2:1 against the warning-tinted light-mode background, under WCAG AA's 4.5:1 for this badge's
+   11px bold text (--font-xs); --fg measures >15:1 light / >11:1 dark. */
+.basinnChartConditionalBadge {
+	background: color-mix(in srgb, var(--warning) 20%, transparent);
+	border: 1px solid var(--warning);
+	border-radius: var(--radius-sm);
+	color: var(--fg);
+	cursor: help;
+	font-size: var(--font-xs);
+	font-weight: bold;
+	margin-left: 4px;
+	padding: 1px 6px;
+	position: relative;
+	white-space: nowrap;
+}
+
+.basinnChartConditionalBadge:hover::after,
+.basinnChartConditionalBadge:focus-visible::after {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-md);
+	color: var(--fg);
+	content: attr(data-tip);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	line-height: 1.4;
+	margin-top: 6px;
+	max-width: 340px;
+	padding: 6px 10px;
+	/* Same fixed-positioning escape as .basinnChartBestValueBadge above -- see that rule's
+	   comment for why this must stay `position: fixed` with every inset left auto. */
+	position: fixed;
+	text-align: left;
+	white-space: normal;
+	width: max-content;
+	z-index: 10;
+}
+
+.basinnChartConditionalBadge:focus-visible {
+	outline: 2px solid var(--warning);
+	outline-offset: 1px;
+}
+
 @media (max-width: 768px) {
 	.basinnChartWrapperWrapper {
 		overflow-x: auto;
