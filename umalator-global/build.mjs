@@ -26,7 +26,6 @@ const root = path.join(dirname, '..', '..');
 const redirectData = {
 	name: 'redirectData',
 	setup(build) {
-		redirectEngineData().setup(build);
 		build.onResolve({ filter: /skill_meta.json$/ }, (args) => ({
 			path: path.join(dirname, 'skill_meta.json'),
 		}));
@@ -122,7 +121,13 @@ const buildOptions = {
 	write: !serve,
 	define: { CC_DEBUG: debug.toString(), CC_GLOBAL: 'true' },
 	external: ['*.ttf'],
-	plugins: [redirectData, mockAssert, redirectTable, seedrandomPlugin],
+	plugins: [
+		redirectData,
+		redirectEngineData(),
+		mockAssert,
+		redirectTable,
+		seedrandomPlugin,
+	],
 };
 
 const MIME_TYPES = {

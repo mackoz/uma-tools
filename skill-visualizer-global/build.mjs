@@ -28,7 +28,6 @@ const datadir = path.join(dirname, '..', 'umalator-global');
 const redirectData = {
 	name: 'redirectData',
 	setup(build) {
-		redirectEngineData().setup(build);
 		build.onResolve({ filter: /skill_meta.json$/ }, (args) => ({
 			path: path.join(datadir, 'skill_meta.json'),
 		}));
@@ -61,7 +60,7 @@ const buildOptions = {
 	write: !serve,
 	define: { CC_DEBUG: debug.toString(), CC_GLOBAL: 'true' },
 	external: ['*.ttf'],
-	plugins: [redirectData, mockAssert],
+	plugins: [redirectData, redirectEngineData(), mockAssert],
 };
 
 const MIME_TYPES = {

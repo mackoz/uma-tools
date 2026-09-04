@@ -44,4 +44,14 @@ import { redirectEngineDataPath } from './redirectEngineData.mjs';
 	assert.equal(redirectEngineDataPath('../skill_meta.json', importer), null);
 }
 
+// --- specifier already pointing at data/global/ returns null (no double-redirect) ---
+{
+	const importer = path.resolve('umalator-global/app.tsx');
+	const result = redirectEngineDataPath(
+		'../uma-skill-tools/data/global/skill_data.json',
+		importer,
+	);
+	assert.equal(result, null);
+}
+
 console.log('redirectEngineData.test.mjs: all assertions passed');
