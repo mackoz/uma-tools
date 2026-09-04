@@ -5,21 +5,23 @@
 // UTC-anchoring choice.
 //
 // Kept import-free (no Preact, no CSS, no JSON, and critically no `enum` -- see below) so it's
-// plain-node testable under `node --experimental-strip-types`, matching chartLadder.ts,
-// shopSkillFilter.ts, spOptimizer.ts, and statisticalAnalysis.ts. umalator/app.tsx owns the
-// `presets.ts` data imports and the string-to-enum lookup tables, and passes plain string
+// testable under Vitest (`npm run test`) without pulling in the DOM or Preact, matching
+// chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, and statisticalAnalysis.ts. umalator/app.tsx
+// owns the `presets.ts` data imports and the string-to-enum lookup tables, and passes plain string
 // values (and epoch milliseconds for "now") in here.
 //
-// IMPORTANT: node's `--experimental-strip-types` mode (which `npm run test` runs under) rejects
-// ANY `enum` -- plain or `const` -- with ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX. This file must never
-// import Season/GroundCondition/Weather/Time/EventType from uma-skill-tools/RaceParameters, or
-// every test importing it stops working. `import type` is fine (fully erased); a runtime import
-// is not.
+// IMPORTANT: this file must never import Season/GroundCondition/Weather/Time/EventType from
+// uma-skill-tools/RaceParameters at runtime. That's no longer a test-runner-enforced constraint
+// (Vitest, unlike node's old `--experimental-strip-types` mode, tolerates a runtime `enum`
+// import fine) -- it's a build-time convention now: this file, presets.ts, and
+// umalator-global/presets.ts stay free of a runtime `enum` import so they keep working the way
+// hand-maintained, non-generated data should. `import type` is fine (fully erased); a runtime
+// import is not.
 
 // Literal string unions mirroring the *member names* (not values) of
 // uma-skill-tools/RaceParameters.ts's Season/GroundCondition/Weather/Time enums. These are
 // type-only -- erased at compile time -- so importing them costs nothing at runtime and doesn't
-// reintroduce the `enum` `--experimental-strip-types` can't handle (see the file header). Their
+// reintroduce the runtime `enum` import this file's header asks callers to avoid. Their
 // entire purpose is to make `presets.ts`'s `satisfies readonly RawPreset[]` actually reject a
 // misspelled or nonexistent member (e.g. `ground: 'Firm'`, which isn't a GroundCondition member
 // at all -- see docs/cm-presets.md) instead of silently widening to `string`, which is exactly

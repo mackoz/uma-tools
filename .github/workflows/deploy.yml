@@ -33,10 +33,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
 
       # Every app with a build.mjs is rebuilt in CI and none of their bundles
       # are tracked in git (see .gitignore) — this workflow is their only
