@@ -1,22 +1,38 @@
 import { h, render } from 'preact';
-import { useState, useMemo, useEffect } from 'preact/hooks';
-import { Text, IntlProvider } from 'preact-i18n';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { IntlProvider, Text } from 'preact-i18n';
 
-import { Language, LanguageSelect, useLanguageSelect } from '../components/Language';
-import { SkillList, ExpandedSkillDetails } from '../components/SkillList';
-import { RaceTrack, TrackSelect, RegionDisplayType } from '../components/RaceTrack';
-import { TRACKNAMES_ja, TRACKNAMES_en } from '../strings/common';
-
-import skills from '../uma-skill-tools/data/skill_data.json';
-import skillnames from '../uma-skill-tools/data/skillnames.json';
-
-import { Region, RegionList } from '../uma-skill-tools/Region';
-import { CourseData, CourseHelpers } from '../uma-skill-tools/CourseData';
-import { HorseParameters, Strategy, Aptitude } from '../uma-skill-tools/HorseTypes';
-import { getParser } from '../uma-skill-tools/ConditionParser';
-import { buildSkillData, conditionsWithActivateCountsAsRandom } from '../uma-skill-tools/RaceSolverBuilder';
+import {
+	Language,
+	LanguageSelect,
+	useLanguageSelect,
+} from '../components/Language';
+import {
+	RaceTrack,
+	RegionDisplayType,
+	TrackSelect,
+} from '../components/RaceTrack';
+import { ExpandedSkillDetails, SkillList } from '../components/SkillList';
+import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
+import {
+	immediate,
+	noopImmediate,
+} from '../uma-skill-tools/ActivationConditions';
 import { ImmediatePolicy } from '../uma-skill-tools/ActivationSamplePolicy';
-import { immediate, noopImmediate } from '../uma-skill-tools/ActivationConditions';
+import { getParser } from '../uma-skill-tools/ConditionParser';
+import { type CourseData, CourseHelpers } from '../uma-skill-tools/CourseData';
+import skills from '../uma-skill-tools/data/jp/skill_data.json';
+import skillnames from '../uma-skill-tools/data/jp/skillnames.json';
+import {
+	Aptitude,
+	type HorseParameters,
+	Strategy,
+} from '../uma-skill-tools/HorseTypes';
+import {
+	buildSkillData,
+	conditionsWithActivateCountsAsRandom,
+} from '../uma-skill-tools/RaceSolverBuilder';
+import { Region, RegionList } from '../uma-skill-tools/Region';
 
 import '../components/Tooltip.css';
 import './app.css';
@@ -24,27 +40,34 @@ import './app.css';
 const DefaultCourseId = 10903;
 
 const UI_ja = Object.freeze({
-	'title': 'ウマ娘スキル発動位置可視化ツール',
-	'addskill': '+ スキル追加',
-	'thresholds': '補正ステータス：',
-	'stats': Object.freeze(['なし', 'スピード', 'スタミナ', 'パワー', '根性', '賢さ']),
-	'joiner': '、',
-	'notice': Object.freeze({
-		'dna': 'このコースではこのスキルは発動しない',
-		'error': '発動条件を解析しながらエラーが出た'
-	})
+	title: 'ウマ娘スキル発動位置可視化ツール',
+	addskill: '+ スキル追加',
+	thresholds: '補正ステータス：',
+	stats: Object.freeze([
+		'なし',
+		'スピード',
+		'スタミナ',
+		'パワー',
+		'根性',
+		'賢さ',
+	]),
+	joiner: '、',
+	notice: Object.freeze({
+		dna: 'このコースではこのスキルは発動しない',
+		error: '発動条件を解析しながらエラーが出た',
+	}),
 });
 
 const UI_en = Object.freeze({
-	'title': 'Umamusume Skill Activation Visualizer',
-	'addskill': '+ Add Skill',
-	'thresholds': 'Stat thresholds: ',
-	'stats': Object.freeze(['None', 'Speed', 'Stamina', 'Power', 'Guts', 'Wisdom']),
-	'joiner': ',',
-	'notice': Object.freeze({
-		'dna': 'This skill does not activate on this track',
-		'error': 'Error parsing activation conditions'
-	})
+	title: 'Umamusume Skill Activation Visualizer',
+	addskill: '+ Add Skill',
+	thresholds: 'Stat thresholds: ',
+	stats: Object.freeze(['None', 'Speed', 'Stamina', 'Power', 'Guts', 'Wisdom']),
+	joiner: ',',
+	notice: Object.freeze({
+		dna: 'This skill does not activate on this track',
+		error: 'Error parsing activation conditions',
+	}),
 });
 
 const horse = Object.freeze({
@@ -57,94 +80,138 @@ const horse = Object.freeze({
 	distanceAptitude: Aptitude.S,
 	surfaceAptitude: Aptitude.A,
 	strategyAptitde: Aptitude.A,
-	rawStamina: 2000
+	rawStamina: 2000,
 });
 
 function baseSpeed(distance: number) {
 	return 20.0 - (distance - 2000) / 1000.0;
 }
 
-const conditions = Object.freeze(Object.assign({}, conditionsWithActivateCountsAsRandom, {
-	accumulatetime: immediate({
-		filterGte(regions: RegionList, t: number, course: CourseData, _: HorseParameters) {
-			// obviously we can't know this condition without actually running the race, and the actual distance traveled depends on the uma's strategy, power stat,
-			// skills (opening leg accel skills), and other things that aren't available in a static environment like this. so instead guess approximately how far we
-			// travel in t seconds by just using the course base speed.
-			// this will typically be a bit high since umas need to accelerate and non-nige strategies have lower than 1.0 StrategyPhaseCoefficient for phase 0
-			// except for oonige in which case it could be a bit low since their phase 0 speed is so high
-			const estimate = new Region(baseSpeed(course.distance) * t, course.distance);
-			return regions.rmap(r => r.intersect(estimate));
-		}
+const conditions = Object.freeze(
+	Object.assign({}, conditionsWithActivateCountsAsRandom, {
+		accumulatetime: immediate({
+			filterGte(
+				regions: RegionList,
+				t: number,
+				course: CourseData,
+				_: HorseParameters,
+			) {
+				// obviously we can't know this condition without actually running the race, and the actual distance traveled depends on the uma's strategy, power stat,
+				// skills (opening leg accel skills), and other things that aren't available in a static environment like this. so instead guess approximately how far we
+				// travel in t seconds by just using the course base speed.
+				// this will typically be a bit high since umas need to accelerate and non-nige strategies have lower than 1.0 StrategyPhaseCoefficient for phase 0
+				// except for oonige in which case it could be a bit low since their phase 0 speed is so high
+				const estimate = new Region(
+					baseSpeed(course.distance) * t,
+					course.distance,
+				);
+				return regions.rmap((r) => r.intersect(estimate));
+			},
+		}),
+		grade: noopImmediate,
+		ground_condition: noopImmediate,
+		is_used_skill_id: noopImmediate,
+		motivation: noopImmediate,
+		popularity: noopImmediate,
+		running_style: noopImmediate,
+		season: noopImmediate,
+		time: noopImmediate,
+		weather: noopImmediate,
 	}),
-	grade: noopImmediate,
-	ground_condition: noopImmediate,
-	is_used_skill_id: noopImmediate,
-	motivation: noopImmediate,
-	popularity: noopImmediate,
-	running_style: noopImmediate,
-	season: noopImmediate,
-	time: noopImmediate,
-	weather: noopImmediate
-}));
+);
 
 const parser = getParser(conditions);
 
-function regionsForSkill(course: CourseData, skillId: string, color: {stroke: string, fill: string}) {
+function regionsForSkill(
+	course: CourseData,
+	skillId: string,
+	color: { stroke: string; fill: string },
+) {
 	const wholeCourse = new RegionList();
 	wholeCourse.push(new Region(0, course.distance));
 	try {
-		const sds = buildSkillData(horse, {}, course, wholeCourse, parser, skillId, true);
-		if (sds.length == 0) return [{err: false, type: RegionDisplayType.Immediate, regions: [], color}];
-		return sds.map(sd => ({
+		const sds = buildSkillData(
+			horse,
+			{},
+			course,
+			wholeCourse,
+			parser,
+			skillId,
+			true,
+		);
+		if (sds.length == 0)
+			return [
+				{ err: false, type: RegionDisplayType.Immediate, regions: [], color },
+			];
+		return sds.map((sd) => ({
 			err: false,
-			type: sd.samplePolicy == ImmediatePolicy ? RegionDisplayType.Immediate : RegionDisplayType.Regions,
+			type:
+				sd.samplePolicy == ImmediatePolicy
+					? RegionDisplayType.Immediate
+					: RegionDisplayType.Regions,
 			regions: sd.regions,
 			color,
-			height: 100
+			height: 100,
 		}));
 	} catch (e) {
-		return [{err: true, type: RegionDisplayType.Immediate, regions: [], color}];
+		return [
+			{ err: true, type: RegionDisplayType.Immediate, regions: [], color },
+		];
 	}
 }
 
 function doesNotActivate(skillRegions) {
-	return skillRegions.regions.length == 0 || skillRegions.regions[0].start == 9999;
+	return (
+		skillRegions.regions.length == 0 || skillRegions.regions[0].start == 9999
+	);
 }
 
 const colors = [
-	{stroke: 'rgb(205,11,11)', fill: 'rgba(247,115,115,0.3)'},
-	{stroke: 'rgb(28,61,106)', fill: 'rgba(47,103,177,0.3)'},
-	{stroke: 'rgb(114,76,132)', fill: 'rgba(182,153,196,0.3)'},
-	{stroke: 'rgb(36,106,99)', fill: 'rgba(61,177,166,0.3)'}
+	{ stroke: 'rgb(205,11,11)', fill: 'rgba(247,115,115,0.3)' },
+	{ stroke: 'rgb(28,61,106)', fill: 'rgba(47,103,177,0.3)' },
+	{ stroke: 'rgb(114,76,132)', fill: 'rgba(182,153,196,0.3)' },
+	{ stroke: 'rgb(36,106,99)', fill: 'rgba(61,177,166,0.3)' },
 ];
 
 function App(props) {
 	const [language, setLanguage] = useLanguageSelect();
-	const [courseId, setCourseId] = useState(() => +(/cid=(\d+)/.exec(window.location.hash) || [null, DefaultCourseId])[1]);
-	const [selectedSkills, setSelectedSkills] = useState(() => new Set((/sid=(\d+(?:,\d+)*)/.exec(window.location.hash) || [null, ''])[1].split(',').filter(Boolean)));
+	const [courseId, setCourseId] = useState(
+		() =>
+			+(/cid=(\d+)/.exec(window.location.hash) || [null, DefaultCourseId])[1],
+	);
+	const [selectedSkills, setSelectedSkills] = useState(
+		() =>
+			new Set(
+				(/sid=(\d+(?:,\d+)*)/.exec(window.location.hash) || [null, ''])[1]
+					.split(',')
+					.filter(Boolean),
+			),
+	);
 	const [skillsOpen, setSkillsOpen] = useState(false);
 
-	useEffect(function () {
+	useEffect(() => {
 		document.title = language == 'ja' ? UI_ja.title : UI_en.title;
 	}, [language]);
 
-	useEffect(function () {
-		window.location.replace(`#cid=${courseId}${selectedSkills.size == 0 ? "" : ",sid="}${Array.from(selectedSkills).join(',')}`);
+	useEffect(() => {
+		window.location.replace(
+			`#cid=${courseId}${selectedSkills.size == 0 ? '' : ',sid='}${Array.from(selectedSkills).join(',')}`,
+		);
 	}, [courseId, selectedSkills]);
 
 	function setSelectedSkillsAndClose(ids) {
 		setSelectedSkills(ids);
 		setSkillsOpen(false);
 	}
-	
+
 	function showSkillSelector(e) {
 		setSkillsOpen(true);
 	}
-	
+
 	function hideSkillSelector(e) {
 		setSkillsOpen(false);
 	}
-	
+
 	function removeSkill(e) {
 		const se = e.target.closest('.expandedSkill');
 		if (se == null) return;
@@ -155,46 +222,102 @@ function App(props) {
 		setSelectedSkills(newSelected);
 	}
 
-	const strings = {skillnames: {}, tracknames: TRACKNAMES_en, ui: UI_en};
+	const strings = { skillnames: {}, tracknames: TRACKNAMES_en, ui: UI_en };
 	const langid = 0;
-	Object.keys(skillnames).forEach(id => strings.skillnames[id] = skillnames[id][langid]);
+	Object.keys(skillnames).forEach((id) => {
+		strings.skillnames[id] = skillnames[id][langid];
+	});
 
 	const course = CourseHelpers.getCourse(courseId);
 
-	const statThresholds = course.courseSetStatus.length == 0 ? strings.ui.stats[0] : course.courseSetStatus.map(s => strings.ui.stats[s]).join(strings.ui.joiner);
+	const statThresholds =
+		course.courseSetStatus.length == 0
+			? strings.ui.stats[0]
+			: course.courseSetStatus
+					.map((s) => strings.ui.stats[s])
+					.join(strings.ui.joiner);
 
-	const regions = useMemo(() => Array.from(selectedSkills).flatMap((id,i) => regionsForSkill(course, id, colors[i % colors.length])), [selectedSkills, course]);
-	const skillDetails = useMemo(function () {
-		return Array.from(selectedSkills).map(function (id, i) {
-			const hasNotice = regions[i].err || doesNotActivate(regions[i]);
-			return (
-				<li class={`expandedSkillItem${hasNotice ? ' hasNotice' : ''}`}>
-					{regions[i].err && <div class="skillNotice hasTooltip"><span>×</span><div class="tooltip"><Text id="ui.notice.error" /><span class="arrow" /></div></div>}
-					{!regions[i].err && doesNotActivate(regions[i]) && <div class="skillNotice hasTooltip"><span>!</span><div class="tooltip"><Text id="ui.notice.dna" /><span class="arrow" /></div></div>}
-					<div class="expandedSkillColorMarker" style={`background:${colors[i % colors.length].stroke}`} />
-					<ExpandedSkillDetails id={id} distanceFactor={course.distance} />
-				</li>
-			);
-		});
-	}, [selectedSkills, course, regions]);
-	
+	const regions = useMemo(
+		() =>
+			Array.from(selectedSkills).flatMap((id, i) =>
+				regionsForSkill(course, id, colors[i % colors.length]),
+			),
+		[selectedSkills, course],
+	);
+	const skillDetails = useMemo(
+		() =>
+			Array.from(selectedSkills).map((id, i) => {
+				const hasNotice = regions[i].err || doesNotActivate(regions[i]);
+				return (
+					<li class={`expandedSkillItem${hasNotice ? ' hasNotice' : ''}`}>
+						{regions[i].err && (
+							<div class="skillNotice hasTooltip">
+								<span>×</span>
+								<div class="tooltip">
+									<Text id="ui.notice.error" />
+									<span class="arrow" />
+								</div>
+							</div>
+						)}
+						{!regions[i].err && doesNotActivate(regions[i]) && (
+							<div class="skillNotice hasTooltip">
+								<span>!</span>
+								<div class="tooltip">
+									<Text id="ui.notice.dna" />
+									<span class="arrow" />
+								</div>
+							</div>
+						)}
+						<div
+							class="expandedSkillColorMarker"
+							style={`background:${colors[i % colors.length].stroke}`}
+						/>
+						<ExpandedSkillDetails id={id} distanceFactor={course.distance} />
+					</li>
+				);
+			}),
+		[selectedSkills, course, regions],
+	);
+
 	return (
 		<Language.Provider value={language}>
 			<IntlProvider definition={strings}>
-				<div id="overlay" class={skillsOpen ? "skillListWrapper-open" : ""} onClick={hideSkillSelector} />
-				<RaceTrack courseid={courseId} width={960} height={240} xOffset={0} yOffset={0} yExtra={0} regions={regions} />
+				<div
+					id="overlay"
+					class={skillsOpen ? 'skillListWrapper-open' : ''}
+					onClick={hideSkillSelector}
+				/>
+				<RaceTrack
+					courseid={courseId}
+					width={960}
+					height={240}
+					xOffset={0}
+					yOffset={0}
+					yExtra={0}
+					regions={regions}
+				/>
 				<div id="buttonsRow">
 					<TrackSelect courseid={courseId} setCourseid={setCourseId} />
-					<div id="thresholds"><Text id="ui.thresholds" />{statThresholds}</div>
-					<button id="addSkill" onClick={showSkillSelector}><Text id="ui.addskill" /></button>
+					<div id="thresholds">
+						<Text id="ui.thresholds" />
+						{statThresholds}
+					</div>
+					<button id="addSkill" onClick={showSkillSelector}>
+						<Text id="ui.addskill" />
+					</button>
 				</div>
 				<div id="skillDetailsWrapper" onClick={removeSkill}>
-					<ul class="skillDetailsList">
-						{skillDetails}
-					</ul>
+					<ul class="skillDetailsList">{skillDetails}</ul>
 				</div>
-				<div id="skillListWrapper" class={skillsOpen ? "skillListWrapper-open" : ""}>
-					<SkillList ids={Object.keys(skills)} selected={selectedSkills} setSelected={setSelectedSkillsAndClose} />
+				<div
+					id="skillListWrapper"
+					class={skillsOpen ? 'skillListWrapper-open' : ''}
+				>
+					<SkillList
+						ids={Object.keys(skills)}
+						selected={selectedSkills}
+						setSelected={setSelectedSkillsAndClose}
+					/>
 				</div>
 			</IntlProvider>
 		</Language.Provider>

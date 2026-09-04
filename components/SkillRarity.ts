@@ -7,7 +7,7 @@
 //
 // Inherited uniques (id[0] === '9') carry rarity 1 (White) despite being uniques -- RaceSolver.ts
 // notes this explicitly -- so `inherit` is checked before `white` and `white` excludes them.
-import skilldata from '../uma-skill-tools/data/skill_data.json';
+import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 
 export function matchRarity(id: string, testRarity: string): boolean {
 	const r = skilldata[id]?.rarity;

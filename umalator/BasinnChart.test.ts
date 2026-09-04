@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test, vi } from 'vitest';
 import type { HorseState } from '../components/HorseDef.tsx';
 import { getParser } from '../uma-skill-tools/ConditionParser.ts';
-import courseData from '../uma-skill-tools/data/course_data.json' with {
+import courseData from '../uma-skill-tools/data/jp/course_data.json' with {
 	type: 'json',
 };
 import {
@@ -33,11 +33,11 @@ vi.mock('@tanstack/preact-table', () => ({
 // UI-34: this file exercises real skill_data.json/course_data.json content, not mocked skill
 // objects -- matching this repo's other test files (chartLadder.test.ts, histogramData.test.ts).
 // One thing worth being explicit about: BasinnChart.tsx's `skilldata` import is an unconditional
-// `../uma-skill-tools/data/skill_data.json` (JP data). The Global build only gets Global's own
+// `../uma-skill-tools/data/jp/skill_data.json` (JP data). The Global build only gets Global's own
 // skill_data.json because umalator-global/build.mjs's esbuild `redirectData` plugin rewrites that
 // import path at *build* time -- Vitest doesn't run that plugin, so under test this file always
 // reads the JP dataset regardless of which app it's nominally exercising. Every skill id below was
-// checked directly against JP `uma-skill-tools/data/skill_data.json` (not assumed from Global's),
+// checked directly against JP `uma-skill-tools/data/jp/skill_data.json` (not assumed from Global's),
 // and where a case also matters for Global, that's called out and independently confirmed.
 
 // A JP course with a real, non-degenerate phase 2 -- matches the course used by
