@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { test } from 'vitest';
 import {
 	addShopSkill,
 	applyShopFilter,
@@ -13,17 +14,15 @@ import {
 	shopFilterDirty,
 } from './shopSkillFilter.ts';
 
-// --- isShopFilterActive: non-empty ---
-{
+test('isShopFilterActive: non-empty', () => {
 	assert.equal(isShopFilterActive([]), false);
 	assert.equal(isShopFilterActive(['a']), true);
-}
+});
 
-// --- prerequisitesOf / dependentsOf / addShopSkill / removeShopSkill: the ladder ---
-// Fixture modelled on real group 20001 (Right-Handed): a three-rung white/gold ladder plus a
-// debuff variant that must never be swept up. 'other' is a same-named-but-different, unrelated
-// ladder (group 'g2') to make sure a group match is what gates everything, not id shape.
-{
+test('prerequisitesOf / dependentsOf / addShopSkill / removeShopSkill: the ladder', () => {
+	// Fixture modelled on real group 20001 (Right-Handed): a three-rung white/gold ladder plus a
+	// debuff variant that must never be swept up. 'other' is a same-named-but-different, unrelated
+	// ladder (group 'g2') to make sure a group match is what gates everything, not id shape.
 	const LADDER: LadderIndex = {
 		demon: { group: 'g1', rate: 3 }, // Clockwise Demon (gold)
 		circle: { group: 'g1', rate: 2 }, // Right-Handed ◎
@@ -157,10 +156,9 @@ import {
 		'an unindexed id has no prerequisites to fail, so it is never pruned',
 	);
 	assert.deepEqual(pruneUnsatisfiedPrerequisites([], LADDER), []);
-}
+});
 
-// --- applyShopFilter: intersection, candidate order preserved, unreachable ids dropped ---
-{
+test('applyShopFilter: intersection, candidate order preserved, unreachable ids dropped', () => {
 	const candidates = ['a', 'b', 'c', 'd'];
 	assert.deepEqual(applyShopFilter(candidates, ['c', 'a']), ['a', 'c']);
 	// Shortlist order ('z' first) must not leak into the result order.
@@ -173,10 +171,9 @@ import {
 	// unreleased) is silently dropped, not an error.
 	assert.deepEqual(applyShopFilter(candidates, ['a', 'zzz']), ['a']);
 	assert.deepEqual(applyShopFilter(candidates, []), []);
-}
+});
 
-// --- shopFilterDirty: the case the naive tableData-comparison design got wrong ---
-{
+test('shopFilterDirty: the case the naive tableData-comparison design got wrong', () => {
 	// Inactive: dirty only if the filter was previously applied (pool has since widened back out).
 	assert.equal(
 		shopFilterDirty(false, ['a'], new Set(['a']), new Set(), null),
@@ -230,10 +227,9 @@ import {
 		false,
 		'active + unknown procable set -> not dirty',
 	);
-}
+});
 
-// --- loadShopSkills: parsing/validation ---
-{
+test('loadShopSkills: parsing/validation', () => {
 	const known = new Set(['a', 'b', 'c']);
 	const isKnown = (id: string) => known.has(id);
 
@@ -259,10 +255,9 @@ import {
 		['a', 'b'],
 		'non-string entries dropped',
 	);
-}
+});
 
-// --- partitionShopSkills: procable/wontProc split ---
-{
+test('partitionShopSkills: procable/wontProc split', () => {
 	assert.deepEqual(
 		partitionShopSkills(['a', 'b'], null),
 		{ procable: ['a', 'b'], wontProc: [] },
@@ -276,6 +271,4 @@ import {
 		procable: [],
 		wontProc: [],
 	});
-}
-
-console.log('shopSkillFilter tests passed');
+});
