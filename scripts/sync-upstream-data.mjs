@@ -211,7 +211,7 @@ function main() {
 	console.log(`Engine ref: ${opts.engineRef}`);
 	console.log(dryRun ? '(dry run — pass --no-dry-run to write changes)\n' : '(WRITING changes)\n');
 
-	console.log('-- Global (umalator-global/) --');
+	console.log('-- Global (umalator-global/ + uma-skill-tools/data/global/) --');
 	syncUmas('Global umas', 'umalator-global/umas.json', readJSON(path.join(upstreamRoot, 'umalator-global/umas.json')));
 	syncSimple('Global skill_meta', 'umalator-global/skill_meta.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_meta.json')), {transform: v => stripDeep(v, SKILL_META_DROP)});
 	syncSimple('Global skill_data', 'uma-skill-tools/data/global/skill_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_data.json')), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
@@ -233,7 +233,7 @@ function main() {
 	if (dryRun) {
 		console.log('Dry run — nothing written. Re-run with --no-dry-run to apply.');
 	} else {
-		console.log('Written. Now rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit.');
+		console.log("Written. uma-skill-tools/data/{jp,global}/ changes need their own commit+push in that submodule, then bump this repo's gitlink. Also rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit here.");
 	}
 }
 
