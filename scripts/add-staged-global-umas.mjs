@@ -144,6 +144,17 @@ function writeJSON(p, obj) {
 	);
 }
 
+function commitAndPushInSubmodule(submodulePath, relFiles, message, {dryRun}) {
+	if (dryRun) {
+		console.log(`\n(dry run — would commit in ${submodulePath}: ${relFiles.join(', ')})`);
+		return;
+	}
+	execFileSync('git', ['-C', submodulePath, 'add', ...relFiles], {stdio: 'inherit'});
+	execFileSync('git', ['-C', submodulePath, 'commit', '-m', message], {stdio: 'inherit'});
+	execFileSync('git', ['-C', submodulePath, 'push'], {stdio: 'inherit'});
+	console.log(`\nCommitted and pushed in ${submodulePath}. Now bump uma-tools' gitlink and commit here too.`);
+}
+
 // Best-effort: the submodule commit this run's JP mechanics came from, recorded in provenance
 // so a later divergence check can tell whether a JP-sourced Global entry is still current. null
 // if uma-skill-tools isn't a git checkout for some reason (e.g. a stripped CI archive) -- that's
@@ -190,11 +201,11 @@ function inheritedSkillForUnique(sid) {
 
 function main() {
 	const skillMetaPath = path.join(forkRoot, 'umalator-global/skill_meta.json');
-	const skillDataPath = path.join(forkRoot, 'umalator-global/skill_data.json');
-	const skillNamesPath = path.join(forkRoot, 'umalator-global/skillnames.json');
+	const skillDataPath = path.join(forkRoot, 'uma-skill-tools/data/global/skill_data.json');
+	const skillNamesPath = path.join(forkRoot, 'uma-skill-tools/data/global/skillnames.json');
 	const jpSkillMeta = readJSON(path.join(forkRoot, 'skill_meta.json'));
 	const jpSkillData = readJSON(
-		path.join(forkRoot, 'uma-skill-tools/data/skill_data.json'),
+		path.join(forkRoot, 'uma-skill-tools/data/jp/skill_data.json'),
 	);
 	const globalSkillMeta = readJSON(skillMetaPath);
 	const globalSkillData = readJSON(skillDataPath);
@@ -519,6 +530,12 @@ function main() {
 		if (newChars.length || newOutfits.length || newInherited.length) {
 			writeJSON(skillMetaPath, globalSkillMeta);
 			writeJSON(skillDataPath, globalSkillData);
+			commitAndPushInSubmodule(
+				path.join(forkRoot, 'uma-skill-tools'),
+				['data/global/skill_data.json'],
+				'Add staged unreleased-uma skill data',
+				{dryRun}
+			);
 		}
 		fs.writeFileSync(
 			path.join(forkRoot, 'umalator-global/unreleased.json'),
