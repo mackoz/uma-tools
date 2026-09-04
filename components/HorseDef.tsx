@@ -473,14 +473,19 @@ export function HorseDef(props) {
 	function handlePickerSelect(skillId: string) {
 		const groupId = skillmeta[skillId].groupId;
 		let newSkills: typeof state.skills;
+		let replaced: string | undefined;
 		if (isDebuffSkill(skillId)) {
 			const ndebuffs = state.skills.count(isDebuffSkill);
 			newSkills = state.skills.set(groupId + '-' + ndebuffs, skillId);
 		} else {
+			// picking into an occupied group replaces its skill, so that counts as a remove
+			replaced = state.skills.get(groupId);
 			newSkills = state.skills.set(groupId, skillId);
 		}
 		setState(withSkillsSynced(state, newSkills));
-		// UI-35: same optional/no-op telemetry hook as onUmaSelected above.
+		// UI-35: same optional/no-op telemetry hooks as onUmaSelected above.
+		if (replaced && replaced !== skillId)
+			props.onSkillEvent?.(replaced, 'remove', 'picker');
 		props.onSkillEvent?.(skillId, 'add', 'picker');
 	}
 

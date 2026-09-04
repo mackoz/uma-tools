@@ -4615,7 +4615,8 @@ function App(props) {
 
 	function doBasinnChart() {
 		// UI-35: shopSkillFilter previously fired unconditionally here, meaning every Uniques/Course
-		// Chart run also posted a "shop filter" event with count 0/enabled false -- meaningless
+		// Chart run also posted a "shop filter" event with enabled false and whatever shortlist
+		// count happened to be persisted in localStorage -- meaningless
 		// pollution for tabs where the shop shortlist feature doesn't apply (it's Mode.Chart-only,
 		// same as the shortlist state itself; see the `mode === Mode.Chart` guard further down this
 		// function). Guarded to Mode.Chart below instead of firing here.
