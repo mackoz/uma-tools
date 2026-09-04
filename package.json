@@ -21,7 +21,7 @@
     "verify": "node scripts/verify.mjs",
     "verify:baseline": "node scripts/verify.mjs --baseline",
     "smoke": "node scripts/smoke.mjs",
-    "test": "node --experimental-strip-types umalator/statisticalAnalysis.test.ts && node --experimental-strip-types umalator/chartLadder.test.ts && node --experimental-strip-types umalator/shopSkillFilter.test.ts && node --experimental-strip-types umalator/spOptimizer.test.ts && node --experimental-strip-types umalator/racePresets.test.ts && node --experimental-strip-types umalator/histogramData.test.ts",
+    "test": "vitest run",
     "test:stats": "npm run test",
     "prepare": "husky"
   },
@@ -37,7 +37,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "playwright": "^1.62.1",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.2",
