@@ -214,9 +214,9 @@ function main() {
 	console.log('-- Global (umalator-global/) --');
 	syncUmas('Global umas', 'umalator-global/umas.json', readJSON(path.join(upstreamRoot, 'umalator-global/umas.json')));
 	syncSimple('Global skill_meta', 'umalator-global/skill_meta.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_meta.json')), {transform: v => stripDeep(v, SKILL_META_DROP)});
-	syncSimple('Global skill_data', 'umalator-global/skill_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_data.json')), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
-	syncSimple('Global course_data', 'umalator-global/course_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/course_data.json')));
-	syncSimple('Global tracknames', 'umalator-global/tracknames.json', readJSON(path.join(upstreamRoot, 'umalator-global/tracknames.json')));
+	syncSimple('Global skill_data', 'uma-skill-tools/data/global/skill_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_data.json')), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
+	syncSimple('Global course_data', 'uma-skill-tools/data/global/course_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/course_data.json')));
+	syncSimple('Global tracknames', 'uma-skill-tools/data/global/tracknames.json', readJSON(path.join(upstreamRoot, 'umalator-global/tracknames.json')));
 
 	console.log('\n-- JP (repo root) --');
 	syncUmas('JP umas', 'umas.json', readJSON(path.join(upstreamRoot, 'umas.json')));
@@ -224,10 +224,10 @@ function main() {
 	syncIcons(readJSON(path.join(upstreamRoot, 'icons.json')));
 
 	console.log('\n-- JP engine data (uma-skill-tools/data/, compared against the engine repo\'s own HEAD) --');
-	syncSimple('Engine skill_data', 'uma-skill-tools/data/skill_data.json', readEngineJSON('data/skill_data.json'), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
-	syncSimple('Engine skillnames', 'uma-skill-tools/data/skillnames.json', readEngineJSON('data/skillnames.json'));
-	syncSimple('Engine course_data', 'uma-skill-tools/data/course_data.json', readEngineJSON('data/course_data.json'));
-	syncSimple('Engine tracknames', 'uma-skill-tools/data/tracknames.json', readEngineJSON('data/tracknames.json'));
+	syncSimple('Engine skill_data', 'uma-skill-tools/data/jp/skill_data.json', readEngineJSON('data/jp/skill_data.json'), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
+	syncSimple('Engine skillnames', 'uma-skill-tools/data/jp/skillnames.json', readEngineJSON('data/jp/skillnames.json'));
+	syncSimple('Engine course_data', 'uma-skill-tools/data/jp/course_data.json', readEngineJSON('data/jp/course_data.json'));
+	syncSimple('Engine tracknames', 'uma-skill-tools/data/jp/tracknames.json', readEngineJSON('data/jp/tracknames.json'));
 
 	console.log(`\nTotal: +${totalAdded} key(s) added, ${totalDiverged} shared key(s) diverge in value (untouched).`);
 	if (dryRun) {
