@@ -144,6 +144,47 @@ function writeJSON(p, obj) {
 	);
 }
 
+function commitAndPushInSubmodule(
+	submodulePath,
+	relFiles,
+	message,
+	{ dryRun },
+) {
+	if (dryRun) {
+		console.log(
+			`\n(dry run — would commit in ${submodulePath}: ${relFiles.join(', ')})`,
+		);
+		return;
+	}
+	try {
+		execFileSync('git', ['-C', submodulePath, 'add', ...relFiles], {
+			stdio: 'inherit',
+		});
+		execFileSync('git', ['-C', submodulePath, 'commit', '-m', message], {
+			stdio: 'inherit',
+		});
+		execFileSync('git', ['-C', submodulePath, 'push'], { stdio: 'inherit' });
+		console.log(
+			`\nCommitted and pushed in ${submodulePath}. Now bump uma-tools' gitlink and commit here too.`,
+		);
+	} catch (err) {
+		// Most likely cause: the submodule is checked out at a detached HEAD (the normal state
+		// after `git submodule update`), which makes `git push` fail immediately with "You are not
+		// currently on a branch". Don't let that crash the whole script -- umas.json/skill_meta.json/
+		// unreleased.json were already written to disk successfully by the caller; only this
+		// submodule commit step failed, and the user needs clear instructions to finish it by hand.
+		console.error(
+			`\nFailed to commit/push in the uma-skill-tools submodule automatically: ${err.message}`,
+		);
+		console.error(
+			`Manual recovery: cd ${submodulePath} && git add ${relFiles.join(' ')} && git commit -m "${message}" && git push`,
+		);
+		console.error(
+			'(the submodule is likely on a detached HEAD -- checkout a branch there first if needed)',
+		);
+	}
+}
+
 // Best-effort: the submodule commit this run's JP mechanics came from, recorded in provenance
 // so a later divergence check can tell whether a JP-sourced Global entry is still current. null
 // if uma-skill-tools isn't a git checkout for some reason (e.g. a stripped CI archive) -- that's
@@ -190,11 +231,17 @@ function inheritedSkillForUnique(sid) {
 
 function main() {
 	const skillMetaPath = path.join(forkRoot, 'umalator-global/skill_meta.json');
-	const skillDataPath = path.join(forkRoot, 'umalator-global/skill_data.json');
-	const skillNamesPath = path.join(forkRoot, 'umalator-global/skillnames.json');
+	const skillDataPath = path.join(
+		forkRoot,
+		'uma-skill-tools/data/global/skill_data.json',
+	);
+	const skillNamesPath = path.join(
+		forkRoot,
+		'uma-skill-tools/data/global/skillnames.json',
+	);
 	const jpSkillMeta = readJSON(path.join(forkRoot, 'skill_meta.json'));
 	const jpSkillData = readJSON(
-		path.join(forkRoot, 'uma-skill-tools/data/skill_data.json'),
+		path.join(forkRoot, 'uma-skill-tools/data/jp/skill_data.json'),
 	);
 	const globalSkillMeta = readJSON(skillMetaPath);
 	const globalSkillData = readJSON(skillDataPath);
@@ -524,6 +571,17 @@ function main() {
 			path.join(forkRoot, 'umalator-global/unreleased.json'),
 			`${JSON.stringify(unreleasedJson, null, '\t')}\n`,
 		);
+		// Submodule commit/push happens last, after every local file has already been written --
+		// a failure here (e.g. detached HEAD, see commitAndPushInSubmodule's own catch) must never
+		// leave unreleased.json stale relative to umas.json/skill_meta.json/skill_data.json.
+		if (newChars.length || newOutfits.length || newInherited.length) {
+			commitAndPushInSubmodule(
+				path.join(forkRoot, 'uma-skill-tools'),
+				['data/global/skill_data.json'],
+				'Add staged unreleased-uma skill data',
+				{ dryRun },
+			);
+		}
 		console.log(
 			'\nWritten. Now rebuild umalator/ and umalator-global/ and commit.',
 		);

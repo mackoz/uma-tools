@@ -44,12 +44,12 @@ function readJSON(relPath) {
 }
 
 const jpSkillMeta = readJSON('skill_meta.json');
-const jpSkillData = readJSON('uma-skill-tools/data/skill_data.json');
-const jpCourseData = readJSON('uma-skill-tools/data/course_data.json');
+const jpSkillData = readJSON('uma-skill-tools/data/jp/skill_data.json');
+const jpCourseData = readJSON('uma-skill-tools/data/jp/course_data.json');
 
 const globalSkillMeta = readJSON('umalator-global/skill_meta.json');
-const globalSkillData = readJSON('umalator-global/skill_data.json');
-const globalCourseData = readJSON('umalator-global/course_data.json');
+const globalSkillData = readJSON('uma-skill-tools/data/global/skill_data.json');
+const globalCourseData = readJSON('uma-skill-tools/data/global/course_data.json');
 const unreleased = readJSON('umalator-global/unreleased.json');
 const provenance = unreleased.provenance ?? {};
 

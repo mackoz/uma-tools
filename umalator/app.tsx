@@ -58,8 +58,8 @@ import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
 import { type CourseData, CourseHelpers } from '../uma-skill-tools/CourseData';
-import skilldata from '../uma-skill-tools/data/skill_data.json';
-import skillnames from '../uma-skill-tools/data/skillnames.json';
+import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
+import skillnames from '../uma-skill-tools/data/jp/skillnames.json';
 import type { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
 import {
 	Grade,

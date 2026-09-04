@@ -9,7 +9,7 @@
 // three independent copies invite. Consolidated here so there's only one place to fix next time.
 
 import skillmeta from '../skill_meta.json';
-import skilldata from '../uma-skill-tools/data/skill_data.json';
+import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
 
 // The in-game icon for a skill tracks its primary effect type, not its rarity or name -- e.g.

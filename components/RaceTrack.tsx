@@ -14,8 +14,8 @@ import {
 	Orientation,
 	Surface,
 } from '../uma-skill-tools/CourseData';
-import courses from '../uma-skill-tools/data/course_data.json';
-import tracknames from '../uma-skill-tools/data/tracknames.json';
+import courses from '../uma-skill-tools/data/jp/course_data.json';
+import tracknames from '../uma-skill-tools/data/jp/tracknames.json';
 import { Region, RegionList } from '../uma-skill-tools/Region';
 import { useLanguage } from './Language';
 

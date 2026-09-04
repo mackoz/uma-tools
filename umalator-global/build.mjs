@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Option, program } from 'commander';
 import * as esbuild from 'esbuild';
+import { redirectEngineData } from '../scripts/build-plugins/redirectEngineData.mjs';
 
 program
 	.option('--debug')
@@ -25,21 +26,6 @@ const root = path.join(dirname, '..', '..');
 const redirectData = {
 	name: 'redirectData',
 	setup(build) {
-		// One-or-more leading path segments (not just one) -- PIPE-2 review, round 4: a
-		// two-directories-deep importer (umalator/components/UmasTab.tsx's
-		// '../../uma-skill-tools/data/skill_data.json') didn't match the old single-segment
-		// `\.\.?` here, so it fell through unredirected to the real repo-root *JP*
-		// skill_data.json in the Global bundle -- confirmed live (built with --debug and found
-		// a JP-only skill id embedded in the output). Every other importer in the codebase is
-		// exactly one level deep, which is why this went unnoticed until a file happened to sit
-		// two levels down. The `/data/`-split extraction below is depth-agnostic already; only
-		// the match itself needed broadening.
-		build.onResolve(
-			{ filter: /^(?:\.\.?\/)+(?:uma-skill-tools\/)?data\// },
-			(args) => ({
-				path: path.join(dirname, args.path.split('/data/')[1]),
-			}),
-		);
 		build.onResolve({ filter: /skill_meta.json$/ }, (args) => ({
 			path: path.join(dirname, 'skill_meta.json'),
 		}));
@@ -135,7 +121,13 @@ const buildOptions = {
 	write: !serve,
 	define: { CC_DEBUG: debug.toString(), CC_GLOBAL: 'true' },
 	external: ['*.ttf'],
-	plugins: [redirectData, mockAssert, redirectTable, seedrandomPlugin],
+	plugins: [
+		redirectData,
+		redirectEngineData(),
+		mockAssert,
+		redirectTable,
+		seedrandomPlugin,
+	],
 };
 
 const MIME_TYPES = {

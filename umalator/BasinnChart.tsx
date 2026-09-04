@@ -28,8 +28,8 @@ import './BasinnChart.css';
 
 import icons from '../icons.json';
 import skillmeta from '../skill_meta.json';
-import skilldata from '../uma-skill-tools/data/skill_data.json';
-import skillnames from '../uma-skill-tools/data/skillnames.json';
+import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
+import skillnames from '../uma-skill-tools/data/jp/skillnames.json';
 import umas from '../umas.json';
 
 export function isPurpleSkill(id) {

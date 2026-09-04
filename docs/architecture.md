@@ -15,7 +15,7 @@ It is a **git submodule**, pointing at [`mackoz/uma-skill-tools`](https://github
 ```
 Region.ts, HorseTypes.ts, RaceParameters.ts, Random.ts   (no internal deps)
         |
-CourseData.ts  (+ data/course_data.json)
+CourseData.ts  (+ data/jp/course_data.json)
         |
 ApproximateConditions.ts --> SpecialConditions.ts
         |                            |
@@ -67,7 +67,7 @@ End-to-end data flow for one `.build()` call:
 | `ActivationSamplePolicy.ts` | Turns potential-activation region lists into concrete per-sample trigger regions: `ImmediatePolicy`, `RandomPolicy`, `UniformRandomPolicy`, `LogNormalRandomPolicy`, `ErlangRandomPolicy`, `StraightRandomPolicy`, `AllCornerRandomPolicy`. |
 | `HpPolicy.ts` | `GameHpPolicy` (real stamina model, `maxHp = 0.8 * strategyCoef * stamina + distance`, standard `20*(v - baseSpeed + 12)^2/144` HP-per-second formula) vs `NoopHpPolicy` (always full HP). `getLastSpurtPair()` is the key last-spurt/survival-rate routine. |
 | `ApproximateConditions.ts` / `SpecialConditions.ts` | Fork additions. Model *ongoing* race situations (blocked side, overtake) as tick-by-tick Markov chains, distinct from the static, pre-race condition reduction in `ActivationConditions.ts`. |
-| `CourseData.ts` | Track geometry types + `getCourse(courseId)`, which loads and deep-freezes `data/course_data.json`. |
+| `CourseData.ts` | Track geometry types + `getCourse(courseId)`, which loads and deep-freezes `data/jp/course_data.json`. |
 | `Region.ts` | The `[start, end)` interval abstraction everything else builds on. |
 | `HorseTypes.ts`, `RaceParameters.ts`, `Random.ts` | Leaf type/enum modules. Note: `Rule30CARng` (`Random.ts:44`) is just an alias for the prando-backed `SeededRng` — the name is a leftover from a since-replaced rule-30-cellular-automaton RNG, kept because every call site uses it. |
 
