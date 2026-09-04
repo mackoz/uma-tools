@@ -551,7 +551,7 @@ async function runTheme(browser, url, theme) {
 			// white prerequisite, indented beneath it; removing that prerequisite cascades the
 			// gold away too. "Show all skills" first so the pick can't be dropped by course
 			// procability -- Professor of Curvature/Corner Adept are ordinary Global skills
-			// (verified present in umalator-global/skillnames.json and skill_data.json), not tied
+			// (verified present in uma-skill-tools/data/global/skillnames.json and skill_data.json), not tied
 			// to any particular course.
 			await check('chart.shopfilter.prereq', async () => {
 				await page

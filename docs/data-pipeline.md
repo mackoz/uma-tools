@@ -92,7 +92,7 @@ Run it with the **Global** client's `master.mdb` (either the default path or `up
 
 **As of PIPE-42, the `skill_data.json`/`skillnames.json` lines above write directly into `uma-skill-tools/data/global/`**, not into `umalator-global/` — that's the location the build-time redirect actually resolves onto (see [apps.md](apps.md)), matching the JP dataset's own `data/jp/` output paths above. Because that output now lands inside the `uma-skill-tools` submodule, running `update.bat` no longer finishes the job by itself: the two regenerated files still need to be committed and pushed *inside that submodule checkout* (it's a separate repo — see `CLAUDE.md`'s submodule section) before this repo's gitlink is bumped to pick them up. `> skill_meta.json` is unaffected — that file's location didn't move.
 
-**`make_global_course_data.pl` is deliberately not in this list** — courses change rarely, so it's run manually: `perl make_global_course_data.pl master.mdb courseeventparam`. It's byte-for-byte the same logic as the JP `make_course_data.pl`.
+**`make_global_course_data.pl` is deliberately not in this list** — courses change rarely, so it's run manually: `perl make_global_course_data.pl master.mdb courseeventparam`. It's byte-for-byte the same logic as the JP `make_course_data.pl`. Like the `skill_data.json`/`skillnames.json` lines above, its real output target (via `>` redirect) is `uma-skill-tools/data/global/course_data.json`, not a bare `umalator-global/` file — the same submodule-commit caveat from the note above applies.
 
 ### How the Global scripts differ from their JP counterparts
 
