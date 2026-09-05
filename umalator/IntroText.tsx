@@ -66,6 +66,20 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-05</summary>
+						<ul>
+							<li>
+								Fixed: some skills whose activation is modeled with a
+								probability distribution (crowding, position-gap and overtaking
+								conditions) could crash a comparison instead of returning
+								results. It depended on the exact combination of course and
+								skill, and only when the roll landed at the extreme end of its
+								range, so it showed up as an occasional failed run rather than a
+								consistently broken skill.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-04</summary>
 						<ul>
 							<li>
