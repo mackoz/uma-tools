@@ -37,8 +37,8 @@ This depends on the engine's per-skill trigger and wisdom-check RNG streams bein
 stable keys (skill ID, perspective, occurrence index — `uma-skill-tools/RaceSolverBuilder.ts`'s
 `deriveSeed` calls), so that adding or removing an unrelated candidate skill from the pool doesn't
 shift another skill's trigger draw. Without that, cross-skill ranking would partly be measuring RNG
-shuffle instead of the skill's actual effect. `uma-skill-tools/test/activation-sampling.ts` covers
-this at the engine level.
+shuffle instead of the skill's actual effect. `uma-skill-tools/test/activation-sampling.test.ts`
+covers this at the engine level.
 
 One length is 2.5 meters in the comparison output. Finish time is interpolated between the last two
 simulator ticks around the finish line rather than using the whole-tick timestamp.
