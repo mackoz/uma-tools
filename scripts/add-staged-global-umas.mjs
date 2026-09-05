@@ -151,18 +151,9 @@ function writeJSON(p, obj) {
 	);
 }
 
-function commitAndPushInSubmodule(
-	submodulePath,
-	relFiles,
-	message,
-	{ dryRun },
-) {
-	if (dryRun) {
-		console.log(
-			`\n(dry run — would commit in ${submodulePath}: ${relFiles.join(', ')})`,
-		);
-		return;
-	}
+// Both call sites only invoke this from inside their own `if (!dryRun)` block, so there's no
+// dry-run branch to take here -- this always actually commits and pushes.
+function commitAndPushInSubmodule(submodulePath, relFiles, message) {
 	try {
 		execFileSync('git', ['-C', submodulePath, 'add', ...relFiles], {
 			stdio: 'inherit',
@@ -362,7 +353,6 @@ function main() {
 						path.join(forkRoot, 'uma-skill-tools'),
 						['data/global/skill_data.json'],
 						'Restore staged unreleased-uma skill data dropped by regeneration',
-						{ dryRun },
 					);
 				}
 				console.log(
@@ -628,7 +618,6 @@ function main() {
 				path.join(forkRoot, 'uma-skill-tools'),
 				['data/global/skill_data.json'],
 				'Add staged unreleased-uma skill data',
-				{ dryRun },
 			);
 		}
 		console.log(

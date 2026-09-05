@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
+import { getEffectValueOutcomes } from './SkillEffectValue';
 import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { FormattedCondition } from './SkillList';
 import { matchRarity } from './SkillRarity';
@@ -658,7 +659,7 @@ const EFFECT_TYPE_NAMES: Record<number, string> = {
 	42: 'Duration Increase',
 };
 
-function formatEffectValue(type: number, modifier: number): string {
+function formatSingleEffectValue(type: number, modifier: number): string {
 	const value = modifier / 10000;
 	switch (type) {
 		case 9:
@@ -670,6 +671,16 @@ function formatEffectValue(type: number, modifier: number): string {
 		default:
 			return value > 0 ? `+${value}` : `${value}`;
 	}
+}
+
+function formatEffectValue(
+	type: number,
+	modifier: number,
+	valueUsage?: number,
+): string {
+	return getEffectValueOutcomes(modifier, valueUsage)
+		.map((m) => formatSingleEffectValue(type, m))
+		.join(' / ');
 }
 
 interface ExpandedSkillViewProps {
@@ -736,7 +747,7 @@ export function ExpandedSkillView({
 											{EFFECT_TYPE_NAMES[ef.type] ?? `Type ${ef.type}`}
 										</span>
 										<span class="effect-value">
-											{formatEffectValue(ef.type, ef.modifier)}
+											{formatEffectValue(ef.type, ef.modifier, ef.valueUsage)}
 										</span>
 									</span>
 								))}
