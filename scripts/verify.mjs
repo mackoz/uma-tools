@@ -6,6 +6,8 @@
 //   node scripts/verify.mjs --skip-tests   skip the unit test stage
 //   node scripts/verify.mjs --skip-smoke   skip the browser smoke stage
 //   node scripts/verify.mjs --skip-gitlink   skip the gitlink-drift check (e.g. on a flaky/offline connection)
+//   node scripts/verify.mjs --skip-pkg-guard   skip the package.json injection tripwire
+//   node scripts/verify.mjs --skip-deps        skip the dependency-freshness check
 //
 // The tests stage runs `npm run test` (`vitest run` against statisticalAnalysis.ts,
 // chartLadder.ts, shopSkillFilter.ts, spOptimizer.ts, racePresets.ts, histogramData.ts,
@@ -14,16 +16,21 @@
 // scripts/smoke.mjs (Playwright chromium against the umalator-global dev server, light + dark);
 // it reports SKIPPED when playwright isn't installed. The docs stage runs a strict build of the
 // optional local docs site under plans/ and is skipped when absent.
+// The pkg-guard and deps stages (PIPE-56) are tripwires against an npm install run inside a
+// worktree silently damaging the shared install -- see scripts/verify-helpers.mjs and
+// docs/work-queue PIPE-56 for the incident. Pure logic lives in scripts/verify-helpers.mjs
+// (forbiddenPkgKeys, missingDeps), unit-tested in scripts/verify-helpers.test.mjs.
 //
 // Exits non-zero if a build fails, a unit test fails, the typecheck error count rises above the
-// baseline, the smoke fails, the docs build fails, or (when HEAD matches
-// origin/master's tip) the uma-skill-tools gitlink doesn't point at the
-// submodule's origin/master tip.
+// baseline, the smoke fails, the docs build fails, the package.json guard or dependency-freshness
+// check fails, or (when HEAD matches origin/master's tip) the uma-skill-tools gitlink doesn't
+// point at the submodule's origin/master tip.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { forbiddenPkgKeys, missingDeps } from './verify-helpers.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(root, 'scripts', 'verify-baseline.json');
@@ -32,6 +39,8 @@ const skipBuild = process.argv.includes('--skip-build');
 const skipSmoke = process.argv.includes('--skip-smoke');
 const skipGitlink = process.argv.includes('--skip-gitlink');
 const skipTests = process.argv.includes('--skip-tests');
+const skipPkgGuard = process.argv.includes('--skip-pkg-guard');
+const skipDeps = process.argv.includes('--skip-deps');
 
 // tokens.css is deliberately excluded: it is the one place colors belong.
 const CSS_FILES = [
@@ -254,6 +263,93 @@ function runDocs() {
 	return { label: 'docs FAILED', ok: false };
 }
 
+// Lists installed package names directly under a node_modules directory,
+// expanding scoped packages ("@scope/name") to match how they're declared in
+// package.json. Returns null if the directory doesn't exist at all, so callers
+// can tell "nothing installed" (a clear, single-line message) apart from "some
+// deps missing" (a list of names).
+function listInstalledNames(nodeModulesDir) {
+	if (!fs.existsSync(nodeModulesDir)) return null;
+	const names = [];
+	for (const entry of fs.readdirSync(nodeModulesDir)) {
+		if (entry.startsWith('.')) continue;
+		if (entry.startsWith('@')) {
+			const scopeDir = path.join(nodeModulesDir, entry);
+			for (const sub of fs.readdirSync(scopeDir)) names.push(`${entry}/${sub}`);
+		} else {
+			names.push(entry);
+		}
+	}
+	return names;
+}
+
+// Stage A (PIPE-56): package.json injection tripwire. An npm install run from
+// inside a worktree was once observed to inject `type`/`directories`/`keywords`
+// into the tracked *parent* package.json -- see scripts/verify-helpers.mjs for
+// the full incident writeup. Checks both the root and engine package.json,
+// since either could be hit depending on which directory an npm command runs
+// from.
+function runPkgGuard() {
+	const targets = [
+		['package.json', path.join(root, 'package.json')],
+		[
+			'uma-skill-tools/package.json',
+			path.join(root, 'uma-skill-tools', 'package.json'),
+		],
+	];
+	const problems = [];
+	for (const [label, fp] of targets) {
+		if (!fs.existsSync(fp)) continue;
+		const pkgJson = JSON.parse(fs.readFileSync(fp, 'utf8'));
+		const offending = forbiddenPkgKeys(pkgJson);
+		if (offending.length) problems.push(`${label}: ${offending.join(', ')}`);
+	}
+	if (!problems.length) return { label: 'pkg-guard OK', ok: true };
+	console.error(
+		`pkg-guard FAILED: unexpected key(s) found -- likely an npm install run from inside a worktree (PIPE-56):\n  ${problems.join('\n  ')}`,
+	);
+	return { label: `pkg-guard FAILED (${problems.length})`, ok: false };
+}
+
+// Stage C (PIPE-56): dependency-freshness check. Asserts every dependency
+// declared in the root and engine package.json is actually present in the
+// corresponding node_modules -- the check that would have caught the real,
+// silent breakage this ticket documents (a worktree's `npm i` replaced the
+// engine's shared node_modules symlink with a real directory, leaving the
+// *main checkout's* install stale and untested until someone happened to run
+// `npm test` there). Uses directory-existence rather than `npm ls`: confirmed
+// while implementing this ticket that `npm ls --all` exits 1 on this repo's
+// pre-existing accessible-autocomplete/preact peer conflict even when nothing
+// is actually missing (see scripts/verify-helpers.mjs).
+function runDepsFreshness() {
+	const targets = [
+		['root', path.join(root, 'package.json'), path.join(root, 'node_modules')],
+		[
+			'uma-skill-tools',
+			path.join(root, 'uma-skill-tools', 'package.json'),
+			path.join(root, 'uma-skill-tools', 'node_modules'),
+		],
+	];
+	const problems = [];
+	for (const [label, pkgPath, nodeModulesDir] of targets) {
+		if (!fs.existsSync(pkgPath)) continue;
+		const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+		const installed = listInstalledNames(nodeModulesDir);
+		if (installed === null) {
+			problems.push(
+				`${label}: node_modules missing entirely -- run npm install`,
+			);
+			continue;
+		}
+		const missing = missingDeps(pkgJson, installed);
+		if (missing.length)
+			problems.push(`${label}: missing ${missing.join(', ')}`);
+	}
+	if (!problems.length) return { label: 'deps OK', ok: true };
+	console.error(`deps FAILED:\n  ${problems.join('\n  ')}`);
+	return { label: `deps FAILED (${problems.length})`, ok: false };
+}
+
 function sum(obj) {
 	return Object.values(obj).reduce((a, b) => a + b, 0);
 }
@@ -294,6 +390,12 @@ const docs = runDocs();
 const gitlink = skipGitlink
 	? { label: 'gitlink SKIPPED', ok: true }
 	: runGitlink();
+const pkgGuard = skipPkgGuard
+	? { label: 'pkg-guard SKIPPED', ok: true }
+	: runPkgGuard();
+const deps = skipDeps
+	? { label: 'deps SKIPPED', ok: true }
+	: runDepsFreshness();
 
 const tscLabel =
 	tsc >= TSC_CAP ? `>=${TSC_CAP} (capped)` : `${tsc}${delta(tsc, base?.tsc)}`;
@@ -306,6 +408,8 @@ const parts = [
 	smoke.label,
 	docs.label,
 	gitlink.label,
+	pkgGuard.label,
+	deps.label,
 ];
 console.log(parts.join(' | '));
 
@@ -325,6 +429,8 @@ if (
 	tscRegressed ||
 	!smoke.ok ||
 	!docs.ok ||
-	!gitlink.ok
+	!gitlink.ok ||
+	!pkgGuard.ok ||
+	!deps.ok
 )
 	process.exit(1);
