@@ -19,17 +19,27 @@
 // questions nobody's investigated yet. Either way, silently overwriting them here would
 // be a worse bug than leaving them alone.
 
+import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
+import { fileURLToPath } from 'node:url';
 
-import {program} from 'commander';
+import { program } from 'commander';
 
 program
-	.requiredOption('--upstream <path>', 'path to a local alpha123/uma-tools checkout')
-	.option('--engine-ref <ref>', 'git ref inside <upstream>/uma-skill-tools to read JP engine data from (upstream\'s own uma-tools checkout pins an old submodule commit — compare against the engine repo\'s own history instead)', 'origin/master')
-	.option('--no-dry-run', 'actually write merged JSON and copy new icon files (default: report only)');
+	.requiredOption(
+		'--upstream <path>',
+		'path to a local alpha123/uma-tools checkout',
+	)
+	.option(
+		'--engine-ref <ref>',
+		"git ref inside <upstream>/uma-skill-tools to read JP engine data from (upstream's own uma-tools checkout pins an old submodule commit — compare against the engine repo's own history instead)",
+		'origin/master',
+	)
+	.option(
+		'--no-dry-run',
+		'actually write merged JSON and copy new icon files (default: report only)',
+	);
 
 program.parse();
 const opts = program.opts();
@@ -49,7 +59,16 @@ function readJSON(p) {
 }
 
 function readEngineJSON(relPath) {
-	const out = execFileSync('git', ['-C', path.join(upstreamRoot, 'uma-skill-tools'), 'show', `${opts.engineRef}:${relPath}`], {encoding: 'utf8'});
+	const out = execFileSync(
+		'git',
+		[
+			'-C',
+			path.join(upstreamRoot, 'uma-skill-tools'),
+			'show',
+			`${opts.engineRef}:${relPath}`,
+		],
+		{ encoding: 'utf8' },
+	);
 	return JSON.parse(out);
 }
 
@@ -69,13 +88,24 @@ function writeJSON(p, obj) {
 	const crlf = orig.includes('\r\n');
 	const sorted = {};
 	for (const k of Object.keys(obj).sort()) sorted[k] = obj[k];
-	let out = indent == null ? JSON.stringify(sorted) : JSON.stringify(sorted, null, indent);
+	let out =
+		indent == null
+			? JSON.stringify(sorted)
+			: JSON.stringify(sorted, null, indent);
 	if (crlf) out = out.replace(/\n/g, '\r\n');
-	fs.writeFileSync(p, out + (orig.endsWith('\n') || orig.endsWith('\r\n') ? (crlf ? '\r\n' : '\n') : ''));
+	fs.writeFileSync(
+		p,
+		out +
+			(orig.endsWith('\n') || orig.endsWith('\r\n')
+				? crlf
+					? '\r\n'
+					: '\n'
+				: ''),
+	);
 }
 
 function stripDeep(v, dropKeys) {
-	if (Array.isArray(v)) return v.map(x => stripDeep(x, dropKeys));
+	if (Array.isArray(v)) return v.map((x) => stripDeep(x, dropKeys));
 	if (v && typeof v === 'object') {
 		const out = {};
 		for (const [k, vv] of Object.entries(v)) {
@@ -93,12 +123,60 @@ function stripDeep(v, dropKeys) {
 // from schema alone.
 const SKILL_META_DROP = new Set(['score']);
 // ANCHOR: skill-data-drop-set
-const SKILL_DATA_DROP = new Set(['tags', 'wisdomCheck', 'durationScaling', 'scaling']);
+const SKILL_DATA_DROP = new Set([
+	'tags',
+	'wisdomCheck',
+	'durationScaling',
+	'scaling',
+]);
+// Mirror case of SKILL_DATA_DROP above: a field the *fork* computes (per-effect
+// `valueUsage`, added by HP-6/make_skill_data.pl's `ability_value_usage_*` columns)
+// that upstream's own alpha123-derived skill_data.json will never carry, since it
+// isn't cut from the same master.mdb columns. Left in SKILL_DATA_DROP's upstream-side
+// stripDeep() call it would be a no-op (upstream never has the key to begin with);
+// what actually needs it stripped, before comparing, is the *fork's* side of a shared
+// key — otherwise every shared skill compares an object with `valueUsage` against one
+// without and is reported diverged, which is exactly the 100%-false-positive bug this
+// set exists to prevent for SKILL_DATA_DROP's own fields.
+const SKILL_DATA_FORK_ONLY = new Set(['valueUsage']);
+
+// For a skill_data.json entry newly ADDED from upstream (a skill upstream has that
+// this fork doesn't yet): every effect object in every alternative needs a
+// `valueUsage` key of its own, so the file stays shape-consistent with every
+// generator-produced entry around it (Task 3's make_skill_data.pl always emits one).
+// Upstream has no way to tell us the real ability_value_usage value, so this assumes
+// the safest default: 1 ("Direct" per RaceSolver.ts's SkillEffect comment), meaning
+// the effect's modifier is used as-is with no roll applied. That's also exactly the
+// behavior a *missing* valueUsage already gets from RaceSolver.ts's
+// `scaleEffectValue()` (it only special-cases 8/9, passing everything else through
+// unscaled) -- so this only makes the shape self-consistent, it doesn't change what
+// the engine actually does with the ported skill versus leaving the field out.
+function addDefaultValueUsage(entry) {
+	if (!entry || !Array.isArray(entry.alternatives)) return entry;
+	return {
+		...entry,
+		alternatives: entry.alternatives.map((alt) => ({
+			...alt,
+			effects: (alt.effects || []).map((ef) =>
+				'valueUsage' in ef ? ef : { ...ef, valueUsage: 1 },
+			),
+		})),
+	};
+}
 
 let totalAdded = 0;
 let totalDiverged = 0;
 
-function syncSimple(label, forkRel, upstreamObj, {transform = x => x} = {}) {
+function syncSimple(
+	label,
+	forkRel,
+	upstreamObj,
+	{
+		transform = (x) => x,
+		compareStrip = (x) => x,
+		addTransform = (x) => x,
+	} = {},
+) {
 	const forkPath = path.join(forkRoot, forkRel);
 	const fork = readJSON(forkPath);
 	const added = [];
@@ -107,8 +185,10 @@ function syncSimple(label, forkRel, upstreamObj, {transform = x => x} = {}) {
 		const transformed = transform(v);
 		if (!(k in fork)) {
 			added.push(k);
-			if (!dryRun) fork[k] = transformed;
-		} else if (JSON.stringify(fork[k]) !== JSON.stringify(transformed)) {
+			if (!dryRun) fork[k] = addTransform(transformed);
+		} else if (
+			JSON.stringify(compareStrip(fork[k])) !== JSON.stringify(transformed)
+		) {
 			diverged.push(k);
 		}
 	}
@@ -122,8 +202,9 @@ function downgradeOutfit(v) {
 
 function downgradeUma(u) {
 	const outfits = {};
-	for (const [oid, ov] of Object.entries(u.outfits)) outfits[oid] = downgradeOutfit(ov);
-	return {name: u.name, outfits};
+	for (const [oid, ov] of Object.entries(u.outfits))
+		outfits[oid] = downgradeOutfit(ov);
+	return { name: u.name, outfits };
 }
 
 // Umas need two kinds of merge: whole new umas, and new outfits (alt costumes) on
@@ -148,11 +229,15 @@ function syncUmas(label, forkRel, upstreamObj) {
 			}
 		}
 	}
-	console.log(`${label}: +${addedUmas.length} new uma(s), +${addedOutfits.length} new outfit(s) on existing umas`);
+	console.log(
+		`${label}: +${addedUmas.length} new uma(s), +${addedOutfits.length} new outfit(s) on existing umas`,
+	);
 	if (addedUmas.length) console.log(`  new umas: ${truncate(addedUmas)}`);
-	if (addedOutfits.length) console.log(`  new outfits: ${truncate(addedOutfits)}`);
+	if (addedOutfits.length)
+		console.log(`  new outfits: ${truncate(addedOutfits)}`);
 	totalAdded += addedUmas.length + addedOutfits.length;
-	if (!dryRun && (addedUmas.length || addedOutfits.length)) writeJSON(forkPath, fork);
+	if (!dryRun && (addedUmas.length || addedOutfits.length))
+		writeJSON(forkPath, fork);
 }
 
 const ICON_PREFIX = '/uma-tools/icons/chara/';
@@ -161,11 +246,13 @@ function copyIcon(basename) {
 	const src = path.join(upstreamRoot, 'icons', 'chara', `${basename}.png`);
 	const dst = path.join(forkRoot, 'icons', 'chara', `${basename}.png`);
 	if (!fs.existsSync(src)) {
-		console.warn(`  WARNING: ${basename}.png not found under upstream icons/chara/ — leaving this icons.json key unset`);
+		console.warn(
+			`  WARNING: ${basename}.png not found under upstream icons/chara/ — leaving this icons.json key unset`,
+		);
 		return false;
 	}
 	if (!dryRun) {
-		fs.mkdirSync(path.dirname(dst), {recursive: true});
+		fs.mkdirSync(path.dirname(dst), { recursive: true });
 		fs.copyFileSync(src, dst);
 	}
 	return true;
@@ -194,12 +281,16 @@ function syncIcons(upstreamIcons) {
 }
 
 function truncate(arr, n = 20) {
-	return arr.slice(0, n).join(', ') + (arr.length > n ? ` ... (+${arr.length - n} more)` : '');
+	return (
+		arr.slice(0, n).join(', ') +
+		(arr.length > n ? ` ... (+${arr.length - n} more)` : '')
+	);
 }
 
 function report(label, added, diverged) {
 	let line = `${label}: +${added.length} new key(s)`;
-	if (diverged.length) line += `, ${diverged.length} shared key(s) diverge in value (left untouched — never overwritten by this script)`;
+	if (diverged.length)
+		line += `, ${diverged.length} shared key(s) diverge in value (left untouched — never overwritten by this script)`;
 	console.log(line);
 	if (added.length) console.log(`  added: ${truncate(added)}`);
 	totalAdded += added.length;
@@ -209,31 +300,99 @@ function report(label, added, diverged) {
 function main() {
 	console.log(`Syncing from upstream checkout: ${upstreamRoot}`);
 	console.log(`Engine ref: ${opts.engineRef}`);
-	console.log(dryRun ? '(dry run — pass --no-dry-run to write changes)\n' : '(WRITING changes)\n');
+	console.log(
+		dryRun
+			? '(dry run — pass --no-dry-run to write changes)\n'
+			: '(WRITING changes)\n',
+	);
 
 	console.log('-- Global (umalator-global/ + uma-skill-tools/data/global/) --');
-	syncUmas('Global umas', 'umalator-global/umas.json', readJSON(path.join(upstreamRoot, 'umalator-global/umas.json')));
-	syncSimple('Global skill_meta', 'umalator-global/skill_meta.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_meta.json')), {transform: v => stripDeep(v, SKILL_META_DROP)});
-	syncSimple('Global skill_data', 'uma-skill-tools/data/global/skill_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/skill_data.json')), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
-	syncSimple('Global course_data', 'uma-skill-tools/data/global/course_data.json', readJSON(path.join(upstreamRoot, 'umalator-global/course_data.json')));
-	syncSimple('Global tracknames', 'uma-skill-tools/data/global/tracknames.json', readJSON(path.join(upstreamRoot, 'umalator-global/tracknames.json')));
+	syncUmas(
+		'Global umas',
+		'umalator-global/umas.json',
+		readJSON(path.join(upstreamRoot, 'umalator-global/umas.json')),
+	);
+	syncSimple(
+		'Global skill_meta',
+		'umalator-global/skill_meta.json',
+		readJSON(path.join(upstreamRoot, 'umalator-global/skill_meta.json')),
+		{ transform: (v) => stripDeep(v, SKILL_META_DROP) },
+	);
+	syncSimple(
+		'Global skill_data',
+		'uma-skill-tools/data/global/skill_data.json',
+		readJSON(path.join(upstreamRoot, 'umalator-global/skill_data.json')),
+		{
+			transform: (v) => stripDeep(v, SKILL_DATA_DROP),
+			compareStrip: (v) => stripDeep(v, SKILL_DATA_FORK_ONLY),
+			addTransform: addDefaultValueUsage,
+		},
+	);
+	syncSimple(
+		'Global course_data',
+		'uma-skill-tools/data/global/course_data.json',
+		readJSON(path.join(upstreamRoot, 'umalator-global/course_data.json')),
+	);
+	syncSimple(
+		'Global tracknames',
+		'uma-skill-tools/data/global/tracknames.json',
+		readJSON(path.join(upstreamRoot, 'umalator-global/tracknames.json')),
+	);
 
 	console.log('\n-- JP (repo root) --');
-	syncUmas('JP umas', 'umas.json', readJSON(path.join(upstreamRoot, 'umas.json')));
-	syncSimple('JP skill_meta', 'skill_meta.json', readJSON(path.join(upstreamRoot, 'skill_meta.json')), {transform: v => stripDeep(v, SKILL_META_DROP)});
+	syncUmas(
+		'JP umas',
+		'umas.json',
+		readJSON(path.join(upstreamRoot, 'umas.json')),
+	);
+	syncSimple(
+		'JP skill_meta',
+		'skill_meta.json',
+		readJSON(path.join(upstreamRoot, 'skill_meta.json')),
+		{ transform: (v) => stripDeep(v, SKILL_META_DROP) },
+	);
 	syncIcons(readJSON(path.join(upstreamRoot, 'icons.json')));
 
-	console.log('\n-- JP engine data (uma-skill-tools/data/, compared against the engine repo\'s own HEAD) --');
-	syncSimple('Engine skill_data', 'uma-skill-tools/data/jp/skill_data.json', readEngineJSON('data/jp/skill_data.json'), {transform: v => stripDeep(v, SKILL_DATA_DROP)});
-	syncSimple('Engine skillnames', 'uma-skill-tools/data/jp/skillnames.json', readEngineJSON('data/jp/skillnames.json'));
-	syncSimple('Engine course_data', 'uma-skill-tools/data/jp/course_data.json', readEngineJSON('data/jp/course_data.json'));
-	syncSimple('Engine tracknames', 'uma-skill-tools/data/jp/tracknames.json', readEngineJSON('data/jp/tracknames.json'));
+	console.log(
+		"\n-- JP engine data (uma-skill-tools/data/, compared against the engine repo's own HEAD) --",
+	);
+	syncSimple(
+		'Engine skill_data',
+		'uma-skill-tools/data/jp/skill_data.json',
+		readEngineJSON('data/jp/skill_data.json'),
+		{
+			transform: (v) => stripDeep(v, SKILL_DATA_DROP),
+			compareStrip: (v) => stripDeep(v, SKILL_DATA_FORK_ONLY),
+			addTransform: addDefaultValueUsage,
+		},
+	);
+	syncSimple(
+		'Engine skillnames',
+		'uma-skill-tools/data/jp/skillnames.json',
+		readEngineJSON('data/jp/skillnames.json'),
+	);
+	syncSimple(
+		'Engine course_data',
+		'uma-skill-tools/data/jp/course_data.json',
+		readEngineJSON('data/jp/course_data.json'),
+	);
+	syncSimple(
+		'Engine tracknames',
+		'uma-skill-tools/data/jp/tracknames.json',
+		readEngineJSON('data/jp/tracknames.json'),
+	);
 
-	console.log(`\nTotal: +${totalAdded} key(s) added, ${totalDiverged} shared key(s) diverge in value (untouched).`);
+	console.log(
+		`\nTotal: +${totalAdded} key(s) added, ${totalDiverged} shared key(s) diverge in value (untouched).`,
+	);
 	if (dryRun) {
-		console.log('Dry run — nothing written. Re-run with --no-dry-run to apply.');
+		console.log(
+			'Dry run — nothing written. Re-run with --no-dry-run to apply.',
+		);
 	} else {
-		console.log("Written. uma-skill-tools/data/{jp,global}/ changes need their own commit+push in that submodule, then bump this repo's gitlink. Also rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit here.");
+		console.log(
+			"Written. uma-skill-tools/data/{jp,global}/ changes need their own commit+push in that submodule, then bump this repo's gitlink. Also rebuild umalator/, umalator-global/, and skill-visualizer-global/ and commit here.",
+		);
 	}
 }
 
