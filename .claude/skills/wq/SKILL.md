@@ -43,7 +43,9 @@ than guessing at a different invocation form.
 - **There is no `--category` flag.** `Category` (`engine`/`ui`/`tooling`) is derived from the
   prefix via `prefix-map.json` — passing `--category` fails argparse outright.
 - Never hand-pick a ticket number. `wq.py file` mints it; `wq.py next-id <PREFIX>` mints without
-  filing, if you just need to know the number ahead of time.
+  filing, if you just need to know the number ahead of time. Since PIPE-55 (2026-09-05) `next-id`
+  is genuinely read-only — it used to also rewrite `work-queue/next-ids.json`, leaving an
+  uncommitted change to a tracked file that then blocked the next `claim`.
 
 ## `file` — mint a ticket
 
@@ -84,7 +86,20 @@ uv run scripts/wq.py claim <id> [--branch NAME]
 
 Branches (reusing `--branch NAME` if it already exists — useful for a side-finding claimed onto
 the branch you're already on), moves the ticket file to `in-progress/`, updates README/mkdocs,
-and opens a **draft** PR. That draft is deliberate — claiming doesn't mean "ready for review" —
+and opens a **draft** PR.
+
+**`--branch` is how you get one PR for several tickets.** Without it the branch defaults to
+`<id>-work`, so claiming three tickets for one fix set silently opens three branches and three
+PRs — pass `--branch <first-id>-work` on the second and third claims instead. `claim` prints
+"already has an open PR: #N -- skipping gh pr create" when it correctly reuses one.
+
+**Cleanliness**: `claim` force-switches branches, so it refuses on a dirty plans tree — with one
+exception since PIPE-55 (2026-09-05): an *unstaged* edit to the very ticket file being claimed is
+allowed through, which is exactly what `file`'s own "next: write Summary/Evidence/Suggested
+approach ... then `wq.py claim`" instruction produces. A *staged* edit to that file, or any other
+dirty path, still refuses. Note stashing was never a workaround here — `claim` `git mv`s the
+ticket from `backlog/` to `in-progress/`, so a stash taken against the old path can't be popped
+cleanly afterwards. That draft is deliberate — claiming doesn't mean "ready for review" —
 but it also means nothing un-drafts it automatically. Run `wq.py ready <id>` yourself once
 implementation is actually done, or a `/project-review` pass over the repo will flag it as a
 draft you may have forgotten (see that skill's Step 1) — neither is a substitute for the other.
