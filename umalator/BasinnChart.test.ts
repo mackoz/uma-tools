@@ -41,7 +41,7 @@ vi.mock('@tanstack/preact-table', () => ({
 // and where a case also matters for Global, that's called out and independently confirmed.
 
 // A JP course with a real, non-degenerate phase 2 -- matches the course used by
-// uma-skill-tools/test/activate-counts-as-random.ts for the same reason.
+// uma-skill-tools/test/activate-counts-as-random.test.ts for the same reason.
 const COURSE_ID = '10101';
 const course = (courseData as any)[COURSE_ID];
 
@@ -127,7 +127,7 @@ describe('getActivateableSkills', () => {
 		// parser changes no candidate's inclusion here today, because the base table's
 		// activate_count_*/is_activate_any_skill conditions never empty their own RegionList
 		// (only their *dynamic* condition differs, which this prefilter doesn't evaluate at
-		// all -- see uma-skill-tools/test/activate-counts-as-random.ts for that half of the
+		// all -- see uma-skill-tools/test/activate-counts-as-random.test.ts for that half of the
 		// fix). If this test starts failing, something changed which candidates the acr parser
 		// can exclude/include -- worth a second look, not a quick "fix the test."
 		const withDefault = getActivateableSkills(
