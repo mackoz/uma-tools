@@ -22,10 +22,12 @@ node_modules
 # defense-in-depth: worktrees categorically don't belong in this repo's history).
 .claude/worktrees/
 
-# Personal Claude Code permission allowlist (which Bash/MCP calls skip the
-# approval prompt) -- machine-local preference, not a project convention to
-# share.
-.claude/settings.json
+# .claude/settings.json is tracked: shared project config (the PIPE-49
+# submodule cwd-drift guard hooks). Personal machine-local preferences --
+# permission allowlists (which Bash/MCP calls skip the approval prompt),
+# personal hooks -- live in settings.local.json instead, which stays
+# untracked.
+.claude/settings.local.json
 
 # Bulk import of personal Claude Code session state (agent defs, session
 # memory/feedback notes with real incident writeups and session UUIDs, and
