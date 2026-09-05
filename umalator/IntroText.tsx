@@ -66,6 +66,21 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-04</summary>
+						<ul>
+							<li>
+								Fixed: <strong>Nothing Ventured</strong> and{' '}
+								<strong>Risky Business</strong> (plus a JP-only skill sharing
+								the same effect shape) were badly mis-simulated. Their speed
+								boost was 25x too weak, and their HP drain applied the roll's
+								rare worst case on every single activation instead of actually
+								rolling it — mostly no drain at all, occasionally a smaller or
+								larger one. Both are now simulated as the game actually rolls
+								them.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-03</summary>
 						<ul>
 							<li>

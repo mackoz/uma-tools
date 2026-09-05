@@ -7,6 +7,7 @@ import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
 import { isDebuffSkill } from './HorseDefTypes';
 import { useLanguage } from './Language';
+import { getEffectValueOutcomes } from './SkillEffectValue';
 import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { Tooltip } from './Tooltip';
 
@@ -624,7 +625,15 @@ export function ExpandedSkillDetails(props) {
 										</span>
 										<span class="skillEffectValue">
 											{ef.type in formatEffect
-												? formatEffect[ef.type](ef.modifier / 10000)
+												? getEffectValueOutcomes(
+														ef.modifier,
+														ef.valueUsage,
+													).map((m, i) => (
+														<Fragment key={i}>
+															{i > 0 && ' / '}
+															{formatEffect[ef.type](m / 10000)}
+														</Fragment>
+													))
 												: ef.modifier / 10000}
 										</span>
 									</div>

@@ -17,29 +17,36 @@
 //   node scripts/add-staged-global-umas.mjs --refresh-staged-meta --no-dry-run
 //                                                                 # see the dedicated section below
 //
-// UI-28's --refresh-staged-meta mode: closes (for one specific, narrow case) the gap this file's
-// header used to describe as fully open -- "an already-staged entry is filtered out of every
-// future run regardless of whether its JP source has changed" (see check-jp-global-divergence.mjs
-// for where that gap is still detected but NOT fixed by this mode; see it below for what actually
-// is). Motivating case: regenerating umalator-global/skill_meta.json straight from master.mdb
-// (e.g. to add a new field like groupRate) necessarily drops every staged-unreleased entry this
-// script previously layered on top, since master.mdb itself has no idea those umas/skills are
-// being staged early -- the regeneration is correct in isolation, but leaves the 45-46 staged
-// ids (umalator-global/unreleased.json's `.skills`) with no skill_meta at all, which crashes
-// SkillSet() (umalator/app.tsx) for any uma behind the "Show Unreleased Umas" toggle. Re-running
-// this script in its normal mode does NOT fix that: normal mode's outfitIds list is filtered by
-// `!alreadyPresent.has(oid)` against umas.json, which the regeneration never touched, so every
-// staged outfit reads as "already added" and the normal scan finds nothing to do.
+// UI-28's --refresh-staged-meta mode (HP-6 extended it to also cover skill_data.json -- see
+// below): closes (for one specific, narrow case) the gap this file's header used to describe as
+// fully open -- "an already-staged entry is filtered out of every future run regardless of
+// whether its JP source has changed" (see check-jp-global-divergence.mjs for where that gap is
+// still detected but NOT fixed by this mode; see it below for what actually is). Motivating case:
+// regenerating umalator-global/skill_meta.json and/or uma-skill-tools/data/global/skill_data.json
+// straight from master.mdb (e.g. to add a new field like groupRate, or a full skill_data.json
+// regen such as HP-6's) necessarily drops every staged-unreleased entry this script previously
+// layered on top, since master.mdb itself has no idea those umas/skills are being staged early --
+// the regeneration is correct in isolation, but leaves the 45-46 staged ids
+// (umalator-global/unreleased.json's `.skills`) with no skill_meta and/or skill_data at all, which
+// crashes SkillSet() (umalator/app.tsx) for any uma behind the "Show Unreleased Umas" toggle.
+// Re-running this script in its normal mode does NOT fix that: normal mode's outfitIds list is
+// filtered by `!alreadyPresent.has(oid)` against umas.json, which neither regeneration touches, so
+// every staged outfit reads as "already added" and the normal scan finds nothing to do.
 //
 // --refresh-staged-meta instead walks umalator-global/unreleased.json's existing `.skills` list
-// directly and re-copies each one from *current* JP skill_meta/skill_data -- but ONLY for a sid
-// the regeneration actually dropped (absent from BOTH globalSkillMeta and globalSkillData right
-// now). A sid the regeneration left in place is treated as newly Global-authoritative, not merely
-// still-staged, and is deliberately left untouched even though it's also listed as provenance
-// 'jp' from an earlier run (concrete case: sid 100991, present in the regenerated
-// umalator-global/skill_meta.json because it independently satisfies master.mdb's own
-// `is_general_skill=1 OR rarity>=3`, even though the uma/outfit it belongs to hasn't released).
-// This is deliberately a narrower, more conservative rule than setJpSourced's normal
+// directly and re-copies each one from *current* JP skill_meta/skill_data -- but independently per
+// file: a sid's skill_meta is restored only if it's absent from globalSkillMeta right now, and
+// (as of HP-6) its skill_data is restored only if it's absent from globalSkillData right now.
+// They're checked separately rather than requiring both to be missing because the two files can
+// be regenerated on different schedules -- update.bat happens to regenerate both together today,
+// but nothing here assumes that stays true. A sid the regeneration left in place in a given file
+// is treated as newly Global-authoritative *for that file*, not merely still-staged, and is
+// deliberately left untouched there even though it's also listed as provenance 'jp' from an
+// earlier run (concrete case: sid 100991, present in a from-scratch regeneration of both
+// skill_meta.json and skill_data.json because it independently satisfies master.mdb's own
+// `is_general_skill=1 OR rarity>=3`, even though the uma/outfit it belongs to hasn't released --
+// verified for skill_data.json specifically as part of HP-6's own acceptance check). This is
+// deliberately a narrower, more conservative rule than setJpSourced's normal
 // priorJpSourced-permits-overwrite guard (used by the outfit-scan and inherited-twin sweep below)
 // -- that guard would happily let this mode clobber sid 100991's now-authoritative Global values
 // with a JP approximation, since it WAS priorJpSourced. Restore-if-missing, not refresh-if-stale.
@@ -89,9 +96,9 @@ program
 	)
 	.option(
 		'--refresh-staged-meta',
-		'restore skill_meta/skill_data for already-staged skills a fresh skill_meta.json ' +
-			'regeneration dropped (UI-28) -- runs standalone, ignores --until and the outfit scan; ' +
-			'see the file header for exactly what it does and does not fix',
+		'restore skill_meta/skill_data for already-staged skills a fresh skill_meta.json and/or ' +
+			'skill_data.json regeneration dropped (UI-28, extended HP-6) -- runs standalone, ignores ' +
+			'--until and the outfit scan; see the file header for exactly what it does and does not fix',
 	);
 
 program.parse();
@@ -144,18 +151,9 @@ function writeJSON(p, obj) {
 	);
 }
 
-function commitAndPushInSubmodule(
-	submodulePath,
-	relFiles,
-	message,
-	{ dryRun },
-) {
-	if (dryRun) {
-		console.log(
-			`\n(dry run — would commit in ${submodulePath}: ${relFiles.join(', ')})`,
-		);
-		return;
-	}
+// Both call sites only invoke this from inside their own `if (!dryRun)` block, so there's no
+// dry-run branch to take here -- this always actually commits and pushes.
+function commitAndPushInSubmodule(submodulePath, relFiles, message) {
 	try {
 		execFileSync('git', ['-C', submodulePath, 'add', ...relFiles], {
 			stdio: 'inherit',
@@ -256,14 +254,17 @@ function main() {
 		// deliberately does NOT touch. Standalone mode: doesn't read master.mdb, doesn't touch
 		// umas.json, doesn't re-derive unreleasedOutfits/unreleasedSkills -- unreleased.json's own
 		// `.skills` list is exactly what a regeneration needs restored, and umas.json (the only
-		// other input that list depends on) is untouched by a skill_meta.json regeneration.
+		// other input that list depends on) is untouched by either a skill_meta.json or
+		// skill_data.json regeneration.
 		//
-		// skill_meta.json ONLY, deliberately: skill_data.json isn't regenerated by any pipeline
-		// this ticket touches, so it's never actually missing these ids in the first place --
-		// checking `sid in globalSkillData` as part of the "already restored" test would read
-		// every staged id as already present (it's still sitting in the untouched skill_data.json
-		// from whenever it was first staged) and this mode would never restore anything. Only
-		// skill_meta.json's presence is the real signal of "did the regeneration drop this."
+		// skill_meta.json and skill_data.json are each checked independently, per sid: as of HP-6,
+		// both files can genuinely be missing a staged id after a regeneration (skill_data.json
+		// moved into the pipeline HP-6 touches -- see the file header for the full history of why
+		// this used to check skill_meta.json only). `sid in globalSkillMeta` / `sid in
+		// globalSkillData` are each the real signal of "did *this* regeneration drop this id from
+		// *this* file" -- checked separately so a sid missing from only one of the two files (e.g.
+		// a run where only one was regenerated) gets restored only where it's actually missing,
+		// never re-copied on top of a file that already has it.
 		console.log(
 			dryRun
 				? '(dry run -- pass --no-dry-run to write changes)\n'
@@ -271,51 +272,89 @@ function main() {
 		);
 		const jpVersion = jpDataVersion();
 		const staged = priorUnreleased.skills ?? [];
-		const restored = [];
-		const alreadyPresent = [];
-		const missingFromJp = [];
+		const restoredMeta = [];
+		const restoredData = [];
+		const alreadyPresentMeta = [];
+		const alreadyPresentData = [];
+		const missingFromJpMeta = [];
+		const missingFromJpData = [];
 		for (const sid of staged) {
 			if (sid in globalSkillMeta) {
-				alreadyPresent.push(sid);
-				continue;
+				alreadyPresentMeta.push(sid);
+			} else if (!(sid in jpSkillMeta)) {
+				missingFromJpMeta.push(sid);
+			} else {
+				globalSkillMeta[sid] = jpSkillMeta[sid];
+				restoredMeta.push(sid);
 			}
-			if (!(sid in jpSkillMeta)) {
-				missingFromJp.push(sid);
-				continue;
+
+			if (sid in globalSkillData) {
+				alreadyPresentData.push(sid);
+			} else if (!(sid in jpSkillData)) {
+				missingFromJpData.push(sid);
+			} else {
+				globalSkillData[sid] = jpSkillData[sid];
+				restoredData.push(sid);
 			}
-			globalSkillMeta[sid] = jpSkillMeta[sid];
-			restored.push(sid);
 		}
-		console.log(`Restored: +${restored.length}`);
-		restored.forEach((s) => {
+		// Union of both, for provenance bookkeeping and the write-gate below -- a sid restored in
+		// only one of the two files still needs its provenance's jpSkillDataCommit refreshed.
+		const restored = [...new Set([...restoredMeta, ...restoredData])].sort();
+		console.log(`Restored to skill_meta.json: +${restoredMeta.length}`);
+		restoredMeta.forEach((s) => {
 			console.log(`  ${s}`);
 		});
-		if (alreadyPresent.length) {
+		console.log(`Restored to skill_data.json: +${restoredData.length}`);
+		restoredData.forEach((s) => {
+			console.log(`  ${s}`);
+		});
+		if (alreadyPresentMeta.length) {
 			console.log(
-				`\nSKIPPED (already present in skill_meta.json -- now Global-authoritative, not merely ` +
-					`still-staged): ${alreadyPresent.join(', ')}`,
+				`\nSKIPPED skill_meta.json (already present -- now Global-authoritative, not merely ` +
+					`still-staged): ${alreadyPresentMeta.join(', ')}`,
 			);
 		}
-		if (missingFromJp.length) {
+		if (alreadyPresentData.length) {
 			console.log(
-				`\nSKIPPED (missing from current JP skill_meta -- can't restore): ${missingFromJp.join(', ')}`,
+				`\nSKIPPED skill_data.json (already present -- now Global-authoritative, not merely ` +
+					`still-staged): ${alreadyPresentData.join(', ')}`,
 			);
 		}
-		// provenance's jpSkillDataCommit is refreshed to the current submodule commit for restored
-		// ids -- everything else in unreleased.json (outfits/skills lists, other provenance
-		// entries) is left exactly as it was; this mode never recomputes them. skill_data.json is
-		// never written here (see above) -- only skill_meta.json actually changed.
+		if (missingFromJpMeta.length) {
+			console.log(
+				`\nSKIPPED skill_meta.json (missing from current JP skill_meta -- can't restore): ${missingFromJpMeta.join(', ')}`,
+			);
+		}
+		if (missingFromJpData.length) {
+			console.log(
+				`\nSKIPPED skill_data.json (missing from current JP skill_data -- can't restore): ${missingFromJpData.join(', ')}`,
+			);
+		}
+		// provenance's jpSkillDataCommit is refreshed to the current submodule commit for every sid
+		// restored to either file -- everything else in unreleased.json (outfits/skills lists,
+		// other provenance entries) is left exactly as it was; this mode never recomputes them.
 		if (restored.length) {
 			const provenance = { ...(priorUnreleased.provenance ?? {}) };
 			for (const sid of restored) {
 				provenance[sid] = { source: 'jp', jpSkillDataCommit: jpVersion };
 			}
 			if (!dryRun) {
-				writeJSON(skillMetaPath, globalSkillMeta);
+				if (restoredMeta.length) writeJSON(skillMetaPath, globalSkillMeta);
+				if (restoredData.length) writeJSON(skillDataPath, globalSkillData);
 				fs.writeFileSync(
 					unreleasedPath,
 					`${JSON.stringify({ ...priorUnreleased, provenance }, null, '\t')}\n`,
 				);
+				// skill_data.json lives in the uma-skill-tools submodule -- writing it to disk isn't
+				// enough to actually publish the change (see docs/data-pipeline.md's PIPE-42 note),
+				// same two-repo commit the normal outfit-scan path below already does.
+				if (restoredData.length) {
+					commitAndPushInSubmodule(
+						path.join(forkRoot, 'uma-skill-tools'),
+						['data/global/skill_data.json'],
+						'Restore staged unreleased-uma skill data dropped by regeneration',
+					);
+				}
 				console.log(
 					'\nWritten. Now rebuild umalator/ and umalator-global/ and commit.',
 				);
@@ -579,7 +618,6 @@ function main() {
 				path.join(forkRoot, 'uma-skill-tools'),
 				['data/global/skill_data.json'],
 				'Add staged unreleased-uma skill data',
-				{ dryRun },
 			);
 		}
 		console.log(
