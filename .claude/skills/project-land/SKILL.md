@@ -309,6 +309,21 @@ run half-done. Each individual step (`land_one`, `sync_gitlink`) happens to no-o
 if you re-run it against already-completed state, but that's incidental behavior, not a
 designed guarantee — don't treat "just run the same command again" as automatically safe.
 
+**Two former triggers of that partial state are fixed as of PIPE-54/PIPE-35 (2026-09-05)** —
+PIPE-12 itself stays open, and everything above still applies, but these two specific failures
+shouldn't recur:
+
+- **A PR branch checked out in a worktree no longer kills the run mid-sequence.** `land` used to
+  force-check-out the branch in the main checkout, which git refuses outright when a worktree
+  holds it — and it died *after* the engine PR had merged. It now operates inside that worktree
+  directly, and refuses up front, before any merge, only when the worktree is unusable (dirty, or
+  holding commits `origin` lacks). `land --dry-run` reports this too, which it previously could
+  not see at all. Since `CLAUDE.md` makes worktrees the documented way to do ticket work, this
+  used to hit *every* worktree-based landing.
+- **A failed Pages-deploy poll no longer reports the whole landing as failed.** That poll is a
+  post-merge *observation* step; a transient `gh` failure inside it used to abort `cmd_land` after
+  every merge had already succeeded. It can't fail the land now.
+
 This doesn't apply to a failed `wq.py file` or `wq.py status`, though — since PIPE-38 both roll
 themselves back if the pre-commit hook (or any other failure before a real commit lands) rejects
 the commit, restoring whatever they'd written and, for `file`, freeing the minted id again — so
@@ -342,7 +357,11 @@ If a run dies:
   it printed `success` after waiting, or a line starting `no Pages deploy expected` and skipped
   the wait (whether because `deploy.yml`'s own filters ruled it out, or because `uma-tools` has
   no `.github/workflows/deploy.yml` at all — both print that same prefix). A wait that's still
-  hanging, or one that reports a failed deploy, is the real problem to chase. This only fires
+  hanging, or one that reports a failed deploy, is the real problem to chase. Since PIPE-35
+  (2026-09-05) a third outcome prints distinctly — the poll itself being unreadable (`gh`
+  failing) — rather than reading as a timeout; and the poll matches the awaited run by `headSha`
+  instead of assuming the newest run is the right one, so a concurrent push no longer shadows it
+  into a false timeout. This only fires
   when the code repo was actually part
   of this run.
 
