@@ -30,7 +30,12 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { forbiddenPkgKeys, missingDeps } from './verify-helpers.mjs';
+import {
+	forbiddenPkgKeys,
+	lockfileVersions,
+	missingDeps,
+	staleDeps,
+} from './verify-helpers.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(root, 'scripts', 'verify-baseline.json');
@@ -263,24 +268,51 @@ function runDocs() {
 	return { label: 'docs FAILED', ok: false };
 }
 
-// Lists installed package names directly under a node_modules directory,
-// expanding scoped packages ("@scope/name") to match how they're declared in
-// package.json. Returns null if the directory doesn't exist at all, so callers
-// can tell "nothing installed" (a clear, single-line message) apart from "some
-// deps missing" (a list of names).
-function listInstalledNames(nodeModulesDir) {
+// Lists installed packages directly under a node_modules directory as a
+// name -> installed-version map, expanding scoped packages ("@scope/name")
+// to match how they're declared in package.json. Returns null if the
+// directory doesn't exist at all, so callers can tell "nothing installed" (a
+// clear, single-line message) apart from "some deps missing" (a list of
+// names).
+//
+// Renamed from listInstalledNames (PIPE-60): it used to return bare
+// directory names from readdirSync, which is a presence check by
+// construction -- nothing opened an installed package's own package.json to
+// read what version was actually there. That gap is exactly how PIPE-53's
+// engine TypeScript bump (4.7.4 -> 7.0.2) left the main checkout silently
+// stale while `deps OK` kept reporting. Reading each entry's own
+// package.json here is what makes staleDeps (scripts/verify-helpers.mjs)
+// possible; a package.json that's missing or unparseable for some entry is
+// treated as "no version known" rather than aborting the whole scan, since a
+// single malformed nested package shouldn't take down the freshness check
+// for everything else.
+function listInstalledVersions(nodeModulesDir) {
 	if (!fs.existsSync(nodeModulesDir)) return null;
-	const names = [];
+	const versions = {};
+	const record = (name, pkgDir) => {
+		try {
+			const pkgJson = JSON.parse(
+				fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'),
+			);
+			if (typeof pkgJson.version === 'string') versions[name] = pkgJson.version;
+		} catch {
+			// No readable package.json -- leave it out of the map; the caller's
+			// missingDeps/staleDeps treat "no version known" as its own
+			// reportable case rather than this function guessing or throwing.
+		}
+	};
 	for (const entry of fs.readdirSync(nodeModulesDir)) {
 		if (entry.startsWith('.')) continue;
 		if (entry.startsWith('@')) {
 			const scopeDir = path.join(nodeModulesDir, entry);
-			for (const sub of fs.readdirSync(scopeDir)) names.push(`${entry}/${sub}`);
+			for (const sub of fs.readdirSync(scopeDir)) {
+				record(`${entry}/${sub}`, path.join(scopeDir, sub));
+			}
 		} else {
-			names.push(entry);
+			record(entry, path.join(nodeModulesDir, entry));
 		}
 	}
-	return names;
+	return versions;
 }
 
 // Stage A (PIPE-56): package.json injection tripwire. An npm install run from
@@ -311,39 +343,87 @@ function runPkgGuard() {
 	return { label: `pkg-guard FAILED (${problems.length})`, ok: false };
 }
 
-// Stage C (PIPE-56): dependency-freshness check. Asserts every dependency
-// declared in the root and engine package.json is actually present in the
-// corresponding node_modules -- the check that would have caught the real,
-// silent breakage this ticket documents (a worktree's `npm i` replaced the
-// engine's shared node_modules symlink with a real directory, leaving the
-// *main checkout's* install stale and untested until someone happened to run
-// `npm test` there). Uses directory-existence rather than `npm ls`: confirmed
-// while implementing this ticket that `npm ls --all` exits 1 on this repo's
-// pre-existing accessible-autocomplete/preact peer conflict even when nothing
-// is actually missing (see scripts/verify-helpers.mjs).
+// Stage C (PIPE-56, extended PIPE-60): dependency-freshness check. Asserts
+// every dependency declared in the root and engine package.json is both
+// present in the corresponding node_modules (missingDeps) and installed at
+// the version package-lock.json actually resolves it to (staleDeps) -- the
+// latter is what would have caught PIPE-53's real, silent breakage: an
+// engine TypeScript bump (4.7.4 -> 7.0.2, @types/node ^18 -> ^24) landed
+// while the main checkout's install stayed on the old versions, with
+// `deps OK` reported the whole time, because nothing before PIPE-60 ever
+// compared an installed package's own version against anything.
+//
+// Presence uses directory-existence rather than `npm ls`: confirmed while
+// implementing PIPE-56 that `npm ls --all` exits 1 on this repo's
+// pre-existing accessible-autocomplete/preact peer conflict even when
+// nothing is actually missing (see scripts/verify-helpers.mjs). Freshness
+// uses package-lock.json's resolved version rather than semver-range
+// satisfaction, for the same "don't add a dependency to fix a
+// dependency-freshness checker" and "unassert-cli has no range to check
+// against" reasons recorded on staleDeps itself.
 function runDepsFreshness() {
 	const targets = [
-		['root', path.join(root, 'package.json'), path.join(root, 'node_modules')],
+		[
+			'root',
+			path.join(root, 'package.json'),
+			path.join(root, 'node_modules'),
+			path.join(root, 'package-lock.json'),
+		],
 		[
 			'uma-skill-tools',
 			path.join(root, 'uma-skill-tools', 'package.json'),
 			path.join(root, 'uma-skill-tools', 'node_modules'),
+			path.join(root, 'uma-skill-tools', 'package-lock.json'),
 		],
 	];
 	const problems = [];
-	for (const [label, pkgPath, nodeModulesDir] of targets) {
+	for (const [label, pkgPath, nodeModulesDir, lockPath] of targets) {
 		if (!fs.existsSync(pkgPath)) continue;
 		const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-		const installed = listInstalledNames(nodeModulesDir);
+		const installed = listInstalledVersions(nodeModulesDir);
 		if (installed === null) {
 			problems.push(
 				`${label}: node_modules missing entirely -- run npm install`,
 			);
 			continue;
 		}
-		const missing = missingDeps(pkgJson, installed);
+		const missing = missingDeps(pkgJson, Object.keys(installed));
 		if (missing.length)
 			problems.push(`${label}: missing ${missing.join(', ')}`);
+
+		if (!fs.existsSync(lockPath)) {
+			problems.push(
+				`${label}: package-lock.json missing entirely -- run npm install`,
+			);
+			continue;
+		}
+		const lockJson = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+		const declared = {
+			...(pkgJson.dependencies || {}),
+			...(pkgJson.devDependencies || {}),
+		};
+		const resolved = lockfileVersions(pkgJson, lockJson);
+		// A dependency present in node_modules but with no lockfile entry at
+		// all shouldn't happen in a healthy repo, but silently skipping it
+		// would reintroduce exactly the "looks present, isn't actually right"
+		// failure class this ticket exists to close -- so it's reported
+		// separately from a version mismatch, not folded into it or dropped.
+		const unresolved = Object.keys(declared).filter(
+			(name) =>
+				name in installed && !(name in resolved) && !missing.includes(name),
+		);
+		if (unresolved.length)
+			problems.push(`${label}: no lockfile entry for ${unresolved.join(', ')}`);
+
+		const stale = staleDeps(pkgJson, installed, resolved);
+		if (stale.length) {
+			const detail = stale
+				.map(
+					(s) => `${s.name} (installed ${s.installed}, lockfile ${s.resolved})`,
+				)
+				.join(', ');
+			problems.push(`${label}: stale ${detail}`);
+		}
 	}
 	if (!problems.length) return { label: 'deps OK', ok: true };
 	console.error(`deps FAILED:\n  ${problems.join('\n  ')}`);
