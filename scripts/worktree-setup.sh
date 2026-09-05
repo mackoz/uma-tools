@@ -10,9 +10,34 @@ cd "$(git rev-parse --show-toplevel)"
 git submodule update --init
 
 main_checkout=$(dirname "$(git rev-parse --git-common-dir)")
-if [ ! -e node_modules ]; then
-	ln -s "$main_checkout/node_modules" node_modules
-fi
+
+# Three-way check (absent / symlink / real directory), not a bare `[ ! -e ]`:
+# npm does not install *through* a symlinked node_modules -- it replaces the
+# symlink with a real directory (PIPE-56). A bare existence guard silently
+# does nothing in that case, which is exactly the state that needs saying
+# something: this worktree has diverged from the shared install, and a stray
+# `npm i` run from inside it may have left the *main checkout's* copy stale
+# and untested (this happened for real during PIPE-52 -- the engine's
+# node_modules ended up missing a then-new dependency, and nothing noticed
+# until `npm test` failed from the main checkout). Never auto-delete or
+# re-link a real directory here: it may hold a deliberately divergent
+# install; say what's wrong and what to run instead.
+check_node_modules_link() {
+	local link_path="$1" target="$2" label="$3"
+	if [ -L "$link_path" ]; then
+		return 0
+	elif [ -e "$link_path" ]; then
+		echo "warning: $label is a real directory, not the shared symlink to $target -- npm has likely installed into it directly (PIPE-56), diverging this worktree from the shared install. Not touching it: if that's unintended, 'rm -rf $link_path' and re-run this script to restore the symlink; if it's a deliberate divergent install, leave it as is." >&2
+		return 1
+	else
+		ln -s "$target" "$link_path"
+		return 0
+	fi
+}
+
+# `|| true`: a real-directory divergence is a warning, not a reason to abort
+# the rest of setup (plans/ linking, git-excludes) under `set -e`.
+check_node_modules_link node_modules "$main_checkout/node_modules" node_modules || true
 
 # plans/ is a symlink to the sibling uma-tools-plans repo in the main checkout (and
 # .gitignore'd there); without it, worktree sessions can't reach work-queue tickets.
@@ -26,13 +51,13 @@ fi
 # npx-cached copy and dies with a misleading TypeError deep in ts-node itself
 # (PIPE-47). Sharing the main checkout's install is safe: same commit, same
 # package.json. Never create a dangling symlink — that reproduces the exact
-# error this block exists to prevent.
-if [ ! -e uma-skill-tools/node_modules ]; then
-	if [ -e "$main_checkout/uma-skill-tools/node_modules" ]; then
-		ln -s "$main_checkout/uma-skill-tools/node_modules" uma-skill-tools/node_modules
-	else
-		echo "note: $main_checkout/uma-skill-tools has no node_modules -- run 'npm install' there first, then re-run this script, or engine tests in this worktree will fail" >&2
-	fi
+# error this block exists to prevent. Same three-way check as the parent
+# node_modules above: an `npm i` run inside the submodule from a worktree
+# replaces this symlink with a real directory just as silently.
+if [ -e "$main_checkout/uma-skill-tools/node_modules" ]; then
+	check_node_modules_link uma-skill-tools/node_modules "$main_checkout/uma-skill-tools/node_modules" uma-skill-tools/node_modules || true
+elif [ ! -e uma-skill-tools/node_modules ]; then
+	echo "note: $main_checkout/uma-skill-tools has no node_modules -- run 'npm install' there first, then re-run this script, or engine tests in this worktree will fail" >&2
 fi
 
 # The engine's .gitignore entry is 'node_modules/' (trailing slash: directories
