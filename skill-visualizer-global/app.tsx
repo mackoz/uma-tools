@@ -12,6 +12,7 @@ import {
 	RegionDisplayType,
 	TrackSelect,
 } from '../components/RaceTrack';
+import { scalingContextForHorseParameters } from '../components/ScalingContext';
 import { ExpandedSkillDetails, SkillList } from '../components/SkillList';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
 import {
@@ -79,8 +80,14 @@ const horse = Object.freeze({
 	strategy: Strategy.Nige,
 	distanceAptitude: Aptitude.S,
 	surfaceAptitude: Aptitude.A,
-	strategyAptitde: Aptitude.A,
+	strategyAptitude: Aptitude.A,
 	rawStamina: 2000,
+	rawWisdom: 2000,
+	// SKL-7: value usage 13 brackets on HorseParameters.maxRawStat -- the max of the five stats
+	// before any course/ground/strategy modifier. This inspection horse applies no such modifiers
+	// (it is used verbatim as the "adjusted" horse everywhere in this app), so its raw max is
+	// simply 2000.
+	maxRawStat: 2000,
 });
 
 function baseSpeed(distance: number) {
@@ -230,6 +237,18 @@ function App(props) {
 
 	const course = CourseHelpers.getCourse(courseId);
 
+	// SKL-7: this app inspects skills against one fixed horse (`horse` above -- all stats 2000,
+	// Nige, no course/ground modifiers applied), so a ScalingContext for it is a direct read of
+	// that object rather than a buildBaseStats()/buildAdjustedStats() derivation. Without one,
+	// every value/duration below renders unscaled -- which stopped being harmless once SKL-7
+	// removed the baked x1.2 from the affected skills' stored modifiers, since those would then
+	// display strictly *smaller* than they used to (e.g. 210081 at +0.35 rather than +0.42).
+	// Full HP, since nothing here simulates a race in which HP could have been spent.
+	const scalingContext = useMemo(
+		() => scalingContextForHorseParameters(horse, course, selectedSkills.size),
+		[course, selectedSkills],
+	);
+
 	const statThresholds =
 		course.courseSetStatus.length == 0
 			? strings.ui.stats[0]
@@ -272,11 +291,15 @@ function App(props) {
 							class="expandedSkillColorMarker"
 							style={`background:${colors[i % colors.length].stroke}`}
 						/>
-						<ExpandedSkillDetails id={id} distanceFactor={course.distance} />
+						<ExpandedSkillDetails
+							id={id}
+							distanceFactor={course.distance}
+							scalingContext={scalingContext}
+						/>
 					</li>
 				);
 			}),
-		[selectedSkills, course, regions],
+		[selectedSkills, course, regions, scalingContext],
 	);
 
 	return (

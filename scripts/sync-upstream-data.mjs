@@ -129,34 +129,39 @@ const SKILL_DATA_DROP = new Set([
 	'durationScaling',
 	'scaling',
 ]);
-// Mirror case of SKILL_DATA_DROP above: a field the *fork* computes (per-effect
-// `valueUsage`, added by HP-6/make_skill_data.pl's `ability_value_usage_*` columns)
-// that upstream's own alpha123-derived skill_data.json will never carry, since it
-// isn't cut from the same master.mdb columns. Left in SKILL_DATA_DROP's upstream-side
-// stripDeep() call it would be a no-op (upstream never has the key to begin with);
-// what actually needs it stripped, before comparing, is the *fork's* side of a shared
-// key — otherwise every shared skill compares an object with `valueUsage` against one
-// without and is reported diverged, which is exactly the 100%-false-positive bug this
-// set exists to prevent for SKILL_DATA_DROP's own fields.
-const SKILL_DATA_FORK_ONLY = new Set(['valueUsage']);
+// Mirror case of SKILL_DATA_DROP above: fields the *fork* computes (per-effect
+// `valueUsage`, added by HP-6/make_skill_data.pl's `ability_value_usage_*` columns;
+// per-alternative `timeUsage`, added by SKL-7/make_skill_data.pl's duration-scaling
+// column) that upstream's own alpha123-derived skill_data.json will never carry, since
+// neither is cut from the same master.mdb columns. Left in SKILL_DATA_DROP's
+// upstream-side stripDeep() call either would be a no-op (upstream never has the key
+// to begin with); what actually needs it stripped, before comparing, is the *fork's*
+// side of a shared key — otherwise every shared skill compares an object with
+// `valueUsage`/`timeUsage` against one without and is reported diverged, which is
+// exactly the 100%-false-positive bug this set exists to prevent for SKILL_DATA_DROP's
+// own fields.
+const SKILL_DATA_FORK_ONLY = new Set(['valueUsage', 'timeUsage']);
 
 // For a skill_data.json entry newly ADDED from upstream (a skill upstream has that
 // this fork doesn't yet): every effect object in every alternative needs a
-// `valueUsage` key of its own, so the file stays shape-consistent with every
-// generator-produced entry around it (Task 3's make_skill_data.pl always emits one).
-// Upstream has no way to tell us the real ability_value_usage value, so this assumes
-// the safest default: 1 ("Direct" per RaceSolver.ts's SkillEffect comment), meaning
-// the effect's modifier is used as-is with no roll applied. That's also exactly the
-// behavior a *missing* valueUsage already gets from RaceSolver.ts's
-// `scaleEffectValue()` (it only special-cases 8/9, passing everything else through
-// unscaled) -- so this only makes the shape self-consistent, it doesn't change what
-// the engine actually does with the ported skill versus leaving the field out.
+// `valueUsage` key of its own, and every alternative itself needs a `timeUsage` key,
+// so the file stays shape-consistent with every generator-produced entry around it
+// (Task 3's make_skill_data.pl always emits valueUsage; SKL-7's always emits
+// timeUsage). Upstream has no way to tell us the real ability_value_usage or
+// duration-scaling value, so this assumes the safest default for each: 1 ("Direct"
+// per RaceSolver.ts's SkillEffect/ScalingContext comments), meaning the value/duration
+// is used as-is with no roll applied. That's also exactly the behavior a *missing*
+// valueUsage/timeUsage already gets from RaceSolver.ts's scaling helpers (they only
+// special-case specific non-1 codes, passing everything else through unscaled) — so
+// this only makes the shape self-consistent, it doesn't change what the engine
+// actually does with the ported skill versus leaving the field out.
 function addDefaultValueUsage(entry) {
 	if (!entry || !Array.isArray(entry.alternatives)) return entry;
 	return {
 		...entry,
 		alternatives: entry.alternatives.map((alt) => ({
 			...alt,
+			timeUsage: 'timeUsage' in alt ? alt.timeUsage : 1,
 			effects: (alt.effects || []).map((ef) =>
 				'valueUsage' in ef ? ef : { ...ef, valueUsage: 1 },
 			),

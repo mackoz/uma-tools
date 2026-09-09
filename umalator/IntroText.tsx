@@ -66,6 +66,28 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-08</summary>
+						<ul>
+							<li>
+								Changed: a skill’s effect strength and duration shown in the
+								skill picker and skill list now reflect how much they actually
+								scale at activation, instead of always showing the stored base
+								value. The most noticeable case: Lovely Spring Breeze and Your
+								Smile Sparkles as the Waves now show their duration scaling from
+								1.0× up to 4.0× depending on remaining HP at activation, rather
+								than a single flat duration. Separately, Past My Limits and Eyes
+								on the Goal now show their value scaling from 0.8× to 1.2× based
+								on your highest base stat, rather than a flat 1.2× for every
+								build -- this only weakens the displayed value for a build whose
+								best stat is under 1100, and is unchanged in practice above
+								that. This is not only a display change: the simulator now
+								applies the same scaling during the race, so comparison results
+								involving any of these four skills move too, not just the
+								numbers shown next to them.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-05</summary>
 						<ul>
 							<li>

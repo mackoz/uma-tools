@@ -47,6 +47,7 @@ import {
 	RegionDisplayType,
 	TrackSelect,
 } from '../components/RaceTrack';
+import { scalingContextForHorseDesc } from '../components/ScalingContext';
 import { matchesAnyIconType } from '../components/SkillIcons';
 import {
 	ExpandedSkillDetails,
@@ -72,6 +73,7 @@ import {
 } from '../uma-skill-tools/RaceParameters';
 import { PosKeepMode, RaceState } from '../uma-skill-tools/RaceSolver';
 import { deriveSeed } from '../uma-skill-tools/Random';
+import type { ScalingContext } from '../uma-skill-tools/ValueScaling';
 import umas from '../umas.json';
 import unreleased from '../unreleased.json';
 import {
@@ -1472,6 +1474,7 @@ function BasinnChartPopover(props) {
 			<ExpandedSkillDetails
 				id={props.skillid}
 				distanceFactor={props.courseDistance}
+				scalingContext={props.scalingContext}
 				dismissable={false}
 			/>
 			<Histogram width={500} height={333} data={props.results} />
@@ -2299,6 +2302,33 @@ function courseChartTemplate(strategy: CourseChartStyle): HorseState {
 		mood: 2 as Mood,
 		skills: SkillSet([]),
 	});
+}
+
+// SKL-7: shared derivation for the Basinn chart popover's ScalingContext -- used both for
+// chartScalingContext (uma1, for Mode.Chart/Mode.UniquesChart) and courseChartScalingContext
+// (the CourseChart template, for Mode.CourseChart) below, so the two can't independently drift.
+// Thin wrapper over components/ScalingContext.ts's shared builder, which is also what
+// components/HorseDef.tsx's picker context goes through -- the brackets have to be fed the same
+// buildBaseStats() -> buildAdjustedStats() quantities RaceSolver looks them up with, not the raw
+// HorseState slider values.
+//
+// hpModeled distinguishes the two chart families and is not cosmetic: Mode.Chart/Mode.UniquesChart
+// build with `mode: 'compare'` and therefore get a real GameHpPolicy, so full HP is the right
+// approximation for a hypothetical activation; Mode.CourseChart omits `mode` entirely and gets
+// NoopHpPolicy, whose hpRemaining() is Infinity (see its call site below).
+function scalingContextFromHorseState(
+	horse: HorseState,
+	course: CourseData,
+	ground: GroundCondition,
+	hpModeled = true,
+): ScalingContext | undefined {
+	return scalingContextForHorseDesc(
+		horse,
+		course,
+		ground,
+		horse.skills.size,
+		hpModeled,
+	);
 }
 
 const CHART_ICON_TYPE_FILTERS = [
@@ -3382,6 +3412,40 @@ function App(props) {
 	const [lastRunChartUma, setLastRunChartUma] = useState(uma1);
 	const [lastRunChartCourseId, setLastRunChartCourseId] = useState(courseId);
 
+	// SKL-7: the Basinn chart's skill-detail popover (BasinnChartPopover / ExpandedSkillDetails)
+	// shows a skill's value and duration at a hypothetical activation, not a point in the actual
+	// simulated race -- there is no real remaining HP, equipped-skill count, etc. to sample. We
+	// approximate with the relevant horse run through the engine's own buildBaseStats() ->
+	// buildAdjustedStats() pipeline, plus full HP (the same
+	// 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula GameHpPolicy.init() uses
+	// for maxHp) -- see scalingContextFromHorseState above, shared with courseChartScalingContext
+	// and with components/HorseDef.tsx's picker context so none of the three can drift apart.
+	//
+	// Built from live uma1/course (matching this popover's existing courseDistance={course.distance},
+	// not lastRunChartCourseId), used directly for Mode.Chart and Mode.UniquesChart -- the latter
+	// actually runs removeUniqueSkills(uma1) (doBasinnChart), which shares uma1's base stats
+	// exactly, so this is exact for value/max-base-stat/speed brackets, and skillCount can only be
+	// off by the removed unique(s), which cannot cross a bracket boundary since usage 2 caps at
+	// 1.2x from 20 skills up. Mode.CourseChart is NOT safe to approximate this way -- it runs an
+	// unrelated fixed template, not uma1 at all -- see courseChartScalingContext below and its
+	// selection at the popover call site.
+	const chartScalingContext = useMemo<ScalingContext | undefined>(
+		() => scalingContextFromHorseState(uma1, course, racedef.ground),
+		[
+			uma1.skills,
+			uma1.speed,
+			uma1.stamina,
+			uma1.power,
+			uma1.guts,
+			uma1.wisdom,
+			uma1.strategy,
+			uma1.strategyAptitude,
+			uma1.mood,
+			course,
+			racedef.ground,
+		],
+	);
+
 	const [{ mode, currentIdx, expanded }, updateUiState] = useReducer(
 		nextUiState,
 		DEFAULT_UI_STATE,
@@ -3673,6 +3737,39 @@ function App(props) {
 	// deliberately NOT keyed on uma1 -- this mode's whole point is independence from it.
 	const [courseChartStyle, setCourseChartStyle] =
 		useState<CourseChartStyle>('Nige');
+
+	// SKL-7: CourseChart mode doesn't simulate uma1 -- doBasinnChart runs a fixed, skill-less
+	// courseChartTemplate(courseChartStyle) instead (COURSE_CHART_TEMPLATE_STATS: speed 1500,
+	// stamina/power 1200, guts 600, wisdom 1200), with its own strategy from this tab, unrelated
+	// to uma1.strategy. chartScalingContext above is built from uma1 and must NOT be reused here
+	// -- e.g. the template's speed (1500) sits below usage 22's 1700 floor (0.0x) while a typical
+	// uma1 (JP default 1850, Global default 1200) can land in a completely different bracket, so
+	// the popover would show scaling the chart's own numbers were never generated from. Selected
+	// at the popover call site by `mode === Mode.CourseChart`.
+	//
+	// hpModeled: false, and that is load-bearing rather than a detail. buildCourseChartOptions()
+	// deliberately omits `mode` (see its own comment), and RaceSolverBuilder.ts hands a real
+	// GameHpPolicy only to `mode === 'compare'` builds -- everything else gets NoopHpPolicy, whose
+	// hpRemaining() returns Infinity. Infinity falls past every duration bracket (ValueScaling.ts's
+	// lookup() compares strictly and the terminal bound is itself Infinity) onto its identity
+	// return, so the runs behind this chart applied *no* duration scaling at all -- 1.0x, whatever
+	// the template's stamina. Computing a finite full-HP figure here instead advertised a duration
+	// the simulation never used: on a 2000m course the popover showed a 12.50s base duration for
+	// Lovely Spring Breeze (2.5x) where the run had used 5.00s. Feeding Infinity makes the popover
+	// compute exactly what the engine computed, through the same table. See
+	// uma-skill-tools/docs/adr/0013-value-scaling-identity-fallthrough.md for why NoopHpPolicy
+	// reports Infinity and why changing that is its own ticket.
+	const courseChartScalingContext = useMemo<ScalingContext | undefined>(
+		() =>
+			scalingContextFromHorseState(
+				courseChartTemplate(courseChartStyle),
+				course,
+				racedef.ground,
+				false,
+			),
+		[courseChartStyle, course, racedef.ground],
+	);
+
 	const courseChartRunsRef = useRef<
 		Map<
 			CourseChartStyle,
@@ -5697,6 +5794,8 @@ function App(props) {
 					state={uma1}
 					setState={setUma1}
 					courseDistance={course.distance}
+					course={course}
+					ground={racedef.ground}
 					tabstart={() => 4}
 					onResetAll={resetAllUmas}
 					onUmaSelected={(id: string) => handleUmaSelected('uma1', id)}
@@ -5740,6 +5839,8 @@ function App(props) {
 						state={uma2}
 						setState={setUma2}
 						courseDistance={course.distance}
+						course={course}
+						ground={racedef.ground}
 						tabstart={() => 4 + horseDefTabs()}
 						onResetAll={resetAllUmas}
 						onUmaSelected={(id: string) => handleUmaSelected('uma2', id)}
@@ -5769,6 +5870,8 @@ function App(props) {
 						state={pacer}
 						setState={setPacer}
 						courseDistance={course.distance}
+						course={course}
+						ground={racedef.ground}
 						tabstart={() => 4 + (mode == Mode.Compare ? 2 : 1) * horseDefTabs()}
 						onResetAll={resetAllUmas}
 						onUmaSelected={(id: string) => handleUmaSelected('pacer', id)}
@@ -6763,6 +6866,14 @@ function App(props) {
 								skillid={popoverSkill}
 								results={popoverResults}
 								courseDistance={course.distance}
+								// SKL-7: CourseChart mode's popover must scale against the fixed
+								// template that mode actually ran, not uma1 -- see
+								// courseChartScalingContext's own comment above.
+								scalingContext={
+									mode === Mode.CourseChart
+										? courseChartScalingContext
+										: chartScalingContext
+								}
 							/>
 						)}
 						{overlayPanel === 'limitations' && (

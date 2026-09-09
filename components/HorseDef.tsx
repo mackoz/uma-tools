@@ -5,6 +5,8 @@ import { IntlProvider, Localizer, Text } from 'preact-i18n';
 
 import { Skill } from '../components/SkillList';
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
+import { GroundCondition } from '../uma-skill-tools/RaceParameters';
+import type { ScalingContext } from '../uma-skill-tools/ValueScaling';
 import {
 	type HorseState,
 	isDebuffSkill,
@@ -13,6 +15,7 @@ import {
 	withSkillsSynced,
 	withStrategySynced,
 } from './HorseDefTypes';
+import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 
@@ -569,6 +572,42 @@ export function HorseDef(props) {
 		if (reconciled !== state) setState(reconciled);
 	}, [state.skills, state.strategy]);
 
+	// SKL-7: the skill picker/list show a skill's value and duration at a hypothetical activation,
+	// not a point in a running race -- there is no real remaining HP to sample, and no race in
+	// progress whose green skills could have moved a stat yet. scalingContextForHorseDesc() runs
+	// this uma through the engine's own buildBaseStats() -> buildAdjustedStats() pipeline so the
+	// brackets get the same quantities RaceSolver would look them up with (its `this.horse` is
+	// buildAdjustedStats() output, *not* the raw slider values these controls edit), and
+	// approximates the HP input at full HP. See components/ScalingContext.ts for what that
+	// deliberately can't reproduce.
+	//
+	// Requires the course (courseSpeedModifier reads courseSetStatus, the ground modifiers read
+	// surface). umalator/app.tsx is this component's only render site and always passes one, so
+	// the null branch below is a defensive default rather than a path any shipping app takes; a
+	// consumer that omitted the course would leave scalingContext undefined and every scaled
+	// display below would fall back to unscaled rendering.
+	const scalingContext = useMemo<ScalingContext | undefined>(() => {
+		if (props.course == null) return undefined;
+		return scalingContextForHorseDesc(
+			state,
+			props.course,
+			props.ground ?? GroundCondition.Good,
+			state.skills.size,
+		);
+	}, [
+		state.skills,
+		state.speed,
+		state.stamina,
+		state.power,
+		state.guts,
+		state.wisdom,
+		state.strategy,
+		state.strategyAptitude,
+		state.mood,
+		props.course,
+		props.ground,
+	]);
+
 	const skillList = useMemo(() => {
 		const u = uniqueSkillForUma(umaId);
 		const hasRunData = props.runData != null && props.umaIndex != null;
@@ -580,6 +619,7 @@ export function HorseDef(props) {
 						<ExpandedSkillView
 							id={id}
 							distanceFactor={props.courseDistance}
+							scalingContext={scalingContext}
 							dismissable={id != u}
 							forcedPosition={state.forcedSkillPositions.get(id) || ''}
 							onPositionChange={(value: string) =>
@@ -609,6 +649,7 @@ export function HorseDef(props) {
 		state.forcedSkillPositions,
 		props.runData,
 		props.umaIndex,
+		scalingContext,
 	]);
 
 	return (

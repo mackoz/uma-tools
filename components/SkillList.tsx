@@ -7,7 +7,10 @@ import { SkillRarity } from '../uma-skill-tools/RaceSolver.ts';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
 import { isDebuffSkill } from './HorseDefTypes';
 import { useLanguage } from './Language';
-import { getEffectValueOutcomes } from './SkillEffectValue';
+import {
+	getEffectValueOutcomes,
+	getScaledBaseDuration,
+} from './SkillEffectValue';
 import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { Tooltip } from './Tooltip';
 
@@ -577,6 +580,21 @@ const formatEffect = Object.freeze({
 	),
 });
 
+// SKL-7: `props.scalingContext?: ScalingContext` (from ../uma-skill-tools/ValueScaling) is
+// optional, matching every other optional prop this component already takes
+// (`props.distanceFactor` above it) -- absent, every scaling call below falls back to identity.
+//
+// Absent is NOT the same as "renders as it did before SKL-7", though, and it is worth being
+// precise about why: SKL-7 also removed the baked x1.2 approximation from the stored modifiers of
+// the skills carrying value usage 2 and 13 (210081/210082 on both datasets, plus 210261-210282 on
+// JP), because that factor is horse-dependent and cannot live in a shared data file. A call site
+// with no context therefore renders those skills *lower* than it used to -- 210081 as +0.35 where
+// it read +0.42 -- not identically. So every call site builds one, and as of SKL-7 there are only
+// three: umalator/app.tsx's chart popover, and both skill-visualizer builds from their own fixed
+// inspection horse. (courseimages consumes no skill component at all, and build-planner imports
+// SkillList but never renders ExpandedSkillDetails.) The optional parameter is therefore a
+// defensive default for a future consumer with no horse to scale against, not a path anything
+// ships today -- if you add a call site, pass a context unless you genuinely have no horse.
 export function ExpandedSkillDetails(props) {
 	const skill = skilldata[props.id];
 	const lang = useLanguage();
@@ -628,6 +646,7 @@ export function ExpandedSkillDetails(props) {
 												? getEffectValueOutcomes(
 														ef.modifier,
 														ef.valueUsage,
+														props.scalingContext,
 													).map((m, i) => (
 														<Fragment key={i}>
 															{i > 0 && ' / '}
@@ -639,32 +658,45 @@ export function ExpandedSkillDetails(props) {
 									</div>
 								))}
 							</div>
-							{alt.baseDuration > 0 && (
-								<span class="skillDuration">
-									<Text id="skilldetails.baseduration" />{' '}
-									<Text
-										id="skilldetails.seconds"
-										fields={{ n: alt.baseDuration / 10000 }}
-									/>
-								</span>
-							)}
-							{props.distanceFactor && alt.baseDuration > 0 && (
-								<span class="skillDuration">
-									<Text
-										id="skilldetails.effectiveduration"
-										fields={{ distance: props.distanceFactor }}
-									/>{' '}
-									<Text
-										id="skilldetails.seconds"
-										fields={{
-											n: +(
-												(alt.baseDuration / 10000) *
-												(props.distanceFactor / 1000)
-											).toFixed(2),
-										}}
-									/>
-								</span>
-							)}
+							{(() => {
+								// SKL-7: scaled once per alternative so the base-duration text and its
+								// distance-converted sibling below agree on the same scaled value.
+								const scaledBaseDuration = getScaledBaseDuration(
+									alt.baseDuration,
+									alt.timeUsage,
+									props.scalingContext,
+								);
+								return (
+									<Fragment>
+										{alt.baseDuration > 0 && (
+											<span class="skillDuration">
+												<Text id="skilldetails.baseduration" />{' '}
+												<Text
+													id="skilldetails.seconds"
+													fields={{ n: scaledBaseDuration / 10000 }}
+												/>
+											</span>
+										)}
+										{props.distanceFactor && alt.baseDuration > 0 && (
+											<span class="skillDuration">
+												<Text
+													id="skilldetails.effectiveduration"
+													fields={{ distance: props.distanceFactor }}
+												/>{' '}
+												<Text
+													id="skilldetails.seconds"
+													fields={{
+														n: +(
+															(scaledBaseDuration / 10000) *
+															(props.distanceFactor / 1000)
+														).toFixed(2),
+													}}
+												/>
+											</span>
+										)}
+									</Fragment>
+								);
+							})()}
 						</div>
 					))}
 					<div class="skillDetailsSection">
