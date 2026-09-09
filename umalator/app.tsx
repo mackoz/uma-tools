@@ -60,7 +60,10 @@ import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
 import { type CourseData, CourseHelpers } from '../uma-skill-tools/CourseData';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import skillnames from '../uma-skill-tools/data/jp/skillnames.json';
-import type { GameHpPolicy } from '../uma-skill-tools/HpPolicy';
+import {
+	type GameHpPolicy,
+	HpStrategyCoefficient,
+} from '../uma-skill-tools/HpPolicy';
 import {
 	Grade,
 	GroundCondition,
@@ -71,7 +74,9 @@ import {
 	Weather,
 } from '../uma-skill-tools/RaceParameters';
 import { PosKeepMode, RaceState } from '../uma-skill-tools/RaceSolver';
+import { parseStrategy } from '../uma-skill-tools/RaceSolverBuilder';
 import { deriveSeed } from '../uma-skill-tools/Random';
+import type { ScalingContext } from '../uma-skill-tools/ValueScaling';
 import umas from '../umas.json';
 import unreleased from '../unreleased.json';
 import {
@@ -1472,6 +1477,7 @@ function BasinnChartPopover(props) {
 			<ExpandedSkillDetails
 				id={props.skillid}
 				distanceFactor={props.courseDistance}
+				scalingContext={props.scalingContext}
 				dismissable={false}
 			/>
 			<Histogram width={500} height={333} data={props.results} />
@@ -3381,6 +3387,46 @@ function App(props) {
 
 	const [lastRunChartUma, setLastRunChartUma] = useState(uma1);
 	const [lastRunChartCourseId, setLastRunChartCourseId] = useState(courseId);
+
+	// SKL-7: the Basinn chart's skill-detail popover (BasinnChartPopover / ExpandedSkillDetails)
+	// shows a skill's value and duration at a hypothetical activation, not a point in the actual
+	// simulated race -- there is no real remaining HP, equipped-skill count, etc. to sample. As in
+	// HorseDef.tsx's own scalingContext, we approximate with uma1's own base stats and full HP
+	// (the same 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula
+	// GameHpPolicy.init() uses for maxHp). Built from the live uma1/course (matching this
+	// popover's existing courseDistance={course.distance}, not lastRunChartCourseId) rather than
+	// the snapshot the chart was last run with, and from uma1 specifically even for
+	// CourseChart/UniquesChart's own template/uniques-stripped variants -- a deliberate
+	// simplification, since none of those variants differ from uma1 in a way that would change
+	// which scaling bracket applies for a typical build.
+	const chartScalingContext = useMemo<ScalingContext>(
+		() => ({
+			skillCount: uma1.skills.size,
+			maxBaseStat: Math.max(
+				uma1.speed,
+				uma1.stamina,
+				uma1.power,
+				uma1.guts,
+				uma1.wisdom,
+			),
+			finalSpeed: uma1.speed,
+			remainingHp:
+				0.8 *
+					HpStrategyCoefficient[parseStrategy(uma1.strategy)] *
+					uma1.stamina +
+				course.distance,
+		}),
+		[
+			uma1.skills,
+			uma1.speed,
+			uma1.stamina,
+			uma1.power,
+			uma1.guts,
+			uma1.wisdom,
+			uma1.strategy,
+			course.distance,
+		],
+	);
 
 	const [{ mode, currentIdx, expanded }, updateUiState] = useReducer(
 		nextUiState,
@@ -6763,6 +6809,7 @@ function App(props) {
 								skillid={popoverSkill}
 								results={popoverResults}
 								courseDistance={course.distance}
+								scalingContext={chartScalingContext}
 							/>
 						)}
 						{overlayPanel === 'limitations' && (

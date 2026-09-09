@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import * as Matcher from '../uma-skill-tools/tools/ConditionMatcher';
-import { getEffectValueOutcomes } from './SkillEffectValue';
+import type { ScalingContext } from '../uma-skill-tools/ValueScaling';
+import {
+	getEffectValueOutcomes,
+	getScaledBaseDuration,
+} from './SkillEffectValue';
 import { getSkillIconSrc, matchesAnyIconType } from './SkillIcons';
 import { FormattedCondition } from './SkillList';
 import { matchRarity } from './SkillRarity';
@@ -677,8 +681,9 @@ function formatEffectValue(
 	type: number,
 	modifier: number,
 	valueUsage?: number,
+	scalingContext?: ScalingContext,
 ): string {
-	return getEffectValueOutcomes(modifier, valueUsage)
+	return getEffectValueOutcomes(modifier, valueUsage, scalingContext)
 		.map((m) => formatSingleEffectValue(type, m))
 		.join(' / ');
 }
@@ -692,6 +697,10 @@ interface ExpandedSkillViewProps {
 	runData?: any;
 	umaIndex?: any;
 	onViewProcData?: () => void;
+	// SKL-7: optional and backwards-compatible, matching the convention of every other prop here --
+	// absent means every getEffectValueOutcomes/getScaledBaseDuration call below falls back to
+	// identity, so a caller that hasn't been wired up yet renders exactly as it did before this.
+	scalingContext?: ScalingContext;
 }
 
 export function ExpandedSkillView({
@@ -703,6 +712,7 @@ export function ExpandedSkillView({
 	runData,
 	umaIndex,
 	onViewProcData,
+	scalingContext,
 }: ExpandedSkillViewProps) {
 	const skill = skilldata[id];
 	if (!skill) return null;
@@ -747,22 +757,37 @@ export function ExpandedSkillView({
 											{EFFECT_TYPE_NAMES[ef.type] ?? `Type ${ef.type}`}
 										</span>
 										<span class="effect-value">
-											{formatEffectValue(ef.type, ef.modifier, ef.valueUsage)}
+											{formatEffectValue(
+												ef.type,
+												ef.modifier,
+												ef.valueUsage,
+												scalingContext,
+											)}
 										</span>
 									</span>
 								))}
 							</div>
 						</div>
-						{alt.baseDuration > 0 && (
-							<div class="skill-detail-row">
-								<span class="skill-detail-label">Duration:</span>
-								<span class="skill-detail-value">
-									{(alt.baseDuration / 10000).toFixed(2)}s base
-									{distanceFactor != null &&
-										` → ${(((alt.baseDuration / 10000) * distanceFactor) / 1000).toFixed(2)}s @ ${distanceFactor}m`}
-								</span>
-							</div>
-						)}
+						{alt.baseDuration > 0 &&
+							(() => {
+								// SKL-7: scaled once per alternative so the base-duration display and its
+								// distance-converted sibling below agree on the same scaled value.
+								const scaledBaseDuration = getScaledBaseDuration(
+									alt.baseDuration,
+									alt.timeUsage,
+									scalingContext,
+								);
+								return (
+									<div class="skill-detail-row">
+										<span class="skill-detail-label">Duration:</span>
+										<span class="skill-detail-value">
+											{(scaledBaseDuration / 10000).toFixed(2)}s base
+											{distanceFactor != null &&
+												` → ${(((scaledBaseDuration / 10000) * distanceFactor) / 1000).toFixed(2)}s @ ${distanceFactor}m`}
+										</span>
+									</div>
+								);
+							})()}
 					</div>
 				))}
 				{onPositionChange && (
