@@ -581,10 +581,18 @@ const formatEffect = Object.freeze({
 });
 
 // SKL-7: `props.scalingContext?: ScalingContext` (from ../uma-skill-tools/ValueScaling) is
-// optional and backwards-compatible, matching every other optional prop this component already
-// takes (`props.distanceFactor` above it) -- absent means every scaling call below falls back to
-// identity, so skill-visualizer's and umalator/app.tsx's existing calls, which don't pass it yet,
-// render exactly as they did before this change.
+// optional, matching every other optional prop this component already takes
+// (`props.distanceFactor` above it) -- absent, every scaling call below falls back to identity.
+//
+// Absent is NOT the same as "renders as it did before SKL-7", though, and it is worth being
+// precise about why: SKL-7 also removed the baked x1.2 approximation from the stored modifiers of
+// the skills carrying value usage 2 and 13 (210081/210082 on both datasets, plus 210261-210282 on
+// JP), because that factor is horse-dependent and cannot live in a shared data file. A call site
+// with no context therefore renders those skills *lower* than it used to -- 210081 as +0.35 where
+// it read +0.42 -- not identically. So every call site that can build a context does: umalator's
+// picker/skill list via components/HorseDef.tsx, its chart popovers via umalator/app.tsx, and both
+// skill-visualizer builds from their own fixed inspection horse. What legitimately renders
+// unscaled is a consumer with no horse to scale against at all (courseimages, build-planner).
 export function ExpandedSkillDetails(props) {
 	const skill = skilldata[props.id];
 	const lang = useLanguage();

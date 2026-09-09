@@ -35,9 +35,11 @@ function isMultiplyRandomValueUsage(valueUsage: number | undefined): boolean {
 // at activation time. For valueUsage 8/9 that's up to 3 values -- the stored modifier is never
 // itself the outcome, so displaying it verbatim (as the pre-HP-6 code did) is simply wrong. For
 // every other deterministic valueUsage, it's a single-element array holding the modifier scaled
-// by `scalingContext` (or the raw modifier, unscaled, if no context is supplied -- every
-// existing call site before SKL-7 omits the third argument, so it keeps rendering exactly as
-// before this change).
+// by `scalingContext` -- or the raw modifier, unscaled, if no context is supplied. Note that
+// "unscaled" is not the same as "as it rendered before SKL-7": SKL-7 also removed the baked x1.2
+// approximation from the stored modifiers of the skills carrying value usage 2 and 13, so a
+// context-less call site renders those *lower* than it used to. See the note above
+// ExpandedSkillDetails in SkillList.tsx for which call sites that leaves.
 export function getEffectValueOutcomes(
 	rawModifier: number,
 	valueUsage: number | undefined,
@@ -59,7 +61,10 @@ export function getEffectValueOutcomes(
 
 // Scales a skill alternative's baseDuration by its timeUsage (e.g. MultiplyRemainHp), the
 // duration-side counterpart to getEffectValueOutcomes above. Omitting scalingContext is again
-// identity, so a caller not yet wired to build one renders the same base duration as before.
+// identity -- and here that genuinely does render the same base duration as before SKL-7, since
+// no baked duration approximation was removed from the data the way it was on the value side.
+// A caller whose simulation runs without an HP model should still pass a context carrying
+// `remainingHp: Infinity` rather than omitting one, so the value-side codes stay scaled.
 export function getScaledBaseDuration(
 	baseDuration: number,
 	timeUsage: number | undefined,

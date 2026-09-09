@@ -5,8 +5,7 @@ import { IntlProvider, Localizer, Text } from 'preact-i18n';
 
 import { Skill } from '../components/SkillList';
 import { HorseParameters } from '../uma-skill-tools/HorseTypes';
-import { HpStrategyCoefficient } from '../uma-skill-tools/HpPolicy';
-import { parseStrategy } from '../uma-skill-tools/RaceSolverBuilder';
+import { GroundCondition } from '../uma-skill-tools/RaceParameters';
 import type { ScalingContext } from '../uma-skill-tools/ValueScaling';
 import {
 	type HorseState,
@@ -16,6 +15,7 @@ import {
 	withSkillsSynced,
 	withStrategySynced,
 } from './HorseDefTypes';
+import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 
@@ -573,32 +573,26 @@ export function HorseDef(props) {
 	}, [state.skills, state.strategy]);
 
 	// SKL-7: the skill picker/list show a skill's value and duration at a hypothetical activation,
-	// not a point in a running race -- there is no real remaining HP, equipped-skill count, etc.
-	// to sample. We approximate with the uma's own base stats and full HP (the same
-	// 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula GameHpPolicy.init() uses
-	// for maxHp) rather than inventing a mid-race value with no principled basis. Only built once
-	// a course is selected (props.courseDistance set) -- without a distance there's no principled
-	// full-HP value either, so scalingContext stays undefined and every scaled display below
-	// falls back to its pre-SKL-7, unscaled rendering, same as this component's other consumers
-	// (skill-visualizer, courseimages, build-planner) that don't pass courseDistance at all.
+	// not a point in a running race -- there is no real remaining HP to sample, and no race in
+	// progress whose green skills could have moved a stat yet. scalingContextForHorseDesc() runs
+	// this uma through the engine's own buildBaseStats() -> buildAdjustedStats() pipeline so the
+	// brackets get the same quantities RaceSolver would look them up with (its `this.horse` is
+	// buildAdjustedStats() output, *not* the raw slider values these controls edit), and
+	// approximates the HP input at full HP. See components/ScalingContext.ts for what that
+	// deliberately can't reproduce.
+	//
+	// Requires the course (courseSpeedModifier reads courseSetStatus, the ground modifiers read
+	// surface) -- consumers that don't pass one (skill-visualizer feeds its own context;
+	// courseimages and build-planner pass nothing at all) leave scalingContext undefined, and
+	// every scaled display below falls back to unscaled rendering.
 	const scalingContext = useMemo<ScalingContext | undefined>(() => {
-		if (props.courseDistance == null) return undefined;
-		return {
-			skillCount: state.skills.size,
-			maxBaseStat: Math.max(
-				state.speed,
-				state.stamina,
-				state.power,
-				state.guts,
-				state.wisdom,
-			),
-			finalSpeed: state.speed,
-			remainingHp:
-				0.8 *
-					HpStrategyCoefficient[parseStrategy(state.strategy)] *
-					state.stamina +
-				props.courseDistance,
-		};
+		if (props.course == null) return undefined;
+		return scalingContextForHorseDesc(
+			state,
+			props.course,
+			props.ground ?? GroundCondition.Good,
+			state.skills.size,
+		);
 	}, [
 		state.skills,
 		state.speed,
@@ -607,7 +601,10 @@ export function HorseDef(props) {
 		state.guts,
 		state.wisdom,
 		state.strategy,
-		props.courseDistance,
+		state.strategyAptitude,
+		state.mood,
+		props.course,
+		props.ground,
 	]);
 
 	const skillList = useMemo(() => {

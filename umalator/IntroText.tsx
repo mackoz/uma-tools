@@ -80,7 +80,10 @@ export function IntroText(props) {
 								on your highest base stat, rather than a flat 1.2× for every
 								build -- this only weakens the displayed value for a build whose
 								best stat is under 1100, and is unchanged in practice above
-								that.
+								that. This is not only a display change: the simulator now
+								applies the same scaling during the race, so comparison results
+								involving any of these four skills move too, not just the
+								numbers shown next to them.
 							</li>
 						</ul>
 					</details>
