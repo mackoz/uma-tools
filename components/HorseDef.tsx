@@ -582,9 +582,10 @@ export function HorseDef(props) {
 	// deliberately can't reproduce.
 	//
 	// Requires the course (courseSpeedModifier reads courseSetStatus, the ground modifiers read
-	// surface) -- consumers that don't pass one (skill-visualizer feeds its own context;
-	// courseimages and build-planner pass nothing at all) leave scalingContext undefined, and
-	// every scaled display below falls back to unscaled rendering.
+	// surface). umalator/app.tsx is this component's only render site and always passes one, so
+	// the null branch below is a defensive default rather than a path any shipping app takes; a
+	// consumer that omitted the course would leave scalingContext undefined and every scaled
+	// display below would fall back to unscaled rendering.
 	const scalingContext = useMemo<ScalingContext | undefined>(() => {
 		if (props.course == null) return undefined;
 		return scalingContextForHorseDesc(
