@@ -2307,6 +2307,34 @@ function courseChartTemplate(strategy: CourseChartStyle): HorseState {
 	});
 }
 
+// SKL-7: shared derivation for the Basinn chart popover's ScalingContext -- used both for
+// chartScalingContext (uma1, for Mode.Chart/Mode.UniquesChart) and courseChartScalingContext
+// (the CourseChart template, for Mode.CourseChart) below, so the two can't independently drift.
+// Approximates a hypothetical activation at full HP -- the same
+// 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula GameHpPolicy.init() uses
+// for maxHp -- since the popover isn't tied to a point in the actual simulated race.
+function scalingContextFromHorseState(
+	horse: HorseState,
+	courseDistance: number,
+): ScalingContext {
+	return {
+		skillCount: horse.skills.size,
+		maxBaseStat: Math.max(
+			horse.speed,
+			horse.stamina,
+			horse.power,
+			horse.guts,
+			horse.wisdom,
+		),
+		finalSpeed: horse.speed,
+		remainingHp:
+			0.8 *
+				HpStrategyCoefficient[parseStrategy(horse.strategy)] *
+				horse.stamina +
+			courseDistance,
+	};
+}
+
 const CHART_ICON_TYPE_FILTERS = [
 	'1001',
 	'1002',
@@ -3390,32 +3418,22 @@ function App(props) {
 
 	// SKL-7: the Basinn chart's skill-detail popover (BasinnChartPopover / ExpandedSkillDetails)
 	// shows a skill's value and duration at a hypothetical activation, not a point in the actual
-	// simulated race -- there is no real remaining HP, equipped-skill count, etc. to sample. As in
-	// HorseDef.tsx's own scalingContext, we approximate with uma1's own base stats and full HP
-	// (the same 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula
-	// GameHpPolicy.init() uses for maxHp). Built from the live uma1/course (matching this
-	// popover's existing courseDistance={course.distance}, not lastRunChartCourseId) rather than
-	// the snapshot the chart was last run with, and from uma1 specifically even for
-	// CourseChart/UniquesChart's own template/uniques-stripped variants -- a deliberate
-	// simplification, since none of those variants differ from uma1 in a way that would change
-	// which scaling bracket applies for a typical build.
+	// simulated race -- there is no real remaining HP, equipped-skill count, etc. to sample. We
+	// approximate with the relevant horse's own base stats and full HP (the same
+	// 0.8 × HpStrategyCoefficient[strategy] × stamina + distance formula GameHpPolicy.init() uses
+	// for maxHp) -- see scalingContextFromHorseState below, shared with courseChartScalingContext
+	// so both derivations can't drift apart.
+	//
+	// Built from live uma1/course (matching this popover's existing courseDistance={course.distance},
+	// not lastRunChartCourseId), used directly for Mode.Chart and Mode.UniquesChart -- the latter
+	// actually runs removeUniqueSkills(uma1) (doBasinnChart), which shares uma1's base stats
+	// exactly, so this is exact for value/max-base-stat/speed brackets, and skillCount can only be
+	// off by the removed unique(s), which cannot cross a bracket boundary since usage 2 caps at
+	// 1.2x from 20 skills up. Mode.CourseChart is NOT safe to approximate this way -- it runs an
+	// unrelated fixed template, not uma1 at all -- see courseChartScalingContext below and its
+	// selection at the popover call site.
 	const chartScalingContext = useMemo<ScalingContext>(
-		() => ({
-			skillCount: uma1.skills.size,
-			maxBaseStat: Math.max(
-				uma1.speed,
-				uma1.stamina,
-				uma1.power,
-				uma1.guts,
-				uma1.wisdom,
-			),
-			finalSpeed: uma1.speed,
-			remainingHp:
-				0.8 *
-					HpStrategyCoefficient[parseStrategy(uma1.strategy)] *
-					uma1.stamina +
-				course.distance,
-		}),
+		() => scalingContextFromHorseState(uma1, course.distance),
 		[
 			uma1.skills,
 			uma1.speed,
@@ -3719,6 +3737,24 @@ function App(props) {
 	// deliberately NOT keyed on uma1 -- this mode's whole point is independence from it.
 	const [courseChartStyle, setCourseChartStyle] =
 		useState<CourseChartStyle>('Nige');
+
+	// SKL-7: CourseChart mode doesn't simulate uma1 -- doBasinnChart runs a fixed, skill-less
+	// courseChartTemplate(courseChartStyle) instead (COURSE_CHART_TEMPLATE_STATS: speed 1500,
+	// stamina/power 1200, guts 600, wisdom 1200), with its own strategy from this tab, unrelated
+	// to uma1.strategy. chartScalingContext above is built from uma1 and must NOT be reused here
+	// -- e.g. the template's speed (1500) sits below usage 22's 1700 floor (0.0x) while a typical
+	// uma1 (JP default 1850, Global default 1200) can land in a completely different bracket, so
+	// the popover would show scaling the chart's own numbers were never generated from. Selected
+	// at the popover call site by `mode === Mode.CourseChart`.
+	const courseChartScalingContext = useMemo<ScalingContext>(
+		() =>
+			scalingContextFromHorseState(
+				courseChartTemplate(courseChartStyle),
+				course.distance,
+			),
+		[courseChartStyle, course.distance],
+	);
+
 	const courseChartRunsRef = useRef<
 		Map<
 			CourseChartStyle,
@@ -6809,7 +6845,14 @@ function App(props) {
 								skillid={popoverSkill}
 								results={popoverResults}
 								courseDistance={course.distance}
-								scalingContext={chartScalingContext}
+								// SKL-7: CourseChart mode's popover must scale against the fixed
+								// template that mode actually ran, not uma1 -- see
+								// courseChartScalingContext's own comment above.
+								scalingContext={
+									mode === Mode.CourseChart
+										? courseChartScalingContext
+										: chartScalingContext
+								}
 							/>
 						)}
 						{overlayPanel === 'limitations' && (
