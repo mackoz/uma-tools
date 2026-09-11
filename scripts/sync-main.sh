@@ -10,6 +10,8 @@
 # end) if the tree is dirty, or if the current non-default branch has commits its upstream
 # lacks. Otherwise checks out the default branch, pulls --ff-only, deletes local branches
 # that are [gone] upstream or fully merged into the default (never the default itself,
+# A [gone] branch whose local commits aren't merged (every squash-landed PR looks like
+# this) is never force-deleted -- it's reported as "left in place" with the -D command.
 # never a branch backing a listed worktree), and for the code repo runs
 # `git submodule update --init` afterwards.
 #
@@ -176,7 +178,7 @@ sync_one() {
 
 	if [ "$dry_run" -eq 1 ]; then
 		echo "[dry-run] $slot: git -C $dir checkout $default_branch"
-		echo "[dry-run] $slot: git -C $dir pull --ff-only"
+		echo "[dry-run] $slot: git -C $dir pull --ff-only --prune"
 		local to_delete
 		to_delete="$(branches_to_delete "$dir" "$default_branch")"
 		if [ -n "$to_delete" ]; then
@@ -198,19 +200,26 @@ sync_one() {
 
 	local before after
 	before="$(git -C "$dir" rev-parse HEAD)"
-	git -C "$dir" pull -q --ff-only
+	# --prune so a branch whose remote was deleted elsewhere (a landed PR) shows as [gone].
+	git -C "$dir" pull -q --ff-only --prune
 	after="$(git -C "$dir" rev-parse HEAD)"
 	[ "$before" != "$after" ] && did_something=1
 
 	local to_delete
 	to_delete="$(branches_to_delete "$dir" "$default_branch")"
-	local deleted=()
+	local deleted=() left=()
 	if [ -n "$to_delete" ]; then
 		while IFS= read -r b; do
 			[ -z "$b" ] && continue
 			if git -C "$dir" branch -d "$b" >/dev/null 2>&1; then
 				deleted+=("$b")
 				did_something=1
+			elif [ "$(git -C "$dir" for-each-ref --format='%(upstream:track)' "refs/heads/$b")" = "[gone]" ]; then
+				# Upstream deleted but the local commits aren't ancestors of the default
+				# branch -- the shape every squash-merged PR leaves behind (all three repos
+				# squash-merge). `-d` correctly refuses; deleting unmerged work is the
+				# user's call, so report it with the exact command instead of forcing.
+				left+=("$b")
 			fi
 		done <<<"$to_delete"
 	fi
@@ -226,6 +235,10 @@ sync_one() {
 	else
 		echo "$slot: up to date, nothing to delete"
 	fi
+	local lb
+	for lb in "${left[@]+"${left[@]}"}"; do
+		echo "$slot: left in place: $lb (upstream gone, local commits unmerged -- squash-landed? then: git -C $dir branch -D $lb)"
+	done
 }
 
 for slot in "${repos_requested[@]}"; do
