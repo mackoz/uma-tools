@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'vitest';
@@ -37,7 +38,32 @@ function runScrubbed(args, extraEnv = {}) {
 	});
 }
 
-test('repo-env.sh --print emits three exports, each a real git work tree', () => {
+// A checkout without the private plans repo (CI, a fresh clone) is a supported
+// configuration: the script still derives and prints UMA_PLANS_REPO, and --check
+// reports it -- and only it -- as missing. The two tests below branch on whether the
+// derived plans path exists so they hold in both environments.
+function plansPresent(vars) {
+	return fs.existsSync(path.join(vars.UMA_PLANS_REPO, '.git'));
+}
+
+function isWorkTree(repoPath) {
+	try {
+		return (
+			execFileSync(
+				'git',
+				['-C', repoPath, 'rev-parse', '--is-inside-work-tree'],
+				{
+					encoding: 'utf8',
+					stdio: ['ignore', 'pipe', 'ignore'],
+				},
+			).trim() === 'true'
+		);
+	} catch {
+		return false;
+	}
+}
+
+test('repo-env.sh --print emits three absolute exports; code and engine are git work trees', () => {
 	const output = runScrubbed(['--print']);
 	const vars = parsePrint(output);
 	assert.deepEqual(Object.keys(vars).sort(), [
@@ -47,22 +73,45 @@ test('repo-env.sh --print emits three exports, each a real git work tree', () =>
 	]);
 	for (const [name, repoPath] of Object.entries(vars)) {
 		assert.ok(path.isAbsolute(repoPath), `${name} should be an absolute path`);
-		const isWorkTree = execFileSync(
-			'git',
-			['-C', repoPath, 'rev-parse', '--is-inside-work-tree'],
-			{ encoding: 'utf8' },
-		).trim();
-		assert.equal(
-			isWorkTree,
-			'true',
-			`${name} (${repoPath}) should be a git work tree`,
+	}
+	assert.ok(
+		isWorkTree(vars.UMA_CODE_REPO),
+		'UMA_CODE_REPO should be a git work tree',
+	);
+	assert.ok(
+		isWorkTree(vars.UMA_ENGINE_REPO),
+		'UMA_ENGINE_REPO should be a git work tree',
+	);
+	assert.ok(vars.UMA_ENGINE_REPO.endsWith(`${path.sep}uma-skill-tools`));
+	if (plansPresent(vars)) {
+		assert.ok(
+			isWorkTree(vars.UMA_PLANS_REPO),
+			'UMA_PLANS_REPO should be a git work tree',
+		);
+	} else {
+		assert.ok(
+			vars.UMA_PLANS_REPO.endsWith(`${path.sep}uma-tools-plans`),
+			'without a plans checkout the derivation should fall back to the sibling-directory name',
 		);
 	}
-	assert.ok(vars.UMA_ENGINE_REPO.endsWith(`${path.sep}uma-skill-tools`));
 });
 
-test('repo-env.sh --check exits 0 when all three paths are real git work trees', () => {
-	assert.doesNotThrow(() => runScrubbed(['--check']));
+test('repo-env.sh --check exits 0 with all three checkouts, or names only UMA_PLANS_REPO without one', () => {
+	const vars = parsePrint(runScrubbed(['--print']));
+	if (plansPresent(vars)) {
+		assert.doesNotThrow(() => runScrubbed(['--check']));
+		return;
+	}
+	assert.throws(
+		() => runScrubbed(['--check']),
+		(err) => {
+			assert.equal(err.status, 1);
+			const stderr = err.stderr.toString();
+			assert.match(stderr, /UMA_PLANS_REPO \(.*\) is not a git work tree/);
+			assert.doesNotMatch(stderr, /UMA_CODE_REPO|UMA_ENGINE_REPO/);
+			return true;
+		},
+	);
 });
 
 test('a pre-set UMA_PLANS_REPO env var wins over the derivation', () => {
