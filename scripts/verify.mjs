@@ -112,10 +112,14 @@ function build(app) {
 	return true;
 }
 
-// tsc 7.x (typescript-go) hard-caps reported diagnostics at 1000, and this
-// repo's implicit-any backlog saturates that cap -- so the total is only a
-// regression signal while it sits below 1000. At the cap it's rendered as
-// ">=1000 (capped)" and can't fail the run.
+// tsc 7.x (typescript-go) hard-caps reported diagnostics at 1000. Before
+// PIPE-58, this repo typechecked under TS 7's unchosen strict:true default,
+// which alone put the count over the cap (~1030) -- so the baseline (1015)
+// was itself capped and this guard was structurally unable to ever fire (see
+// ADR 0020). PIPE-58 pins strict:false in tsconfig.json, dropping the real
+// count to ~103 and putting the baseline back under the cap for good. At the
+// cap this still renders as ">=1000 (capped)" and can't fail the run, but
+// that's now a true headroom margin rather than a permanently-tripped one.
 const TSC_CAP = 1000;
 
 function typecheckErrors() {

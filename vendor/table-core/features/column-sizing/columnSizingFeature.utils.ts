@@ -1,3 +1,10 @@
+// PIPE-58: the three `callMemoOrStaticFn(...)[0]?.headers.reduce(...)` callbacks below annotate
+// `header` as `Header<TableFeatures, RowData>` where upstream TanStack table-core writes
+// `Header<TFeatures, TData>`. The two settings this repo's tsconfig can run under disagree about
+// that array's element type: under strict:false (the pinned default, ADR 0020) it resolves to
+// `Header<TableFeatures, RowData, unknown>`, which upstream's narrower annotation is not assignable
+// from (TS2769, no overload matches); under strict:true it resolves to `any`, where dropping the
+// annotation instead trips noImplicitAny. The widened annotation typechecks under both.
 import {
   table_getCenterHeaderGroups,
   table_getLeftHeaderGroups,
@@ -176,7 +183,7 @@ export function table_getLeftTotalSize<
       table,
       'getLeftHeaderGroups',
       table_getLeftHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum: number, header: Header<TableFeatures, RowData>) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )
@@ -191,7 +198,7 @@ export function table_getCenterTotalSize<
       table,
       'getCenterHeaderGroups',
       table_getCenterHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum: number, header: Header<TableFeatures, RowData>) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )
@@ -206,7 +213,7 @@ export function table_getRightTotalSize<
       table,
       'getRightHeaderGroups',
       table_getRightHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum: number, header: Header<TableFeatures, RowData>) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )

@@ -1,6 +1,5 @@
 import { Map as ImmMap, Record } from 'immutable';
 import skillmeta from '../skill_meta.json';
-import type skills from '../uma-skill-tools/data/jp/skill_data.json';
 
 export function isDebuffSkill(id: string) {
 	// iconId 3xxxx is the debuff icons
@@ -27,8 +26,10 @@ export const OONIGE_SKILL_GROUP = skillmeta[OONIGE_SKILL_ID].groupId; // '20205'
 
 // `skills` is keyed by groupId, not skill id -- use these instead of `.has(OONIGE_SKILL_ID)`,
 // which tests keys and would silently never match (this was UI-25's actual bug).
-// Typed against HorseState['skills'] (not a plain ImmMap<string,string>) to match SkillSet's
-// literal-keyed return type -- a looser annotation here doesn't round-trip through `.set('skills', ...)`.
+// Typed against HorseState['skills'] rather than a bare ImmMap<string,string> so a caller
+// passing some other map still gets caught at the call site -- SkillSet's return type itself
+// is ImmMap<string,string> as of PIPE-58 (the ~2100-member skill-id literal union it used to
+// carry made TS 7 give up comparing it against Immutable's Map overloads).
 export function hasOonigeSkill(skills: HorseState['skills']): boolean {
 	return skills.get(OONIGE_SKILL_GROUP) === OONIGE_SKILL_ID;
 }
@@ -90,9 +91,7 @@ export function reconcileOonige(state: HorseState): HorseState {
 		: state.set('skills', withOonigeSkill(state.skills));
 }
 
-export function SkillSet(
-	ids,
-): ImmMap<(typeof skill_meta)['groupId'], keyof typeof skills> {
+export function SkillSet(ids: string[]): ImmMap<string, string> {
 	return ImmMap(
 		ids.reduce(
 			(acc, id) => {
@@ -106,7 +105,7 @@ export function SkillSet(
 					return { entries, ndebuff };
 				}
 			},
-			{ entries: [], ndebuff: 0 },
+			{ entries: [] as [string, string][], ndebuff: 0 },
 		).entries,
 	);
 }
