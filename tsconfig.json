@@ -1,7 +1,11 @@
 {
 	"compilerOptions": {
-		"lib": ["es2018", "dom"],
+		// TS 7 defaults strict:true; pinned off deliberately -- PIPE-58, ADR 0020.
+		// Per-flag re-enable is the tracked path back to strict, not a silent default.
+		"strict": false,
+		"lib": ["es2022", "dom"],
 		"target": "es2018",
+		"module": "esnext",
 		"resolveJsonModule": true,
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
@@ -11,6 +15,9 @@
 		"preserveConstEnums": true,
 		"jsx": "react",
 		"jsxFactory": "h",
-		"jsxFragmentFactory": "Fragment"
+		"jsxFragmentFactory": "Fragment",
+		"paths": {
+			"@tanstack/*": ["./vendor/*/index.ts"]
+		}
 	}
 }
