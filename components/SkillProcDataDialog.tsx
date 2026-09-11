@@ -140,7 +140,8 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 							</span>
 						</div>
 						<div style="font-size: 9px; margin-bottom: 2px;">
-							Effectiveness rate: {effectivenessRate.toFixed(1)}%
+							Effectiveness rate (of procs that helped):{' '}
+							{effectivenessRate.toFixed(1)}%
 						</div>
 						<div style="display: flex; width: 100%; height: 8px; border: 1px solid #ccc; overflow: hidden; margin-bottom: 8px;">
 							<div

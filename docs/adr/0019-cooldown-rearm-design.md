@@ -1,7 +1,7 @@
 # ADR-0019: Cooldown re-arm draws spares up front, restricted to two sample-policy families
 
 **Status:** Accepted
-**Date:** 2026-09-11 (SKL-21, engine commits through `cd13778`, parent repo commits through `1b17255`)
+**Date:** 2026-09-11 (SKL-21)
 
 ## Context
 
@@ -51,8 +51,11 @@ in `RaceSolverBuilder.ts`'s `samplePolicyPlacesMultiplePoints()`.
 **The distribution family's undershoot is accepted, not chased further.** With the design above,
 the simulator's measured re-trigger rate for the distribution family is 1 in 654 procs (0.15%)
 against a real-replay rate of 7 in 398 (1.8%) — an undershoot, not an overshoot. The corner family
-matches real data closely (0 re-triggers in both 462 simulated and 475 real procs, on the course mix
-available). The undershoot's cause, confirmed by direct measurement, is structural to drawing spares
+matches real data exactly on the one course with replay data available (0 re-triggers in both 462
+simulated and 475 real procs) — but that match is structural, not evidential: that course's
+geometry makes a second corner proc impossible either way (see "Caveat: the corner family's match
+is unvalidated on multi-corner courses" below), so it says nothing about the corner family's
+accuracy on courses with more corners, where it is unvalidated. The undershoot's cause, confirmed by direct measurement, is structural to drawing spares
 independently from the same distribution as the primary: spares cluster near the primary rather than
 spreading across the race, and a spare that has already fallen behind the uma's current position by
 the time the cooldown would allow it to fire is discarded as a cooling-skip on the very next frame —
@@ -70,6 +73,23 @@ confirmed 233 non-cooldown cases / 0 diverged against the pre-SKL-21 baseline, r
 `git show c3954ab:test/regression/checkpoints/20260909.5ecc3aa.2432198835.json`), and again when the
 distance-scaling correction landed (same test, same non-cooldown-untouched guarantee, re-verified).
 
+**Caveat: the corner family's match is unvalidated on multi-corner courses.** The only course with
+real replay data for this family, course `10903` (1600m, 2 corners), necessarily shows 0 re-triggers
+in both the simulator and real replays: `tools/replay/cooldownReport.ts`'s own header explains that
+its 48s scaled cooldown outlasts its ~31s corner traverse, so a second corner proc is geometrically
+impossible there regardless of which model is right. Away from that course the simulated rate is
+substantial and has no replay data to validate against. Measured (300 seeded samples, skill `200331`):
+
+| Course | Distance | Corners | Races with a re-trigger |
+|---|---|---|---|
+| `10903` | 1600m | 2 | 0 / 271 |
+| `10606` | 2400m | 4 | 9 / 263 |
+| `10105` | 2600m | 6 | 65 / 271 (24%) |
+
+So the corner family's "Exact" match claim above holds only for the single course where the
+mechanic can't actually be exercised; treat the 24% rate on a 6-corner course as unvalidated, not
+as confirmed-accurate by extension.
+
 ## Options considered
 
 - **Re-sample a skill's trigger distribution fresh at the moment its cooldown expires**, instead of
@@ -86,7 +106,8 @@ distance-scaling correction landed (same test, same non-cooldown-untouched guara
   in the first place, not a modeling simplification. Early experiments (scaling cooldown alone,
   without this restriction) produced corner/straight re-trigger rates that didn't match real replay
   data; restricting by family, per the documented mechanics, is what made the corner family match
-  exactly.
+  on the one course with available replay data (see the caveat above on how far that match actually
+  generalizes).
 - **A larger `SPARES` to close the distribution undershoot.** Considered and rejected, but not
   because more spares wouldn't help — they would. Spares aren't competitors for one slot: they're
   drawn i.i.d. from the primary's own distribution, filtered to those after the primary, and burned
@@ -100,6 +121,26 @@ distance-scaling correction landed (same test, same non-cooldown-untouched guara
   for the distribution family alone would decouple the two families' spare counts from that shared
   constant. A structural fix (spacing spares out, or drawing them conditioned on surviving the
   cooldown) remains a larger, separate design change.
+- **Have a still-cooling candidate wait in its window instead of burning a spare.** Shipped
+  behavior has `pendingSkillAction()` return `Rearm` (consuming a spare and moving on) for a
+  candidate whose cooldown hasn't expired yet; the alternative would have it return `Wait` instead,
+  leaving that candidate in place to be re-checked on a later frame once the cooldown clears,
+  rather than discarding it as a cooling-skip. The final review built and measured this alternative
+  directly (300 seeded samples per cell):
+
+  | Skill | Course | Shipped (`Rearm`) | Alternative (`Wait`) |
+  |---|---|---|---|
+  | `200331` (corner) | `10903` | 0 | 0 |
+  | `200331` (corner) | `10105` | 65 | 66 |
+  | `201651` (Slipstream) | `10903` | 2 | 136 |
+  | `201662` (distribution) | `10105` | 6 | 182 |
+
+  The corner family is unaffected either way, but the alternative takes the distribution/Slipstream
+  family to roughly 50–60% of races re-triggering — a ~30x *overshoot* against the real 1.8% rate,
+  versus the shipped design's 12x undershoot. Rejected: an overshoot this large is a worse match to
+  the documented real-replay rate than the shipped undershoot, which is what makes "accepted, not
+  chased further" (above) a defensible conclusion rather than a shrug — the alternative was measured
+  and is worse, not merely unexplored.
 - **Leave the regression checkpoint untouched and treat the new behavior as exempt from it.**
   Rejected: cooldown skills make up roughly a quarter of the checkpoint's cases, so "untouched"
   would have meant the checkpoint silently stopped exercising this behavior at all, not that the

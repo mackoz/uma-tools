@@ -180,11 +180,17 @@ export const LIMITATIONS: InfoEntry[] = [
 				actually place more than one candidate point: corner skills (
 				<code>all_corner_random</code>) and the continuously-re-evaluated
 				distribution family (near-lane-time, change-order, and blocking
-				conditions). For the corner family this matches real replays closely.
-				For the distribution family it undershoots: the simulator re-triggers
-				about 1 in 650 times a tracked skill fires, versus about 1 in 57 in real
-				replays of the same skills. The cause is how a skill's extra candidate
-				points ("spares") are drawn -- independently, from the same underlying
+				conditions). For the corner family this matches real replays exactly on
+				the one course with replay data available -- but that course's geometry
+				makes a second corner proc impossible for either the simulator or the
+				real game (its 48s scaled cooldown outlasts its ~31s corner traverse),
+				so that match is structural, not evidence the corner family is accurate
+				on courses with more corners. The corner family's re-trigger rate on
+				those multi-corner courses is unvalidated against real replays. For the
+				distribution family it undershoots: the simulator re-triggers about 1 in
+				650 times a tracked skill fires, versus about 1 in 57 in real replays of
+				the same skills. The cause is how a skill's extra candidate points
+				("spares") are drawn -- independently, from the same underlying
 				distribution as its first activation -- so they cluster near that first
 				point rather than spreading across the race. Most spares land too close
 				behind the skill's current position to survive its cooldown: a spare
