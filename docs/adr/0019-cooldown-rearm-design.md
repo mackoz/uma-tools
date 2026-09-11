@@ -87,14 +87,19 @@ distance-scaling correction landed (same test, same non-cooldown-untouched guara
   without this restriction) produced corner/straight re-trigger rates that didn't match real replay
   data; restricting by family, per the documented mechanics, is what made the corner family match
   exactly.
-- **A larger `SPARES` to close the distribution undershoot.** Considered and rejected for now: the
-  undershoot's measured cause (spares clustering near the primary, consumed before the cooldown
-  expires) isn't fixed by drawing more of the same kind of spare — it would mean more candidates
-  competing for the same narrow post-cooldown window, not a meaningfully higher chance of landing
-  in it. A structural fix (spacing spares out, or drawing them conditioned on surviving the
-  cooldown) is a larger, separate design change; `SPARES=3` already matches `all_corner_random`'s
-  real four-point mechanic exactly, so raising it for the distribution family alone would decouple
-  the two families' spare counts without addressing the actual mechanism.
+- **A larger `SPARES` to close the distribution undershoot.** Considered and rejected, but not
+  because more spares wouldn't help — they would. Spares aren't competitors for one slot: they're
+  drawn i.i.d. from the primary's own distribution, filtered to those after the primary, and burned
+  one per frame by `RaceSolver.rearmSkill()` until an eligible one arms, so each additional spare is
+  an independent additional chance to land beyond the primary at scaled-cooldown distance. Measured
+  directly (skill `201651`, course `10101`, 3000 samples): P(at least one spare lands beyond that
+  distance) is 2.27% at `SPARES=3`, 6.9% at 10, and 18.3% at 30 — roughly proportional to the count,
+  nowhere near saturating. Raising `SPARES` would therefore measurably raise the distribution
+  family's re-trigger rate. The decision to keep it at 3 was made on consistency grounds instead:
+  `SPARES=3` already matches `all_corner_random`'s real four-point mechanic exactly, and raising it
+  for the distribution family alone would decouple the two families' spare counts from that shared
+  constant. A structural fix (spacing spares out, or drawing them conditioned on surviving the
+  cooldown) remains a larger, separate design change.
 - **Leave the regression checkpoint untouched and treat the new behavior as exempt from it.**
   Rejected: cooldown skills make up roughly a quarter of the checkpoint's cases, so "untouched"
   would have meant the checkpoint silently stopped exercising this behavior at all, not that the
@@ -105,8 +110,10 @@ distance-scaling correction landed (same test, same non-cooldown-untouched guara
 
 - Draw count and RNG stream position for a cooldown-bearing skill are fixed at build time, not
   race-outcome-dependent — ADR-0005's common-random-numbers property is preserved for every skill,
-  cooldown-bearing or not (confirmed: 7694 non-cooldown checkpoint cases replay bit-identical across
-  the branch).
+  cooldown-bearing or not (confirmed: `cooldown-partition.test.ts`'s 300-case sample of non-cooldown
+  cases replays bit-identical against the current checkpoint; 7694 is the non-cooldown partition's
+  *size* in the old pre-SKL-21 checkpoint — 10000 cases total, 2306 of them cooldown-involving — not
+  itself a replay result).
 - A cooldown skill on `straight_random` or `is_finalcorner_random` will never show the benefit of a
   short in-game cooldown in this simulator — same limitation the engine had before SKL-21, now
   scoped explicitly to those two families instead of all cooldown skills.
@@ -114,11 +121,14 @@ distance-scaling correction landed (same test, same non-cooldown-untouched guara
   `umalator/components/simNotes.tsx`'s LIMITATIONS panel documents this for users; it is not hidden
   behind an aggregate "cooldowns now work" claim.
 - `SPARES=3` is a shared constant (`RaceSolverBuilder.ts` and its `prepPacerTriggers()` duplicate),
-  not derived from the cooldown/course-distance formula. Per-family activation counts measured
-  across both the regression corpus and a real-replay corpus top out at 2 actual activations on
-  every course tested — distance-scaling cooldown alongside distance-scaling race duration makes
-  the achievable activation count distance-invariant, so `SPARES=3` is permanent headroom rather
-  than a binding limit that would need raising for longer courses.
+  not derived from the cooldown/course-distance formula. These are two different claims: for
+  achieved *activation count*, it's genuine headroom — per-family activation counts measured across
+  both the regression corpus and a real-replay corpus top out at 2 actual activations (of the 4
+  candidate points available) on every course tested, and distance-scaling cooldown alongside
+  distance-scaling race duration makes that ceiling distance-invariant. For the distribution
+  family's *re-trigger probability*, though, it is load-bearing, not headroom — as the Options
+  section above measures, raising `SPARES` would measurably raise how often a second activation
+  actually lands.
 - The checkpoint file at `test/regression/checkpoints/` now has two re-records in this branch's
   history instead of the zero a non-behavior-changing branch would have; recovering the original
   pre-SKL-21 baseline requires `git show` against the merge-base commit, not a file in the working
