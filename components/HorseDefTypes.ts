@@ -91,7 +91,7 @@ export function reconcileOonige(state: HorseState): HorseState {
 		: state.set('skills', withOonigeSkill(state.skills));
 }
 
-export function SkillSet(ids): ImmMap<string, string> {
+export function SkillSet(ids: string[]): ImmMap<string, string> {
 	return ImmMap(
 		ids.reduce(
 			(acc, id) => {

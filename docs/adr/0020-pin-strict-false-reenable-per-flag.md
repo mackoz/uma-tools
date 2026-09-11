@@ -58,7 +58,7 @@ strict settings), ~95 are real pre-existing looseness in app code (`umalator/com
 not changing runtime behavior — esbuild's own transpilation was never strict-mode-aware), fix the
 ~45 mechanical config/declaration gaps identified in the Step-0 triage so the count drops to real
 looseness only, and re-record `scripts/verify-baseline.json`'s `tsc` field from 1015 to a number
-under the cap (104, measured on this branch after the mechanical fixes). The remaining ~104 is
+under the cap (103, measured on this branch after the mechanical fixes). The remaining 103 is
 tracked by PIPE-64 (the burn-down), and re-enabling strict *per
 flag* — `noImplicitAny` first, then nullability, then `strictPropertyInitialization` — with its
 own live baseline at each step (PIPE-65) is the tracked path back to strict, not an assumed one.
@@ -100,7 +100,7 @@ own live baseline at each step (PIPE-65) is the tracked path back to strict, not
   config. Because `uma-tools`' `tsc --noEmit` has no `include`/`exclude` and therefore still
   walks `uma-skill-tools/` sources, the coupling recorded in PIPE-58/PIPE-59 still holds — but
   with both repos now pinned off, only the engine's 7 `tools/` errors (PIPE-66) and one
-  `RaceSolver.ts` diagnostic show up in this repo's 104; it matters again when PIPE-65
+  `RaceSolver.ts` diagnostic show up in this repo's 103; it matters again when PIPE-65
   re-enables each flag, at which point engine files get checked under that flag from this side
   whether or not PIPE-59 has adopted it.
 - `scripts/verify.mjs`'s `TSC_CAP` / capped-diagnostics guard logic (the code, not the baseline)

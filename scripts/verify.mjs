@@ -117,7 +117,7 @@ function build(app) {
 // which alone put the count over the cap (~1030) -- so the baseline (1015)
 // was itself capped and this guard was structurally unable to ever fire (see
 // ADR 0020). PIPE-58 pins strict:false in tsconfig.json, dropping the real
-// count to ~104 and putting the baseline back under the cap for good. At the
+// count to ~103 and putting the baseline back under the cap for good. At the
 // cap this still renders as ">=1000 (capped)" and can't fail the run, but
 // that's now a true headroom margin rather than a permanently-tripped one.
 const TSC_CAP = 1000;
