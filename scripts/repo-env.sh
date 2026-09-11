@@ -75,11 +75,11 @@ _uma_repo_env_run() {
 			printf 'export UMA_PLANS_REPO=%q\n' "$UMA_PLANS_REPO"
 			;;
 		--check)
-			local name path
+			local name repo_dir
 			for name in UMA_CODE_REPO UMA_ENGINE_REPO UMA_PLANS_REPO; do
-				path="${!name}"
-				if [ -z "$path" ] || ! git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-					echo "repo-env.sh --check: $name ($path) is not a git work tree" >&2
+				eval "repo_dir=\"\$$name\""
+				if [ -z "$repo_dir" ] || ! git -C "$repo_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+					echo "repo-env.sh --check: $name ($repo_dir) is not a git work tree" >&2
 					rc=1
 				fi
 			done

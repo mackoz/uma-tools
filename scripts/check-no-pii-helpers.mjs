@@ -4,12 +4,14 @@
 
 // Generic, tracked patterns -- deliberately not personal (no name, no home path, no
 // email): those live only in an untracked per-user file (see check-no-pii.mjs's
-// loadPersonalPatterns). Motivated by the 2026-09-02 history scrub: the public repos
+// loadPersonalPatterns). The user segment excludes `<`, so placeholder notation in docs
+// and in these patterns' own display names (`/Users/<user>/...`) is not a hit -- only a
+// concrete account name is. Motivated by the 2026-09-02 history scrub: the public repos
 // were clean, but uma-tools-plans had 12 tracked tickets carrying the account holder's
 // home path in ticket prose, with nothing stopping the next one.
 export const GENERIC_PII_PATTERNS = [
-	{ name: 'macOS home path (/Users/<user>/...)', regex: /\/Users\/[^/\s]+\// },
-	{ name: 'Linux home path (/home/<user>/...)', regex: /\/home\/[^/\s]+\// },
+	{ name: 'macOS home path (/Users/<user>/...)', regex: /\/Users\/[^/\s<]+\// },
+	{ name: 'Linux home path (/home/<user>/...)', regex: /\/home\/[^/\s<]+\// },
 	{
 		name: 'sanitized Claude transcript directory (-Users-<user>-github-...)',
 		regex: /-Users-[A-Za-z0-9.-]+-github-/,
@@ -45,6 +47,15 @@ export function parseDiffAddedLines(diffText) {
 		}
 	}
 	return result;
+}
+
+// The tripwire's own source and tests necessarily contain the pattern text and
+// `/Users/example/...` fixtures, so they are exempt from their own check -- otherwise every
+// edit to them needs `--no-verify`, which is exactly the habit the hook exists to prevent.
+// Matched on the repo-relative path git reports, from any directory depth.
+export const SELF_EXEMPT_FILES = /(^|\/)check-no-pii(-helpers|\.test)?\.mjs$/;
+export function isSelfExempt(file) {
+	return SELF_EXEMPT_FILES.test(file);
 }
 
 // Parses the per-user pattern file's contents (one regex per line, `#` comments and

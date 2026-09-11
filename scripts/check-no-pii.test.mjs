@@ -8,6 +8,7 @@ import { test } from 'vitest';
 import {
 	findPii,
 	GENERIC_PII_PATTERNS,
+	isSelfExempt,
 	parseDiffAddedLines,
 	parsePersonalPatterns,
 } from './check-no-pii-helpers.mjs';
@@ -30,6 +31,34 @@ test('findPii: flags a macOS home path in an added line', () => {
 	assert.equal(hits[0].file, 'notes.md');
 	assert.equal(hits[0].line, 5);
 	assert.match(hits[0].name, /macOS home path/);
+});
+
+test('findPii: placeholder notation /Users/<user>/ is not a hit', () => {
+	const hits = findPii(
+		[
+			{
+				file: 'CLAUDE.md',
+				line: 1,
+				text: 'looks like `/Users/<user>/...` or `/home/<user>/...`',
+			},
+			{
+				file: 'notes.md',
+				line: 2,
+				text: 'the regex /\\/Users\\/[^/\\s<]+\\// itself',
+			},
+		],
+		GENERIC_PII_PATTERNS,
+	);
+	assert.equal(hits.length, 0);
+});
+
+test('isSelfExempt: the tripwire source, helpers and test are exempt; nothing else is', () => {
+	assert.equal(isSelfExempt('scripts/check-no-pii.mjs'), true);
+	assert.equal(isSelfExempt('scripts/check-no-pii-helpers.mjs'), true);
+	assert.equal(isSelfExempt('scripts/check-no-pii.test.mjs'), true);
+	assert.equal(isSelfExempt('check-no-pii.mjs'), true);
+	assert.equal(isSelfExempt('scripts/check-no-pii-notes.md'), false);
+	assert.equal(isSelfExempt('umalator/app.tsx'), false);
 });
 
 test('findPii: flags a Linux home path', () => {

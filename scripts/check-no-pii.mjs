@@ -8,7 +8,8 @@
 //
 // Exits 0 with no output when given no files, or when nothing staged matches. Exits 1 and
 // prints one `file:line: <pattern name>` line per hit otherwise. Skips package-lock.json
-// (its content is machine-generated, not prose someone wrote) -- binary files are skipped
+// (its content is machine-generated, not prose someone wrote) and the tripwire's own
+// source/tests (see isSelfExempt in the helpers) -- binary files are skipped
 // automatically, since git's `--- a/X`/`+++ b/X` markers for them carry no `@@` hunk and
 // so contribute no added lines to check.
 
@@ -16,9 +17,11 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
 	findPii,
 	GENERIC_PII_PATTERNS,
+	isSelfExempt,
 	parseDiffAddedLines,
 	parsePersonalPatterns,
 } from './check-no-pii-helpers.mjs';
@@ -32,7 +35,9 @@ function loadPersonalPatterns() {
 }
 
 export function run(argv) {
-	const files = argv.filter((f) => path.basename(f) !== 'package-lock.json');
+	const files = argv.filter(
+		(f) => path.basename(f) !== 'package-lock.json' && !isSelfExempt(f),
+	);
 	if (files.length === 0) {
 		return 0;
 	}
@@ -65,6 +70,6 @@ export function run(argv) {
 	return 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 	process.exitCode = run(process.argv.slice(2));
 }
