@@ -41,3 +41,4 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0017](0017-course-chart-neutral-template.md) | Course Chart compares every candidate against a fixed, skill-less template — normalized aptitude, no HP policy, wit check forced off | Accepted |
 | [0018](0018-vitest-test-runner.md) | Adopt Vitest as the test runner; bump CI Node 20 → 22 | Accepted |
 | [0019](0019-cooldown-rearm-design.md) | Cooldown re-arm draws spares up front, restricted to two sample-policy families | Accepted |
+| [0020](0020-pin-strict-false-reenable-per-flag.md) | Pin `strict: false` in `tsconfig.json`, re-enable per flag later | Accepted |
