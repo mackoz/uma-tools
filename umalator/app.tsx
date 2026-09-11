@@ -1058,7 +1058,6 @@ export function VelocityChart(props) {
 	);
 
 	const startTime = activationWindows[0].startTime;
-	const endTime = activationWindows[0].endTime;
 
 	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
 	const timeWindowEnd =
