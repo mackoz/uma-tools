@@ -89,15 +89,6 @@ export const LIMITATIONS: InfoEntry[] = [
 		),
 	},
 	{
-		summary: 'Skill cooldowns are not implemented.',
-		body: (
-			<p>
-				Skills only ever activate once per race, even ones with an in-game
-				cooldown like Professor of Curvature or Beeline Burst.
-			</p>
-		),
-	},
-	{
 		summary:
 			'Every skill is simulated at its base value -- level-based scaling is not modeled.',
 		body: (
