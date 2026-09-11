@@ -16,8 +16,8 @@ full incident writeup.
 
 ## Invocation
 
-Always `uv run scripts/wq.py <subcommand> ...` from the plans repo root (real path or the
-`uma-tools/plans/` symlink both work — `wq.py`'s own `PLANS = Path(__file__).resolve().parent
+Always `uv run scripts/wq.py <subcommand> ...` from the plans repo root (`$UMA_PLANS_REPO`, set
+by `scripts/repo-env.sh` since PIPE-67; the real path or the `uma-tools/plans/` symlink both work — `wq.py`'s own `PLANS = Path(__file__).resolve().parent
 .parent` follows symlinks fine, and `uma-tools/CLAUDE.md` prescribes the symlinked form). **Never
 a bare `python3 scripts/wq.py ...`** — since PIPE-30 it declares PyYAML + `wcmatch` as PEP 723
 inline dependencies that only `uv run` resolves automatically; a bare `python3` dies on the

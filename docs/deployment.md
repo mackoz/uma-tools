@@ -43,7 +43,9 @@ cd umalator-global
 node build.mjs --serve        # port 8000 by default; node build.mjs --serve 3000 for a custom port
 ```
 
-Then open `http://localhost:8000/uma-tools/umalator-global/`.
+Then open `http://localhost:8000/uma-tools/umalator-global/`. An agent (or anyone who wants a server that
+can be stopped without `pkill -f` guesswork) should use `scripts/dev-serve.sh start|status|stop
+[--port N]` instead — it is idempotent and only ever signals the process it started (PIPE-67).
 
 The other `build.mjs`-capable apps (`umalator/`, `skill-visualizer-global/`, `skill-visualizer/`, `courseimages/`, `rougelike/`, `umadle/`) work the same way from their own directories — only `umalator-global/` and `skill-visualizer-global/` have a `--serve` mode; the rest use `node build.mjs [--debug]` and reload manually, or serve statically. `npm run build` at the repo root builds all of them in one shot.
 

@@ -25,3 +25,7 @@ Alongside the same adoption, several "recommended" rule categories were delibera
 - Mixed formatting persists in files nobody has touched — accepted as the cost of reviewable diffs and usable blame.
 - The pre-commit hook will never reformat a file you didn't stage, so a diff's formatting changes are always attributable to that change's author actually editing the file.
 - Disabled rule categories are a recorded backlog with counts, not a silent configuration accident.
+
+## Amendments
+
+- **2026-09-11 (PIPE-67).** `lint-staged` now runs a second task, `scripts/check-no-pii.mjs`, on every staged file regardless of extension. The formatting decision above is unchanged — biome's glob is still `*.{ts,tsx,js,jsx,css}` and it still touches only staged files — but "the pre-commit hook" is no longer only biome; see `docs/adr/0021-repo-env-vars-and-pii-tripwire.md`.

@@ -116,7 +116,9 @@ off the PR object.
 
 ### Discover — every open PR in every repo, not just one per slot
 
-Run, per repo:
+Run, per repo (`scripts/pr-status.sh` (PIPE-67) does this for all three at once and prints each
+PR's cross-links, draft state and mergeability — use it for the overview, and the raw command
+below when you need `baseRefName` or the full body):
 
 ```
 gh pr list --repo <github repo> --state open --json number,title,headRefName,baseRefName,url,body,isDraft

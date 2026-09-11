@@ -131,7 +131,7 @@ If game data looks stale (a released uma/skill/course is missing) and there's no
 
 ## Linting and formatting
 
-[Biome](https://biomejs.dev) (`@biomejs/biome`, config at `biome.json`) — one tool for both lint and format, tabs, single quotes, understands TSX. `npm run lint` checks, `npm run lint:fix` applies safe fixes. A `husky` pre-commit hook runs `lint-staged`, which runs `biome check --write` **only on staged files** — it will not reformat a file you didn't touch.
+[Biome](https://biomejs.dev) (`@biomejs/biome`, config at `biome.json`) — one tool for both lint and format, tabs, single quotes, understands TSX. `npm run lint` checks, `npm run lint:fix` applies safe fixes. A `husky` pre-commit hook runs `lint-staged`, which runs `biome check --write` **only on staged files** — it will not reformat a file you didn't touch — and, since PIPE-67, `scripts/check-no-pii.mjs` on *every* staged file (any extension), so the hook now prints activity even for a staged `.mjs` that biome's glob skips.
 
 **The existing codebase has deliberately not been bulk-reformatted.** A full `biome check --write .` run touches ~160 files and produces a 50k+ line diff (verified, then discarded, while setting this up) — running it is almost never what you want; it buries a real change in reformatting noise and touches vendored code (`vendor/table-core`, excluded from `biome.json`'s `files.includes` for this reason, along with the `uma-skill-tools` submodule, which has its own tooling). Files only get formatted as you actually edit them, via the pre-commit hook.
 
