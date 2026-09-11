@@ -16,6 +16,13 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 ## Branching & PRs
 
+- **`$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` name the three repo checkouts** (PIPE-67)
+  — `uma-tools`, its `uma-skill-tools` submodule, and the sibling `uma-tools-plans` checkout —
+  so skills, scripts, and `wq.py`/`check-citations.py` stop each re-deriving "the sibling
+  directory" and prose stops citing an absolute path. A Claude session gets all three for free
+  via a `SessionStart` hook that runs `scripts/repo-env.sh --print`; a human shell gets them by
+  running `source scripts/repo-env.sh` (bash or zsh). `bash scripts/repo-env.sh --check` reports
+  any of the three that isn't a real git work tree (e.g. a clone without the private plans repo).
 - **Log a work-queue ticket before starting.** Bug and feature work is tracked in the sibling
   `uma-tools-plans` repo, symlinked here as `plans/` (gitignored, not part of this repo). File it
   with `uv run plans/scripts/wq.py file <PREFIX> --type {bug,feature} --title T --effort E

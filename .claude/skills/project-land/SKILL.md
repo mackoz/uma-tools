@@ -56,14 +56,15 @@ gh pr list --repo <github repo> --state open --search "<TICKET-ID> in:title" --j
 (`body` is there so a repo with more than one match can be disambiguated by real evidence,
 not just a guess — see below.)
 
-Repo table (same as `/project-review`'s Step 1 — derive local paths from where you're
-actually running, don't hardcode a machine's home directory):
+Repo table (same as `/project-review`'s Step 1 — use `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/
+`$UMA_PLANS_REPO` when a Claude session in `uma-tools` has them (PIPE-67); otherwise derive
+local paths from where you're actually running, don't hardcode a machine's home directory):
 
 | Slot | Local path | GitHub repo |
 |---|---|---|
-| engine | `<code>/uma-skill-tools` | `mackoz/uma-skill-tools` |
-| code | current `uma-tools` checkout root | `mackoz/uma-tools` |
-| plans | `../uma-tools-plans` (sibling of `code`'s repo root) | `mackoz/uma-tools-plans` |
+| engine | `$UMA_ENGINE_REPO` (`<code>/uma-skill-tools`) | `mackoz/uma-skill-tools` |
+| code | `$UMA_CODE_REPO` (current `uma-tools` checkout root) | `mackoz/uma-tools` |
+| plans | `$UMA_PLANS_REPO` (`../uma-tools-plans`, sibling of `code`'s repo root) | `mackoz/uma-tools-plans` |
 
 - **Zero results for engine or code, but a plans PR exists**: this ticket may genuinely not
   touch that repo (a plans-only doc ticket, or an app-only UI ticket with no engine change)

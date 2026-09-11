@@ -93,19 +93,21 @@ runs. See Step 5 for why this matters and the incident that surfaced it.
 Repo table (mirrors `uma-tools-plans/scripts/wq.py`'s `ENGINE_REPO`/`CODE_REPO`/`PLANS`
 constants — note `ENGINE_REPO` is deliberately the *submodule inside* `uma-tools`, not any
 sibling clone, per that script's own comment on why a sibling clone let gitlink drift go
-unnoticed). Derive the local paths from where you're actually running, the same way
-`wq.py` derives them from its own script location — don't hardcode one machine's home
-directory into this file: `code`'s local path is the current `uma-tools` checkout's repo
-root; `engine`'s is `<code>/uma-skill-tools`; `plans`'s is the sibling directory
-`../uma-tools-plans` next to `code`'s repo root. If you want to check `wq.py`'s constants
-yourself, read the script at `<plans>/scripts/wq.py` — not through the `uma-tools/plans/`
-symlink; see the path-guard warning just below.
+unnoticed). A Claude session in `uma-tools` gets `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/
+`$UMA_PLANS_REPO` for free via its `SessionStart` hook (`scripts/repo-env.sh`, PIPE-67) —
+use those rather than re-deriving the paths, and don't hardcode one machine's home
+directory into this file. Without them (a plain shell, or a session outside `uma-tools`),
+derive the same way `wq.py` does from its own script location: `code`'s local path is the
+current `uma-tools` checkout's repo root; `engine`'s is `<code>/uma-skill-tools`; `plans`'s
+is the sibling directory `../uma-tools-plans` next to `code`'s repo root. If you want to
+check `wq.py`'s constants yourself, read the script at `<plans>/scripts/wq.py` — not
+through the `uma-tools/plans/` symlink; see the path-guard warning just below.
 
 | Slot | Local path | GitHub repo | Base branch |
 |---|---|---|---|
-| engine | `<code>/uma-skill-tools` | `mackoz/uma-skill-tools` | `master` |
-| code | current `uma-tools` checkout root | `mackoz/uma-tools` | `master` |
-| plans | `../uma-tools-plans` (sibling of `code`'s repo root) | `mackoz/uma-tools-plans` | `main` |
+| engine | `$UMA_ENGINE_REPO` (`<code>/uma-skill-tools`) | `mackoz/uma-skill-tools` | `master` |
+| code | `$UMA_CODE_REPO` (current `uma-tools` checkout root) | `mackoz/uma-tools` | `master` |
+| plans | `$UMA_PLANS_REPO` (`../uma-tools-plans`, sibling of `code`'s repo root) | `mackoz/uma-tools-plans` | `main` |
 
 Reach `uma-tools-plans` by that real path, **never** through the `uma-tools/plans/`
 symlink — `uma-tools-plans/CLAUDE.md` warns the symlinked path trips tool path guards.
