@@ -53,17 +53,22 @@ same idea as `wq.py ready`'s own PR search):
 gh pr list --repo <github repo> --state open --search "<TICKET-ID> in:title" --json number,title,headRefName,url,body
 ```
 
+`scripts/pr-status.sh <TICKET-ID>` (PIPE-67) runs exactly this search across all three repos in one
+call and already prints each PR's sibling cross-links, mergeability and check state — prefer it, and
+fall back to the raw `gh pr list` only when you need a field it doesn't show.
+
 (`body` is there so a repo with more than one match can be disambiguated by real evidence,
 not just a guess — see below.)
 
-Repo table (same as `/project-review`'s Step 1 — derive local paths from where you're
-actually running, don't hardcode a machine's home directory):
+Repo table (same as `/project-review`'s Step 1 — use `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/
+`$UMA_PLANS_REPO` when a Claude session in `uma-tools` has them (PIPE-67); otherwise derive
+local paths from where you're actually running, don't hardcode a machine's home directory):
 
 | Slot | Local path | GitHub repo |
 |---|---|---|
-| engine | `<code>/uma-skill-tools` | `mackoz/uma-skill-tools` |
-| code | current `uma-tools` checkout root | `mackoz/uma-tools` |
-| plans | `../uma-tools-plans` (sibling of `code`'s repo root) | `mackoz/uma-tools-plans` |
+| engine | `$UMA_ENGINE_REPO` (`<code>/uma-skill-tools`) | `mackoz/uma-skill-tools` |
+| code | `$UMA_CODE_REPO` (current `uma-tools` checkout root) | `mackoz/uma-tools` |
+| plans | `$UMA_PLANS_REPO` (`../uma-tools-plans`, sibling of `code`'s repo root) | `mackoz/uma-tools-plans` |
 
 - **Zero results for engine or code, but a plans PR exists**: this ticket may genuinely not
   touch that repo (a plans-only doc ticket, or an app-only UI ticket with no engine change)
@@ -110,7 +115,7 @@ Based on what Step 1 found:
   instead, then jump to Step 6.
 - **No plans PR at all, but a code and/or engine PR exists** → don't assume the plans PR is
   simply absent; every bug/feature change is supposed to have one per this project's own
-  hard rule. Check `../uma-tools-plans/work-queue/in-progress/` for a ticket file whose ID
+  hard rule. Check `$UMA_PLANS_REPO/work-queue/in-progress/` for a ticket file whose ID
   appears in the PR title or head branch name. If one exists, **stop** — the plans PR was
   probably just not opened yet, not genuinely unnecessary, and completing this ticket needs
   its own plans branch+PR, which takes it out of "single-repo" landing entirely; go open
@@ -126,7 +131,7 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
 
 1. `require_clean`-equivalent, by hand — `wq.py land`'s own `land_one`/`checkout_pr_head`
    normally guarantee this before touching anything, and there's no script call doing it
-   for you here. In `../uma-tools-plans`: confirm `git status --porcelain` is empty, then
+   for you here. In `$UMA_PLANS_REPO`: confirm `git status --porcelain` is empty, then
    `git fetch origin <head> && git checkout <head>` for the plans PR's branch. Skipping this
    is not a shortcut — `wq.py complete` (step 3 below) calls `commit_push`, which pushes to
    *whatever branch is currently checked out*; landing straight on `main` if that's what
@@ -154,7 +159,7 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    The `(this PR)` self-reference form matches what `wq.py land` itself generates for a
    plans-repo citing its own not-yet-merged PR (`cmd_land`'s `pr_parts` construction).
 3. `uv run scripts/wq.py complete <id> --refs "[uma-tools-plans#N](url) (this PR)"` (run from
-   `../uma-tools-plans` — step 1 already put you there, so this is repo-relative, not the
+   `$UMA_PLANS_REPO` — step 1 already put you there, so this is repo-relative, not the
    `plans/scripts/wq.py` form Steps 3/4 of the normal path use below) — commits and pushes
    the completion to this still-open branch, so the PR's own merge is what lands it, same
    principle as `land --complete-id` (just done by hand since that flag requires
@@ -179,7 +184,11 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
 3. `gh pr merge N --squash`.
 4. Clean up by hand, matching what `land_one` normally does automatically: checkout the
    default branch, pull, delete the local and remote feature branch, and — code repo only —
-   `git submodule update --init`.
+   `git submodule update --init`. `scripts/sync-main.sh --repo code` (or `--repo engine`;
+   PIPE-67) does the local-branch half of this for you — checkout, pull, delete
+   gone/merged local branches, `git submodule update --init` for the code repo — leaving
+   only the remote branch deletion (`git push origin --delete <branch>`, or `gh pr merge`'s
+   own `--delete-branch` if it wasn't already given) to do separately.
 
 ## Step 2 — Preconditions, before touching `wq.py land` at all
 
@@ -345,8 +354,9 @@ If a run dies:
 ## Step 6 — Verify the landed state
 
 **After a normal `wq.py land` run** (Steps 2-4):
-- `git status --porcelain=v1 -b` in all three local checkouts — should be clean, on
-  `master`/`master`/`main` respectively. `uma-skill-tools` ending in detached HEAD after the
+- `scripts/repo-status.sh` (PIPE-67) — one line per checkout; all three should be clean, on
+  `master`/`master`/`main` respectively, with `gitlink OK` (the raw equivalent is
+  `git status --porcelain=v1 -b` in each). `uma-skill-tools` ending in detached HEAD after the
   submodule update is expected and healthy, not a problem.
 - If `--complete-id` was used, confirm the ticket file actually moved from
   `work-queue/in-progress/<id>.md` to `work-queue/completed/<id>.md`.

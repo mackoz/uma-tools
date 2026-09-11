@@ -255,16 +255,16 @@ function runTests() {
 }
 
 // Optional local docs site: strict-build it when present, skip silently when not.
+// Honors UMA_PLANS_REPO (PIPE-67) if set -- e.g. by scripts/repo-env.sh's SessionStart
+// hook -- falling back to the plans/ symlink under this checkout, same as before.
 function runDocs() {
-	const mkdocsBin = path.join(root, 'plans', '.venv', 'bin', 'mkdocs');
-	if (
-		!fs.existsSync(path.join(root, 'plans', 'mkdocs.yml')) ||
-		!fs.existsSync(mkdocsBin)
-	) {
+	const plansDir = process.env.UMA_PLANS_REPO || path.join(root, 'plans');
+	const mkdocsBin = path.join(plansDir, '.venv', 'bin', 'mkdocs');
+	if (!fs.existsSync(path.join(plansDir, 'mkdocs.yml')) || !fs.existsSync(mkdocsBin)) {
 		return { label: 'docs -', ok: true };
 	}
 	const r = spawnSync(mkdocsBin, ['build', '--strict'], {
-		cwd: path.join(root, 'plans'),
+		cwd: plansDir,
 		encoding: 'utf8',
 	});
 	if (r.status === 0) return { label: 'docs OK', ok: true };

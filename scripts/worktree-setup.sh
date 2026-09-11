@@ -41,9 +41,13 @@ check_node_modules_link node_modules "$main_checkout/node_modules" node_modules 
 
 # plans/ is a symlink to the sibling uma-tools-plans repo in the main checkout (and
 # .gitignore'd there); without it, worktree sessions can't reach work-queue tickets.
-# Guarded: a checkout without the private plans repo just skips it.
-if [ ! -e plans ] && [ -e "$main_checkout/plans" ]; then
-	ln -s "$main_checkout/plans" plans
+# Honors UMA_PLANS_REPO (PIPE-67, scripts/repo-env.sh) as the link target if set,
+# falling back to the main checkout's own plans/ symlink target as before. Guarded:
+# a checkout without the private plans repo (env var unset and no symlink either) just
+# skips it.
+plans_target="${UMA_PLANS_REPO:-$main_checkout/plans}"
+if [ ! -e plans ] && [ -e "$plans_target" ]; then
+	ln -s "$plans_target" plans
 fi
 
 # The submodule is its own npm project with its own node_modules; without it,

@@ -16,6 +16,19 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
 
 ## Branching & PRs
 
+- **`$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` name the three repo checkouts** (PIPE-67)
+  — `uma-tools`, its `uma-skill-tools` submodule, and the sibling `uma-tools-plans` checkout —
+  so skills, scripts, and `wq.py`/`check-citations.py` stop each re-deriving "the sibling
+  directory" and prose stops citing an absolute path. A Claude session gets all three for free
+  via a `SessionStart` hook that runs `scripts/repo-env.sh --print`; a human shell gets them by
+  running `source scripts/repo-env.sh` (bash or zsh). `bash scripts/repo-env.sh --check` reports
+  any of the three that isn't a real git work tree (e.g. a clone without the private plans repo).
+- **Prefer the five `scripts/` workflow scripts over ad-hoc `git`/`gh` sequences** for the
+  operations they cover — tri-repo status, explicit-path commit+push, PR status/cross-linking,
+  post-landing default-branch sync, and the dev server (PIPE-67, see "Repo scripts" under
+  "Build / verify commands") — they encode the refusals this section already asks for (no
+  `-A`/`.`, no committing on a default branch by accident, no killing a server another session
+  started) so a hand-driven sequence doesn't have to re-derive them each time.
 - **Log a work-queue ticket before starting.** Bug and feature work is tracked in the sibling
   `uma-tools-plans` repo, symlinked here as `plans/` (gitignored, not part of this repo). File it
   with `uv run plans/scripts/wq.py file <PREFIX> --type {bug,feature} --title T --effort E
@@ -102,6 +115,14 @@ The `pkg-guard` and `deps` stages (PIPE-56) are tripwires against an `npm` insta
 
 `build.mjs` is authoritative for every app that has one. Several apps still carry legacy Windows-oriented `build.bat` scripts, but `build-planner` is now the only app with no `build.mjs`. The old scripts predate the current build setup; in particular, `umalator/build.bat` does not emit `simulator.worker.js`, so it is not a substitute for `umalator/build.mjs`.
 
+**Repo scripts** (PIPE-67): five workflow scripts in `scripts/` wrap the git/gh sequences the three-repo loop drives most often — all bash, all take `--dry-run`/`--help`, all source `scripts/repo-env.sh` for the `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` paths.
+
+- `scripts/repo-status.sh` — read-only tri-repo status: branch, ahead/behind, dirty count, worktree count, the code repo's gitlink vs the engine's `origin/master`, and open PRs per repo.
+- `scripts/commit-push.sh --repo <code|engine|plans> -m "<msg>" -- <path>...` — explicit-path add → commit → push, refusing `-A`/`.`, an empty pathspec, or a commit directly on the repo's default branch without `--allow-default`.
+- `scripts/pr-status.sh [TICKET-ID] [--link]` — one line per open PR (draft/mergeable/review/checks) plus which sibling repos' PRs it cross-links in its body; `--link` appends the missing links.
+- `scripts/sync-main.sh [--repo <slot>]...` — post-landing sync: checks out and pulls the default branch, deletes branches that are gone upstream or merged, refusing per-repo on a dirty tree or unpushed commits rather than failing the whole run.
+- `scripts/dev-serve.sh start|stop|status [--app umalator-global|skill-visualizer-global] [--port N]` — a pidfile-scoped dev server; `stop` only ever signals a pid it recorded and confirmed is still a `build.mjs --serve` process, never a bare `pkill -f`.
+
 There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any build script. `strict` is pinned `false` in `tsconfig.json` (PIPE-58, `docs/adr/0020-pin-strict-false-reenable-per-flag.md`) — TS 7 defaults `strict: true`, which this repo never chose, and which alone pushed the count to ~1030; per-flag re-enable, deliberately, is the tracked path back, the parent-repo counterpart of the engine's own PIPE-59. `npm run verify`'s tsc baseline is live again (currently 103, well under the cap) and can once more fail on a real regression — before PIPE-58 the recorded baseline was itself above the cap, so that guard could structurally never fire. The remaining 103 is real pre-strict looseness, not config noise, concentrated in `umalator/compare.ts`, `umalator/app.tsx`, `components/SkillList.tsx`, and the small apps — tracked by PIPE-64 (the burn-down); PIPE-65 is the per-flag re-enable that follows it, and until its `noImplicitAny` pass lands, implicit-`any` is not reported by `tsc` at all. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models. tsc 7.x (typescript-go) still hard-caps reported diagnostics at 1000 — true as ever, just no longer saturated.
 
 `umadle` now builds from a clean install: `accessible-autocomplete` is a declared dependency, and `.npmrc` supplies the legacy-peer setting required for its optional Preact 8 peer against this repo's Preact 10. See `docs/apps.md` for the details.
@@ -110,7 +131,7 @@ If game data looks stale (a released uma/skill/course is missing) and there's no
 
 ## Linting and formatting
 
-[Biome](https://biomejs.dev) (`@biomejs/biome`, config at `biome.json`) — one tool for both lint and format, tabs, single quotes, understands TSX. `npm run lint` checks, `npm run lint:fix` applies safe fixes. A `husky` pre-commit hook runs `lint-staged`, which runs `biome check --write` **only on staged files** — it will not reformat a file you didn't touch.
+[Biome](https://biomejs.dev) (`@biomejs/biome`, config at `biome.json`) — one tool for both lint and format, tabs, single quotes, understands TSX. `npm run lint` checks, `npm run lint:fix` applies safe fixes. A `husky` pre-commit hook runs `lint-staged`, which runs `biome check --write` **only on staged files** — it will not reformat a file you didn't touch — and, since PIPE-67, `scripts/check-no-pii.mjs` on *every* staged file (any extension), so the hook now prints activity even for a staged `.mjs` that biome's glob skips.
 
 **The existing codebase has deliberately not been bulk-reformatted.** A full `biome check --write .` run touches ~160 files and produces a 50k+ line diff (verified, then discarded, while setting this up) — running it is almost never what you want; it buries a real change in reformatting noise and touches vendored code (`vendor/table-core`, excluded from `biome.json`'s `files.includes` for this reason, along with the `uma-skill-tools` submodule, which has its own tooling). Files only get formatted as you actually edit them, via the pre-commit hook.
 
@@ -151,6 +172,7 @@ Of that 76, 12 umas are **not actually released on Global yet** (every outfit st
 
 ## Documentation changes
 
+- Ticket/doc prose uses `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` or a `~`-relative form, never an absolute home path or the account holder's name — the `check-no-pii.mjs` pre-commit hook (PIPE-67) refuses a staged line that looks like one. Personal identifiers go in the untracked `${XDG_CONFIG_HOME:-$HOME/.config}/uma-tools/pii-patterns` (one pattern per line, `#` comments); keep them to the JS/POSIX-ERE common subset — literals, `\.`, `[...]`, `|`, `.*` — because the engine and plans hooks read the same file with awk, where `\d`/`\b`/`\w` don't exist.
 - After a code change, sweep this repo's own `README`/`CLAUDE.md`/`docs/` for claims the change made stale and fix them in the same pass.
 - When rewriting a doc, keep its existing format — tables stay tables. Don't convert a table to prose unless explicitly asked.
 - Verify factual claims (stats, mechanics, HP/chart numbers) against the source code or a real `master.mdb` query before writing them, and cite the file you checked.

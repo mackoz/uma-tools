@@ -5,6 +5,9 @@
     ],
     "PostToolUse": [
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/submodule-cwd-guard.mjs\" --post" } ] }
+    ],
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/repo-env.sh\" --print >> \"$CLAUDE_ENV_FILE\"" } ] }
     ]
   }
 }
