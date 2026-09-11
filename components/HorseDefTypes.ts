@@ -1,6 +1,5 @@
 import { Map as ImmMap, Record } from 'immutable';
 import skillmeta from '../skill_meta.json';
-import type skills from '../uma-skill-tools/data/jp/skill_data.json';
 
 export function isDebuffSkill(id: string) {
 	// iconId 3xxxx is the debuff icons
