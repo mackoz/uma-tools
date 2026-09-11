@@ -30,7 +30,7 @@ the plans repo still carrying the home path, with nothing in any repo to refuse 
    user segment), so docs can still write `/Users/<user>/...`. Personal identifiers — a real name,
    a real email — live only in an untracked per-user file,
    `${XDG_CONFIG_HOME:-$HOME/.config}/uma-tools/pii-patterns`, that each hook reads if present.
-   Each hook exempts its own source and tests, so editing the tripwire never needs `--no-verify`.
+   Each hook exempts its own source (and, for the JS one, its tests), so editing the tripwire never needs `--no-verify`. The per-user file is read by both a JS regex engine and awk's POSIX ERE, so its patterns are restricted to the subset both read identically (documented in the helper and each CLAUDE.md); the sh hooks pass it through `ENVIRON` rather than `awk -v`, which would strip backslashes.
 
 ## Options considered
 

@@ -232,8 +232,10 @@ sync_one() {
 		local note=""
 		[ "${#deleted[@]}" -gt 0 ] && note=", deleted: ${deleted[*]}"
 		echo "$slot: synced to $default_branch$note"
-	else
+	elif [ "${#left[@]}" -eq 0 ]; then
 		echo "$slot: up to date, nothing to delete"
+	else
+		echo "$slot: up to date"
 	fi
 	local lb
 	for lb in "${left[@]+"${left[@]}"}"; do

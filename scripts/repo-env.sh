@@ -95,6 +95,10 @@ _uma_repo_env_run() {
 	return $rc
 }
 
+# Under `zsh scripts/repo-env.sh` (direct execution, no BASH_SOURCE) this takes the "sourced"
+# branch and ends in `return`, which zsh treats as `exit` at a script's top level -- correct
+# exit code, just by a different route than bash. Don't "fix" it into an `exit` here: that
+# would kill an interactive zsh that sources this file.
 if [ "${BASH_SOURCE[0]:-}" != "$0" ]; then
 	_uma_repo_env_run "$@"
 	_uma_repo_env_rc=$?

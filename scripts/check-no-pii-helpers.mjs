@@ -59,7 +59,11 @@ export function isSelfExempt(file) {
 }
 
 // Parses the per-user pattern file's contents (one regex per line, `#` comments and
-// blank lines skipped) into the same `{ name, regex }` shape as GENERIC_PII_PATTERNS.
+// blank lines skipped). The same file feeds the POSIX-sh/awk hooks in the engine and plans
+// repos, where the line is a POSIX ERE, not a JS regex -- so a personal pattern must use only
+// the subset both engines read identically: literal text, `\.`, `[...]` classes, `|`, `.*`.
+// `\d`, `\b`, `\w`, and `[[:space:]]` mean different things (or nothing) across the two and
+// are not supported; write `[0-9]`, `[a-z]`, `[ \t]` instead. into the same `{ name, regex }` shape as GENERIC_PII_PATTERNS.
 export function parsePersonalPatterns(fileContent) {
 	const patterns = [];
 	for (const rawLine of fileContent.split('\n')) {
