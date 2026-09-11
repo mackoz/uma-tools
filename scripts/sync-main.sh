@@ -56,6 +56,10 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
+# Clear positional params first -- `source` inherits this script's
+# leftover "$@" otherwise, which would feed repo-env.sh's own arg parser
+# whatever flags this script was called with (e.g. --fetch, --dry-run).
+set --
 source "$(dirname "${BASH_SOURCE[0]}")/repo-env.sh"
 
 explicit_mode=1
