@@ -89,15 +89,6 @@ export const LIMITATIONS: InfoEntry[] = [
 		),
 	},
 	{
-		summary: 'Skill cooldowns are not implemented.',
-		body: (
-			<p>
-				Skills only ever activate once per race, even ones with an in-game
-				cooldown like Professor of Curvature or Beeline Burst.
-			</p>
-		),
-	},
-	{
 		summary:
 			'Every skill is simulated at its base value -- level-based scaling is not modeled.',
 		body: (
@@ -177,6 +168,40 @@ export const LIMITATIONS: InfoEntry[] = [
 					actually occurred.
 				</p>
 			</Fragment>
+		),
+	},
+	{
+		summary:
+			'Position-based cooldown skills re-trigger less often in the simulator than they do in real races.',
+		body: (
+			<p>
+				A skill with an in-game cooldown can activate more than once per race
+				here, but only for the two condition families whose game mechanics
+				actually place more than one candidate point: corner skills (
+				<code>all_corner_random</code>) and the continuously-re-evaluated
+				distribution family (near-lane-time, change-order, and blocking
+				conditions). For the corner family this matches real replays exactly on
+				the one course with replay data available -- but that course's geometry
+				makes a second corner proc impossible for either the simulator or the
+				real game (its 48s scaled cooldown outlasts its ~31s corner traverse),
+				so that match is structural, not evidence the corner family is accurate
+				on courses with more corners. The corner family's re-trigger rate on
+				those multi-corner courses is unvalidated against real replays. For the
+				distribution family it undershoots: the simulator re-triggers about 1 in
+				650 times a tracked skill fires, versus about 1 in 57 in real replays of
+				the same skills. The cause is how a skill's extra candidate points
+				("spares") are drawn -- independently, from the same underlying
+				distribution as its first activation -- so they cluster near that first
+				point rather than spreading across the race. Most spares land too close
+				behind the skill's current position to survive its cooldown: a spare
+				that's already behind the uma by the time its cooldown would allow it to
+				fire gets silently skipped on the very next frame, so with only a few
+				spares drawn per skill, most of them are used up this way within a few
+				frames of the first activation, well before the cooldown actually
+				expires a second time. Straight-line and final-corner conditions place
+				exactly one candidate point for the whole race and never re-trigger here
+				at all, matching the game exactly for those two families.
+			</p>
 		),
 	},
 ];

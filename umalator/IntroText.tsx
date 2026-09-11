@@ -66,6 +66,34 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-11</summary>
+						<ul>
+							<li>
+								Changed: skills with an in-game cooldown can now activate more
+								than once in a race, instead of always firing at most once. If a
+								skill's condition is met again after its cooldown elapses (which
+								scales with course distance, the same way skill durations
+								already do), it re-activates. How often this actually happens in
+								practice depends on the skill: corner skills like{' '}
+								<strong>Professor of Curvature</strong> and position-based
+								skills like <strong>Slipstream</strong> can re-trigger multiple
+								times, while straight-line skills like{' '}
+								<strong>Beeline Burst</strong> still only ever activate once,
+								since the game only ever gives them one point on the course to
+								trigger from in the first place.
+							</li>
+							<li>
+								Changed: the Skill Proc Data dialog's "Effectiveness rate" is
+								now a percentage of skill procs (activations), not of samples
+								(races) -- the old denominator could exceed 100% once a skill
+								could activate more than once per race. This rescales the
+								displayed number for every skill, cooldown or not: a skill that
+								procs in half its races and helps every time it procs now reads
+								100% instead of 50%.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-08</summary>
 						<ul>
 							<li>

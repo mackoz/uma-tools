@@ -1032,7 +1032,6 @@ export function VelocityChart(props) {
 
 	const skillUmaIndex = skillData.umaIndex;
 	const { positions: skillPositions } = skillData;
-	const [startPos, endPos] = skillPositions[0];
 
 	const skillUmaTimes = skillUmaIndex === 0 ? uma1Times : uma2Times;
 	const skillUmaPositions = skillUmaIndex === 0 ? uma1Positions : uma2Positions;
@@ -1041,15 +1040,29 @@ export function VelocityChart(props) {
 		skillUmaIndex === 0 ? uma2Velocities : uma1Velocities;
 	const otherUmaPositions = skillUmaIndex === 0 ? uma2Positions : uma1Positions;
 
-	const startTime = interpolateValue(
-		startPos,
-		skillUmaPositions,
-		skillUmaTimes,
+	// One {startTime, endTime} window per activation (cooldown-rearming skills can
+	// activate more than once in a single run -- see skillPositions above).
+	const activationWindows = skillPositions.map(
+		([activationStartPos, activationEndPos]) => ({
+			startTime: interpolateValue(
+				activationStartPos,
+				skillUmaPositions,
+				skillUmaTimes,
+			),
+			endTime: interpolateValue(
+				activationEndPos,
+				skillUmaPositions,
+				skillUmaTimes,
+			),
+		}),
 	);
-	const endTime = interpolateValue(endPos, skillUmaPositions, skillUmaTimes);
+
+	const startTime = activationWindows[0].startTime;
 
 	const timeWindowStart = Math.max(0, startTime - TIME_WINDOW_PADDING);
-	const timeWindowEnd = endTime + TIME_WINDOW_PADDING;
+	const timeWindowEnd =
+		activationWindows[activationWindows.length - 1].endTime +
+		TIME_WINDOW_PADDING;
 
 	const skillUmaVelocityData: Array<[number, number]> = [];
 	const otherUmaVelocityData: Array<[number, number]> = [];
@@ -1112,33 +1125,41 @@ export function VelocityChart(props) {
 
 	const otherUmaPathData = line(otherUmaVelocityData);
 
-	let convergenceTime = maxTime;
-	for (let i = 0; i < otherUmaTimes.length; i++) {
-		const t = otherUmaTimes[i];
-		if (t >= endTime) {
-			const otherVel = otherUmaVelocities[i];
-			const skillVel = (skillUmaIndex === 0 ? uma1Velocities : uma2Velocities)[
-				i
-			];
-			if (Math.abs(skillVel - otherVel) <= VELOCITY_CONVERGENCE_THRESHOLD) {
-				convergenceTime = t;
-				break;
+	const skillUmaVelocitiesForConvergence =
+		skillUmaIndex === 0 ? uma1Velocities : uma2Velocities;
+
+	function findConvergenceTime(afterTime: number): number {
+		for (let i = 0; i < otherUmaTimes.length; i++) {
+			const t = otherUmaTimes[i];
+			if (t >= afterTime) {
+				const otherVel = otherUmaVelocities[i];
+				const skillVel = skillUmaVelocitiesForConvergence[i];
+				if (Math.abs(skillVel - otherVel) <= VELOCITY_CONVERGENCE_THRESHOLD) {
+					return t;
+				}
 			}
 		}
+		return maxTime;
 	}
 
-	const skillUmaVelocityDataFiltered: Array<[number, number]> = [];
-	for (let i = 0; i < skillUmaVelocityData.length; i++) {
-		const [t, v] = skillUmaVelocityData[i];
-		if (t >= startTime && t <= Math.min(convergenceTime, timeWindowEnd)) {
-			skillUmaVelocityDataFiltered.push([t, v]);
-		}
-	}
-
-	const skillUmaPathData =
-		skillUmaVelocityDataFiltered.length > 0
-			? line(skillUmaVelocityDataFiltered)
-			: null;
+	// One highlighted velocity-line segment per activation, each running from that
+	// activation's start to wherever the skill uma's velocity re-converges with the
+	// other uma's (capped at the next activation's start, and at the chart's edge).
+	const skillUmaVelocitySegments: Array<Array<[number, number]>> =
+		activationWindows.map((window, i) => {
+			const nextActivationStart =
+				i < activationWindows.length - 1
+					? activationWindows[i + 1].startTime
+					: Infinity;
+			const segmentEnd = Math.min(
+				findConvergenceTime(window.endTime),
+				nextActivationStart,
+				timeWindowEnd,
+			);
+			return skillUmaVelocityData.filter(
+				([t]) => t >= window.startTime && t <= segmentEnd,
+			);
+		});
 
 	useEffect(() => {
 		if (!canvasRef.current) return;
@@ -1218,11 +1239,12 @@ export function VelocityChart(props) {
 			ctx.stroke();
 		}
 
-		if (skillUmaPathData && skillUmaVelocityDataFiltered.length > 0) {
+		skillUmaVelocitySegments.forEach((segment) => {
+			if (segment.length === 0) return;
 			ctx.strokeStyle = '#ff69b4';
 			ctx.lineWidth = 2;
 			ctx.beginPath();
-			skillUmaVelocityDataFiltered.forEach((d, i) => {
+			segment.forEach((d, i) => {
 				const roundedTime = Number(d[0].toFixed(2));
 				const roundedVelocity = Number(d[1].toFixed(2));
 				if (i === 0) {
@@ -1232,7 +1254,7 @@ export function VelocityChart(props) {
 				}
 			});
 			ctx.stroke();
-		}
+		});
 
 		ctx.restore();
 	}, [
@@ -1243,7 +1265,7 @@ export function VelocityChart(props) {
 		yMin,
 		maxVelocityRoundedUp,
 		phaseBackgrounds,
-		skillUmaVelocityDataFiltered,
+		skillUmaVelocitySegments,
 		otherUmaVelocityData,
 		width,
 		height,
