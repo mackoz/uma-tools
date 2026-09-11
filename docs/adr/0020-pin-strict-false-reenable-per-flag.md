@@ -59,9 +59,9 @@ not changing runtime behavior — esbuild's own transpilation was never strict-m
 ~45 mechanical config/declaration gaps identified in the Step-0 triage so the count drops to real
 looseness only, and re-record `scripts/verify-baseline.json`'s `tsc` field from 1015 to a number
 under the cap (104, measured on this branch after the mechanical fixes). The remaining ~104 is
-tracked by a burn-down follow-up ticket (filed from this branch), and re-enabling strict *per
+tracked by PIPE-64 (the burn-down), and re-enabling strict *per
 flag* — `noImplicitAny` first, then nullability, then `strictPropertyInitialization` — with its
-own live baseline at each step is the tracked path back to strict, not an assumed one.
+own live baseline at each step (PIPE-65) is the tracked path back to strict, not an assumed one.
 
 ## Options considered
 
@@ -69,8 +69,8 @@ own live baseline at each step is the tracked path back to strict, not an assume
    only option that fixes the dead regression guard immediately. Cost: ~850 real type problems
    become formally invisible to `tsc`, and adopting strict later gets harder the longer code is
    written without it — mitigated here by not stopping at the pin: the mechanical bucket is fixed
-   in the same change, and the per-flag re-enable path is committed to via the burn-down/re-enable
-   follow-up tickets rather than left as a someday.
+   in the same change, and the per-flag re-enable path is committed to via PIPE-64 (burn-down) and
+   PIPE-65 (re-enable) rather than left as a someday.
 2. **Adopt strict deliberately, keep it on, and work the ~1030 down over time.** Correct
    long-term, but the diagnostic cap means the baseline cannot be a meaningful regression signal
    until the count falls below 1000 — so the dead check stays dead through most of that work
@@ -81,15 +81,15 @@ own live baseline at each step is the tracked path back to strict, not an assume
    time, each with its own live baseline (chosen, as the actual decision).** Slower than option 1
    alone, but every step after the initial pin keeps `verify`'s tsc signal live instead of
    reverting to a capped, dead one. This ticket implements only the pin plus the mechanical
-   cleanup; the per-flag sequence is the parent-repo counterpart of PIPE-59 and is tracked as its
-   own follow-up so each flag lands as its own reviewed PR with its own before/after count.
+   cleanup; the per-flag sequence is the parent-repo counterpart of PIPE-59 and is tracked as PIPE-65
+   so each flag lands as its own reviewed PR with its own before/after count.
 
 ## Consequences
 
 - ~850 diagnostics that would report under `strict: true` are formally unchecked by `tsc
   --noEmit` and by `npm run verify`'s tsc stage until each strict flag is re-enabled one at a
   time. This is a real, acknowledged loss of a compile-time signal, not a cosmetic one — the
-  burn-down and per-flag re-enable follow-ups exist specifically so this isn't the end state.
+  PIPE-64 and PIPE-65 exist specifically so this isn't the end state.
 - `vendor/table-core/utils.ts` and
   `vendor/table-core/features/column-sizing/columnSizingFeature.utils.ts` now carry small local
   patches (documented in each file's own header comment) so they typecheck under both
@@ -98,8 +98,11 @@ own live baseline at each step is the tracked path back to strict, not an assume
 - `uma-skill-tools`' own `tsconfig.json` strict pin (PIPE-53) and its future strict adoption
   (PIPE-59) are decided independently in that repo; this ADR governs only `uma-tools`' own
   config. Because `uma-tools`' `tsc --noEmit` has no `include`/`exclude` and therefore still
-  walks `uma-skill-tools/` sources, PIPE-59 landing will reduce this repo's count too, without
-  this repo's own config changing.
+  walks `uma-skill-tools/` sources, the coupling recorded in PIPE-58/PIPE-59 still holds — but
+  with both repos now pinned off, only the engine's 7 `tools/` errors (PIPE-66) and one
+  `RaceSolver.ts` diagnostic show up in this repo's 104; it matters again when PIPE-65
+  re-enables each flag, at which point engine files get checked under that flag from this side
+  whether or not PIPE-59 has adopted it.
 - `scripts/verify.mjs`'s `TSC_CAP` / capped-diagnostics guard logic (the code, not the baseline)
   is unchanged — it was always the right check; what was wrong was a baseline already past the
   cap it was supposed to detect crossing.
