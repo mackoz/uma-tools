@@ -78,6 +78,23 @@ fails after this point (a rejected commit, most commonly the pre-commit hook, or
 failure before the commit lands) now rolls itself back — the minted id is free again, not burned
 — so there's no need to hunt for an orphaned skeleton the way UI-30's recovery once did.
 
+## `refresh-dates` — recompute the Filed / Updated columns (PIPE-68)
+
+```
+uv run scripts/wq.py refresh-dates [--backfill-filed] [--dry-run]
+```
+
+Since PIPE-68 (2026-09-11) every ticket carries a `- **Filed**: YYYY-MM-DD` metadata line
+(`file` writes it) and the README's dispatch list, backlog tables and in-progress table end in
+two `Filed | Updated` cells; the published artifact's dashboard shows the same two columns.
+`Updated` is never stored — `file`/`claim`/`status` recompute it from git for the row they
+touch, and `refresh-dates` rewrites every row's two cells in one pass (idempotent: "nothing to
+do" on a second run). Run it before regenerating the artifact if tickets were hand-edited without
+a `wq.py` call in between. `--backfill-filed` only writes a missing Filed line, never overwrites
+one; it was the one-time migration and shouldn't be needed again. A commit counts as an update to
+a ticket only if it changes a non-Filed line of that file, so a metadata-only sweep or a squash
+merge doesn't stamp every ticket with the same date.
+
 ## `claim` — move a ticket to in-progress
 
 ```
