@@ -1,3 +1,7 @@
+// PIPE-58: two `@ts-expect-error` directives below are `@ts-ignore` instead, deviating from
+// upstream TanStack table-core. Upstream typechecks under strict:true, where the suppressed
+// index error fires and `@ts-expect-error` is correct; this repo pins strict:false (ADR 0020),
+// under which the same directive errors as unused (TS2578). `@ts-ignore` typechecks under both.
 import type { Table_Internal } from './types/Table'
 import type { NoInfer, RowData, Updater } from './types/type-utils'
 import type { TableFeatures } from './types/TableFeatures'
@@ -151,7 +155,9 @@ export function tableMemo<
     const { parentName } = getFunctionNameInfo(fnName, '.')
 
     const debugByParent =
-      // @ts-expect-error
+      // @ts-ignore -- upstream used the stricter directive here, but the index error it
+      // suppresses only fires under strict:true; under strict:false (PIPE-58 pins this repo
+      // there) that stricter directive itself errors as unused. @ts-ignore is silent either way.
       table.options[
         `debug${(parentName != 'table' ? parentName + 's' : parentName).replace(
           parentName,
@@ -159,7 +165,7 @@ export function tableMemo<
         )}`
       ]
     const debugByFeature = feature
-      ? // @ts-expect-error
+      ? // @ts-ignore -- see the @ts-ignore above; same strict-on/off split.
         table.options[
           `debug${feature.charAt(0).toUpperCase() + feature.slice(1)}`
         ]

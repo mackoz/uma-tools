@@ -1,3 +1,10 @@
+// PIPE-58: three `.headers.reduce(...)` callbacks below had their `(sum: number, header:
+// Header<TFeatures, TData>)` parameter types dropped, deviating from upstream TanStack
+// table-core. Under this repo's strict:false pin (ADR 0020), the explicit `header` annotation
+// disagreed with the array-element type `callMemoOrStaticFn(...)[0]?.headers` actually infers
+// (TS2769, no overload matches), while the untyped, inferred form -- already used two lines
+// above each of these at the sibling `table.getHeaderGroups()[0]?.headers.reduce(...)` call --
+// typechecks under both strict:true and strict:false.
 import {
   table_getCenterHeaderGroups,
   table_getLeftHeaderGroups,
@@ -176,7 +183,7 @@ export function table_getLeftTotalSize<
       table,
       'getLeftHeaderGroups',
       table_getLeftHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum, header) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )
@@ -191,7 +198,7 @@ export function table_getCenterTotalSize<
       table,
       'getCenterHeaderGroups',
       table_getCenterHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum, header) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )
@@ -206,7 +213,7 @@ export function table_getRightTotalSize<
       table,
       'getRightHeaderGroups',
       table_getRightHeaderGroups,
-    )[0]?.headers.reduce((sum: number, header: Header<TFeatures, TData>) => {
+    )[0]?.headers.reduce((sum, header) => {
       return sum + header_getSize(header)
     }, 0) ?? 0
   )
