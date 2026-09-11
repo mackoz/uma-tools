@@ -158,6 +158,7 @@ Of that 76, 12 umas are **not actually released on Global yet** (every outfit st
 
 ## Documentation changes
 
+- Ticket/doc prose uses `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` or a `~`-relative form, never an absolute home path or the account holder's name — the `check-no-pii.mjs` pre-commit hook (PIPE-67) refuses a staged line that looks like one.
 - After a code change, sweep this repo's own `README`/`CLAUDE.md`/`docs/` for claims the change made stale and fix them in the same pass.
 - When rewriting a doc, keep its existing format — tables stay tables. Don't convert a table to prose unless explicitly asked.
 - Verify factual claims (stats, mechanics, HP/chart numbers) against the source code or a real `master.mdb` query before writing them, and cite the file you checked.
