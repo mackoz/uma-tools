@@ -180,7 +180,11 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
 3. `gh pr merge N --squash`.
 4. Clean up by hand, matching what `land_one` normally does automatically: checkout the
    default branch, pull, delete the local and remote feature branch, and — code repo only —
-   `git submodule update --init`.
+   `git submodule update --init`. `scripts/sync-main.sh --repo code` (or `--repo engine`;
+   PIPE-67) does the local-branch half of this for you — checkout, pull, delete
+   gone/merged local branches, `git submodule update --init` for the code repo — leaving
+   only the remote branch deletion (`git push origin --delete <branch>`, or `gh pr merge`'s
+   own `--delete-branch` if it wasn't already given) to do separately.
 
 ## Step 2 — Preconditions, before touching `wq.py land` at all
 
