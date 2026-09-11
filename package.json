@@ -28,7 +28,8 @@
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,css}": "biome check --write --no-errors-on-unmatched"
+    "*.{ts,tsx,js,jsx,css}": "biome check --write --no-errors-on-unmatched",
+    "*": "node scripts/check-no-pii.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
