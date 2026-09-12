@@ -210,12 +210,30 @@ export function runComparison(
 				// and showing configured debuffs while hiding that would misattribute where the
 				// drain came from.
 				//
-				// The underlying effect (SkillType.Recovery, effect type 9; see
-				// RaceSolver.ts:167,1795 and StaminaDebuffs.ts's own header) is instantaneous --
-				// RaceSolver never calls onSkillDeactivate for it -- so there is no end position to
-				// pair this with. We still store it as a [pos, -1] "no end" pair, matching
-				// skillSet's own shape, purely so ResultsPane's skillEntries/skillSize helpers and
-				// row markup can be reused as-is for this section.
+				// Post-review fix (round 2, issue 2): the PREVIOUS version of this comment claimed
+				// "RaceSolver never calls onSkillDeactivate for it" about the debuff SKILL -- false
+				// for 11 of the 30 shipped debuff skills (e.g. 110301, 201021, 105901111; verified
+				// against skill_data.json), which carry a second, duration-bearing effect alongside
+				// the Recovery one: type 27 TargetSpeed or type 31 Accel or type 22
+				// CurrentSpeedWithNaturalDeceleration. RaceSolver.ts's activate() (~line 1776) pushes
+				// each of THOSE onto its own activeXSkills list with a duration timer, and its
+				// deactivation pass (~line 1548) calls onSkillDeactivate(this, s.skillId,
+				// s.perspective) for whatever is in that list when the timer expires -- Perspective
+				// preserved, so Perspective.Other included. What's actually true and is the reason
+				// this still works: the SkillType.Recovery EFFECT itself (type 9; RaceSolver.ts:167,
+				// 1795-1801) has no duration and never enters an active list, so the HP drain is
+				// always a single point in time, not a range -- hence storing it as a [pos, -1]
+				// "no end" pair, matching skillSet's own shape so ResultsPane's
+				// skillEntries/skillSize helpers and row markup can be reused as-is.
+				//
+				// A skill's OTHER effect (TargetSpeed/Accel/etc, when present) may still fire
+				// onSkillDeactivate with Perspective.Other for the same id, and getDeactivator below
+				// silently ignores it (its own perspective check is `== Perspective.Self`) -- the
+				// `-1` sentinel above survives by that filter, not because the deactivate call never
+				// happens. If getDeactivator is ever widened to handle Perspective.Other, debuff ids
+				// must be routed to debuffSet there too (mirroring this function) BEFORE that widening
+				// lands -- otherwise `skillSet.get(id)` is undefined for a debuff id and `ar.find(...)`
+				// throws.
 				if (!debuffSet.has(id)) debuffSet.set(id, []);
 				debuffSet.get(id).push([s.pos, -1]);
 			}

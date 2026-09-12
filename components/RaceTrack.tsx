@@ -28,6 +28,26 @@ export enum RegionDisplayType {
 	Marker,
 }
 
+// Post-review fix (round 2, issue 4): caps how many vertical rows the Marker branch's
+// per-uma-side row-stacking (see RaceTrack()'s Marker branch below) will ever open. Without a
+// cap, a saturated cluster (the Stam Debuff dialog allows up to 9 stacks of one bucket, and 9
+// random draws inside one phase window commonly cluster tightly) marched arbitrarily far from
+// its anchor edge -- confirmed live: by row 5 uma1's labels reached 59% and uma2's reached 42%,
+// deep inside the skill-activation rungs' territory (Textbox rungs span the full 0-100% when
+// busy -- `y = 90 - 10*i` for i up to 9, see the Textbox branch below) and crossing each other
+// mid-track. Past this cap, a new proc that can't fit any existing row merges into the nearest
+// same-label cluster instead of opening a further row -- see MarkerCluster below.
+const MARKER_ROW_CAP = 4;
+
+interface MarkerCluster {
+	x: number;
+	half: number;
+	text: string;
+	count: number;
+	titles: string[];
+	color: string;
+}
+
 const STRINGS_ja = Object.freeze({
 	racetrack: Object.freeze({
 		thresholds: '補正ステータス：',
@@ -889,13 +909,29 @@ export function RaceTrack(props) {
 					// Show HP toggle (which doesn't touch this `regions` layer at all) and never
 					// reads as a skill-activation box (the Textbox branch above).
 					//
+					// This branch only builds cluster DATA (state.markerRows) -- it does not
+					// render JSX. Rendering happens in one pass after the whole reduce finishes
+					// (see below the reduce call), because rows/clusters accumulate across every
+					// Marker desc processed by this reduce (one per debuff-bucket activation from
+					// app.tsx), not just this desc's own regions; a cluster this desc's activation
+					// merges into (see MARKER_ROW_CAP below) may have been created by an earlier
+					// desc, or grow again from a later one.
+					//
 					// desc.umaIndex picks which edge the label anchors near (uma1 top, uma2
 					// bottom). Within one edge, state.markerRows[umaIndex] is a list of vertical
-					// "rows", each row a list of already-placed {x, half} labels; a new label goes
-					// in the first row none of whose existing labels it would overlap (by
-					// half-width, in the same % units as x), else a brand-new row is opened. This
-					// replaces an earlier x-only jitter that nudged the tick LINE but left the
-					// (much wider) text overlapping -- review caught two same-named procs
+					// "rows" (capped at MARKER_ROW_CAP), each row a list of already-placed
+					// MarkerCluster entries; a new proc goes in the first row none of whose
+					// clusters it would overlap (by half-width, in the same % units as x). Past
+					// the cap, instead of opening a further row (post-review fix, round 2, issue
+					// 4 -- see MARKER_ROW_CAP's own comment for what that looked like
+					// uncapped), it merges into the nearest same-label cluster across the capped
+					// rows, incrementing that cluster's count and folding its position into the
+					// cluster's `<title>` list rather than drawing a new tick. The card's Incoming
+					// Debuffs section already lists every proc individually, so the map need not
+					// be exhaustive once space runs out.
+					//
+					// This replaces an earlier x-only jitter that nudged the tick LINE but left
+					// the (much wider) text overlapping -- review caught two same-named procs
 					// rendering as one run-together "Mystifying Mystifying Murmur -3%" string.
 					// app.tsx now also sends a short drain-only `text` (full name moved to
 					// `title`, shown as a hover tooltip) so a cluster of same-bucket procs has
@@ -903,63 +939,69 @@ export function RaceTrack(props) {
 					if (state.markerRows[desc.umaIndex] == null) {
 						state.markerRows[desc.umaIndex] = [];
 					}
-					const rows: Array<Array<{ x: number; half: number }>> =
-						state.markerRows[desc.umaIndex];
-					const up = desc.umaIndex === 0;
-					const rects = desc.regions.map((r) => {
+					const rows: Array<MarkerCluster[]> = state.markerRows[desc.umaIndex];
+					desc.regions.forEach((r) => {
 						const x = (r.start / course.distance) * 100;
 						// Rough label half-width in % units -- 9px font, narrow charset
 						// (letters/digits/%/-), ~3.6px/char plus a little padding so near-misses
 						// still get separated rather than just barely touching.
 						const half = ((desc.text.length * 3.6 + 6) / props.width) * 100;
+						const title = desc.title || desc.text;
 						let rowIdx = rows.findIndex((row) =>
 							row.every(
 								(placed) => Math.abs(placed.x - x) >= placed.half + half,
 							),
 						);
-						if (rowIdx === -1) {
+						if (rowIdx === -1 && rows.length < MARKER_ROW_CAP) {
 							rowIdx = rows.length;
 							rows.push([]);
 						}
-						rows[rowIdx].push({ x, half });
-						const y = up ? 4 + rowIdx * 11 : 97 - rowIdx * 11;
-						return (
-							<Fragment>
-								<line
-									class="debuffMarkerLine"
-									x1={`${x}%`}
-									y1="0"
-									x2={`${x}%`}
-									y2="100%"
-									stroke={desc.color.stroke}
-									stroke-width="1.5"
-									stroke-dasharray="4 3"
-									pointer-events="none"
-								/>
-								<text
-									class="debuffMarkerText"
-									x={`${x}%`}
-									y={`${y}%`}
-									font-size="9px"
-									text-anchor="middle"
-									dominant-baseline={up ? 'hanging' : 'auto'}
-									fill={desc.color.stroke}
-								>
-									<title>{desc.title || desc.text}</title>
-									{desc.text}
-								</text>
-							</Fragment>
-						);
+						if (rowIdx !== -1) {
+							rows[rowIdx].push({
+								x,
+								half,
+								text: desc.text,
+								count: 1,
+								titles: [title],
+								color: desc.color.stroke,
+							});
+							return;
+						}
+						// Row cap reached and this proc doesn't cleanly fit any existing row:
+						// merge into the nearest cluster that shares this proc's exact label
+						// (same skill bucket + drain, the common real-world case -- several
+						// stacks of one configured debuff) rather than draw an overlapping tick.
+						let best: MarkerCluster | null = null;
+						let bestDist = Infinity;
+						rows.forEach((row) => {
+							row.forEach((c) => {
+								if (c.text !== desc.text) return;
+								const d = Math.abs(c.x - x);
+								if (d < bestDist) {
+									bestDist = d;
+									best = c;
+								}
+							});
+						});
+						if (best == null) {
+							// Rare: every capped row is saturated with OTHER labels (several
+							// distinct debuff buckets all clustering at once) so there is no
+							// same-label cluster to fold into. Attach to the last row anyway --
+							// an occasional visual overlap here is preferable to silently
+							// dropping a proc the card does list.
+							best = {
+								x,
+								half,
+								text: desc.text,
+								count: 0,
+								titles: [],
+								color: desc.color.stroke,
+							};
+							rows[MARKER_ROW_CAP - 1].push(best);
+						}
+						best.count += 1;
+						best.titles.push(title);
 					});
-					// Post-review fix: pushed onto its own layer (state.markerElem), not
-					// state.elem -- see the useMemo return below. This layer renders after
-					// {props.children} (the velocity/HP curves) so a debuff label is never
-					// silently painted over by a curve passing through the same point. Confirmed
-					// live: with several clustered procs, one label's <text> was present and
-					// correctly styled in the DOM (checked via getComputedStyle) but simply
-					// invisible on screen because VelocityLines (RaceTrack's children, previously
-					// drawn after `regions`) happened to cross exactly through its y position.
-					state.markerElem.push(<Fragment>{rects}</Fragment>);
 				} else {
 					state.elem.push(
 						<Fragment>
@@ -980,19 +1022,67 @@ export function RaceTrack(props) {
 			},
 			{
 				seen: new Set(),
-				markerRows: {} as Record<
-					number,
-					Array<Array<{ x: number; half: number }>>
-				>,
+				markerRows: {} as Record<number, Array<MarkerCluster[]>>,
 				rungs: Array(10)
 					.fill(0)
 					.map((_) => []),
 				elem: [],
-				markerElem: [],
 			},
 		);
-		return { regions: state.elem, debuffMarkerLayer: state.markerElem };
-	}, [props.regions, course.distance, props.uma1, props.uma2, props.pacer]);
+		// Render the accumulated marker clusters (state.markerRows) in one pass, now that every
+		// Marker desc has been processed and every merge (MARKER_ROW_CAP) has already happened --
+		// see the Marker branch above for why this can't render incrementally per-desc.
+		const debuffMarkerLayer: any[] = [];
+		Object.keys(state.markerRows).forEach((umaIndexKey) => {
+			const umaIndex = +umaIndexKey;
+			const up = umaIndex === 0;
+			state.markerRows[umaIndex].forEach((row, rowIdx) => {
+				const y = up ? 4 + rowIdx * 11 : 97 - rowIdx * 11;
+				row.forEach((cluster, ci) => {
+					const label =
+						cluster.count > 1
+							? `${cluster.count}× ${cluster.text}`
+							: cluster.text;
+					const title = cluster.titles.join(', ');
+					debuffMarkerLayer.push(
+						<Fragment key={`${umaIndex}-${rowIdx}-${ci}`}>
+							<line
+								class="debuffMarkerLine"
+								x1={`${cluster.x}%`}
+								y1="0"
+								x2={`${cluster.x}%`}
+								y2="100%"
+								stroke={cluster.color}
+								stroke-width="1.5"
+								stroke-dasharray="4 3"
+								pointer-events="none"
+							/>
+							<text
+								class="debuffMarkerText"
+								x={`${cluster.x}%`}
+								y={`${y}%`}
+								font-size="9px"
+								text-anchor="middle"
+								dominant-baseline={up ? 'hanging' : 'auto'}
+								fill={cluster.color}
+							>
+								<title>{title}</title>
+								{label}
+							</text>
+						</Fragment>,
+					);
+				});
+			});
+		});
+		return { regions: state.elem, debuffMarkerLayer };
+	}, [
+		props.regions,
+		course.distance,
+		props.uma1,
+		props.uma2,
+		props.pacer,
+		props.width,
+	]);
 
 	const statStrings = useText({
 		1: 'ui.stats.1',
@@ -1089,9 +1179,15 @@ export function RaceTrack(props) {
 						    point -- see the useMemo above (debuffMarkerLayer). The tick <line>
 						    itself is pointer-events:none (set per-element in the Marker branch
 						    above) so it can never intercept a drag meant for a skill box beneath
-						    it; the <text> is left interactive so its <title> hover tooltip still
-						    works (pointer-events is inherited in SVG, so it would follow a
-						    none set here instead). */}
+						    it. The <text> is deliberately left interactive (not pointer-events:
+						    none) so its <title> hover tooltip still works -- honest trade-off,
+						    not a free lunch: its glyph box is a real, if small (~17px at the
+						    default 9px font), dead zone over whatever skill-box rung happens to
+						    sit underneath a given label, where a click/drag is swallowed by the
+						    label instead of reaching the box. Accepted because the tooltip (and,
+						    post-issue-4, a merged cluster's full title list) carries information
+						    the card doesn't show at this granularity, and the dead zone is a
+						    handful of small text glyphs, not a large area. */}
 						<svg
 							x={props.xOffset}
 							y={props.yOffset}

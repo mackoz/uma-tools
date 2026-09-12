@@ -222,3 +222,18 @@ export function isKnownDebuffBucketId(id: string): boolean {
 export function drainForSkill(skillId: string): number | undefined {
 	return drainById.get(skillId);
 }
+
+// Post-review fix (HP-7 pt.2, round 2): the ONE formatting rule for a drain fraction, moved here
+// from StaminaDebuffDialog.tsx so ResultsPane.tsx/app.tsx's course-map markers can share it
+// instead of re-deriving their own (which is exactly how a real bucket -- 910301, drain 0.0025 --
+// rendered as "0.3%" in two new call sites while the dialog correctly showed "0.25%": both new
+// formatters rounded to a fixed number of decimal places instead of trimming trailing zeros off
+// 2, and the overstated rounding is the wrong direction for a number people reason about HP
+// with). Returns the unsigned magnitude ("0.25%", "3%") -- callers that need a sign prepend the
+// U+2212 minus sign themselves (the established convention: see HorseDef.tsx's
+// `` `−${...}% max HP` `` and StaminaDebuffDialog.tsx's own total line), not the ASCII hyphen.
+export function formatPercent(fraction: number): string {
+	const pct = fraction * 100;
+	// Trims to at most 2 decimal places without trailing zeros (0.25%, 1%, 3%).
+	return `${Number(pct.toFixed(2))}%`;
+}

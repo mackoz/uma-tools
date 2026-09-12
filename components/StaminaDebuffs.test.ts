@@ -2,6 +2,7 @@ import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
 import {
 	bucketsForCourse,
+	formatPercent,
 	isOpponentStaminaDebuff,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
@@ -53,5 +54,28 @@ describe('stamina debuff catalog', () => {
 		expect(isOpponentStaminaDebuff('201162')).toBe(true); // Murmur
 		expect(isOpponentStaminaDebuff('201441')).toBe(true); // All-Seeing Eyes
 		expect(isOpponentStaminaDebuff('200332')).toBe(false); // ordinary skill
+	});
+
+	// Post-review fix (HP-7 pt.2, round 2, issue 1): table-driven over the four distinct drain
+	// fractions that actually appear across STAMINA_DEBUFF_BUCKETS (verified against
+	// skill_data.json directly, not just against whichever buckets a hand-picked test happens to
+	// exercise) -- this would have caught the previous round's bug instantly: two new call sites
+	// (ResultsPane.tsx/app.tsx) each hand-rolled a `Number.isInteger(pct) ? toFixed(0) :
+	// toFixed(1)` rounding rule that rendered bucket 910301's real 0.25% drain as "0.3%", the only
+	// one of these four values it got wrong.
+	test.each([
+		[0.0025, '0.25%'],
+		[0.005, '0.5%'],
+		[0.01, '1%'],
+		[0.03, '3%'],
+	])('formatPercent(%f) === %s', (fraction, expected) => {
+		expect(formatPercent(fraction)).toBe(expected);
+	});
+
+	test('formatPercent is exercised by every distinct drain value actually in the catalog', () => {
+		const distinctDrains = new Set(STAMINA_DEBUFF_BUCKETS.map((b) => b.drain));
+		expect([...distinctDrains].sort((a, b) => a - b)).toEqual([
+			0.0025, 0.005, 0.01, 0.03,
+		]);
 	});
 });

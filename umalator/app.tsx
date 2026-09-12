@@ -57,6 +57,7 @@ import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
 import {
 	drainForSkill,
+	formatPercent,
 	isKnownDebuffBucketId,
 	isOpponentStaminaDebuff,
 } from '../components/StaminaDebuffs';
@@ -3017,9 +3018,6 @@ function App(props) {
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
 	const [simulationError, setSimulationError] = useState('');
-	const [displayRun, setDisplayRun] = useState<
-		'mean' | 'median' | 'min' | 'max'
-	>('median');
 	// round/totalRounds drive the "Run (round/total)" label; pct is this round's completion
 	// fraction (skills whose batch has finished / total skills entering this round).
 	const [simulationProgress, setSimulationProgress] = useState<{
@@ -3472,6 +3470,25 @@ function App(props) {
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
+
+	// Post-review fix (round 2, issue 3): `displayRun` used to be its own `useState('median')`,
+	// entirely independent of `displaying` above (which drives the course map's chartData and is
+	// also read by the Skill Chart's expanded-row "Showing" select -- see createExpandedContent
+	// below). Two independent stores meant they could silently disagree: expand a Skill Chart row,
+	// set its "Showing" to Min (which only ever touched `displaying`, never `displayRun`), then
+	// switch to Compare mode -- the card (driven by `displayRun`) still showed Median while the map
+	// (driven by `displaying`) showed Min. Deriving `displayRun` from `displaying` makes that
+	// structurally impossible: there is only one stored value now. The four `displaying` values
+	// this reducer ever produces are exactly 'meanrun'/'medianrun'/'minrun'/'maxrun' (updateResultsState
+	// above, and the 'string' dispatch branch that always receives one of those four from
+	// handleDisplayRunChange/the Skill Chart's own selector), so slicing off the trailing 'run' is
+	// an exact, lossless inverse of the `${run}run` template used to build `displaying` -- not a
+	// heuristic.
+	const displayRun = (displaying || 'medianrun').slice(0, -3) as
+		| 'mean'
+		| 'median'
+		| 'min'
+		| 'max';
 
 	// tableData is purely a rendered view of chartRunRef.current -- see refreshTableRowsNow(). It's
 	// still a useState (not a ref) because BasinnChart needs to re-render when it changes.
@@ -5245,14 +5262,21 @@ function App(props) {
 	// see compare.ts's ChartRunTrace), hence the same `|| [[], []]`-style fallback rushedIndicators
 	// uses above.
 	//
-	// Post-review fix (Finding 1): `text` is the drain % ONLY, not "name -N%" -- with a debuff
+	// Post-review fix (Finding 1): `text` is the drain % ONLY, not "name −N%" -- with a debuff
 	// bucket configured 2-3x (the normal case, not an edge case) several same-named procs land
-	// within a couple hundred meters of each other, and a ~200px-wide "Mystifying Murmur -3%"
+	// within a couple hundred meters of each other, and a ~200px-wide "Mystifying Murmur −3%"
 	// label has no room to avoid overlapping its neighbor even with RaceTrack.tsx's marker-x
-	// jitter. A short "-3%" leaves the full name to the card's Incoming Debuffs section, and still
+	// jitter. A short "−3%" leaves the full name to the card's Incoming Debuffs section, and still
 	// lets RaceTrack.tsx's row-stacking (see its Marker branch) fit several per uma without
 	// overlapping. `title` (rendered as a hover tooltip, RaceTrack.tsx's Marker branch) keeps the
 	// skill name discoverable on the map itself.
+	//
+	// Post-review fix (round 2, issue 1): use the shared `formatPercent` (components/
+	// StaminaDebuffs.ts) instead of a locally re-derived rounding rule -- the earlier
+	// `Number.isInteger(...) ? toFixed(0) : toFixed(1)` rounded bucket 910301's 0.25% drain up to
+	// "0.3%", the only one of the four shipped drain values it got wrong, and in the direction
+	// that overstates the debuff. `formatPercent` returns the unsigned magnitude; the U+2212 minus
+	// sign is prepended here to match the rest of the app's convention (HorseDef.tsx, StaminaDebuffDialog.tsx), not an ASCII hyphen.
 	const debuffColors = [{ stroke: '#2a77c5' }, { stroke: '#c52a2a' }];
 	const debuffMarkers =
 		chartData == null
@@ -5268,10 +5292,7 @@ function App(props) {
 							([id, activations]) => {
 								const drain = drainForSkill(id);
 								const name = skillnames[id]?.[0] ?? id;
-								const pct =
-									drain != null
-										? `-${Number.isInteger(drain * 100) ? (drain * 100).toFixed(0) : (drain * 100).toFixed(1)}%`
-										: null;
+								const pct = drain != null ? `−${formatPercent(drain)}` : null;
 								const label = pct ?? name;
 								const title = pct != null ? `${name} ${pct}` : name;
 								return activations.map((ar) => ({
@@ -5553,7 +5574,10 @@ function App(props) {
 			const tieRate = stats ? stats.tieRate * 100 : 0;
 			const barChartRunData = { allruns: synthesizeAllRuns(acc) };
 			const detail = detailCacheRef.current.get(skillId);
-			const currentDisplaying = displaying || 'meanrun';
+			// Kept in sync with `displayRun`'s own fallback above ('medianrun', not 'meanrun') --
+			// same single default across the whole app now that `displayRun` is derived from
+			// `displaying` instead of tracked separately.
+			const currentDisplaying = displaying || 'medianrun';
 			const baseCost = (skillmeta as any)[skillId]?.baseCost;
 
 			return (
@@ -5706,7 +5730,8 @@ function App(props) {
 			: null;
 
 	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
-		setDisplayRun(run);
+		// `displayRun` is now derived from `displaying` (see its declaration above) -- setting
+		// `displaying` here is the only state change needed; `displayRun` follows automatically.
 		setChartData(`${run}run`);
 	}
 

@@ -2,7 +2,7 @@ import { Clock, Flag, Heart, Swords, TrendingUp, Zap } from 'lucide-preact';
 import { h } from 'preact';
 import { useContext, useMemo } from 'preact/hooks';
 import { IntlContext } from 'preact-i18n';
-import { drainForSkill } from '../../components/StaminaDebuffs';
+import { drainForSkill, formatPercent } from '../../components/StaminaDebuffs';
 import './ResultsPane.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -136,11 +136,6 @@ function getMaxVelocity(snapshot: RaceSnapshot, umaIndex: 0 | 1): number {
 
 function getSkillName(skillId: string, dict: Record<string, string>): string {
 	return dict[skillId] ?? skillId;
-}
-
-function formatDrainPercent(drain: number): string {
-	const pct = drain * 100;
-	return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
 }
 
 function skillEntries(
@@ -366,7 +361,7 @@ function UmaStatsCard({
 	const showSkills = skillSize(skillMap) > 0;
 
 	const debuffMap = snapshot.db[umaIndex];
-	const showDebuffs = skillSize(debuffMap) > 0;
+	const showDebuffs = debuffActivationCount(debuffMap) > 0;
 
 	return (
 		<div class={`uma-stats-card ${cls}`}>
@@ -556,9 +551,7 @@ function UmaStatsCard({
 											{getSkillName(skillId, skillNameDict)}
 										</span>
 										{drain != null && (
-											<span class="debuff-drain">
-												-{formatDrainPercent(drain)}
-											</span>
+											<span class="debuff-drain">−{formatPercent(drain)}</span>
 										)}
 										<span class="skill-pos">
 											{pos[1] === -1

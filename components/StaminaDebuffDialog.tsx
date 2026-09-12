@@ -17,6 +17,7 @@ import {
 	bucketsForCourse,
 	type DebuffBucket,
 	excludedDebuffCount,
+	formatPercent,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
 } from './StaminaDebuffs';
@@ -43,12 +44,6 @@ const DISTANCE_LABELS: Record<number, string> = {
 	3: 'Medium',
 	4: 'Long',
 };
-
-function formatPercent(fraction: number): string {
-	const pct = fraction * 100;
-	// Trims to at most 2 decimal places without trailing zeros (0.25%, 1%, 3%).
-	return `${Number(pct.toFixed(2))}%`;
-}
 
 interface StepperProps {
 	value: number;
