@@ -18,6 +18,8 @@ import {
 import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
+import { StaminaDebuffDialog } from './StaminaDebuffDialog';
+import { totalDrain } from './StaminaDebuffs';
 
 import './HorseDef.css';
 
@@ -397,6 +399,7 @@ export function HorseDef(props) {
 	const [skillPickerOpen, setSkillPickerOpen] = useState(false);
 	const [expanded, setExpanded] = useState(() => ImmSet());
 	const [procDataSkillId, setProcDataSkillId] = useState<string | null>(null);
+	const [stamDebuffDialogOpen, setStamDebuffDialogOpen] = useState(false);
 
 	const tabstart = props.tabstart();
 	let tabi = 0;
@@ -608,6 +611,19 @@ export function HorseDef(props) {
 		props.ground,
 	]);
 
+	// HP-7 Task 9: the STAM DEBUFF row's summary figures. `scalingContext.remainingHp` is exactly
+	// `0.8 * HpStrategyCoefficient[strategy] * stamina + distance` -- ScalingContext.ts's
+	// `contextFrom()` computes it from this same `buildBaseStats()` -> `buildAdjustedStats()`
+	// pipeline (called with the default `hpModeled = true`, i.e. full HP, since there's no race in
+	// progress to sample a live HP from) -- so reusing it here rather than re-deriving the formula
+	// keeps this row fed the same buildBaseStats/buildAdjustedStats-derived quantities the rest of
+	// the card (skill pills, ExpandedSkillView) already renders from, not raw slider values.
+	const totalDebuffDrain = useMemo(
+		() => totalDrain(state.incomingDebuffs),
+		[state.incomingDebuffs],
+	);
+	const maxHp = scalingContext?.remainingHp;
+
 	const skillList = useMemo(() => {
 		const u = uniqueSkillForUma(umaId);
 		const hasRunData = props.runData != null && props.umaIndex != null;
@@ -743,6 +759,28 @@ export function HorseDef(props) {
 					/>
 				</div>
 			</div>
+			{props.umaIndex != null && (
+				<div class="horseStamDebuffRow">
+					<span class="horseStamDebuffLabel">Stam Debuff</span>
+					<span class="horseStamDebuffValue">
+						{totalDebuffDrain > 0
+							? `−${Number((totalDebuffDrain * 100).toFixed(2))}% max HP${
+									maxHp != null
+										? ` (≈ −${Math.round(totalDebuffDrain * maxHp)} HP)`
+										: ''
+								}`
+							: 'none'}
+					</span>
+					<button
+						type="button"
+						class="horseStamDebuffBtn"
+						onClick={() => setStamDebuffDialogOpen(true)}
+						tabindex={tabnext()}
+					>
+						Configure
+					</button>
+				</div>
+			)}
 			<div class="horseSectionLabel">Skills</div>
 			<div class="horseSkillListWrapper" onClick={handleSkillClick}>
 				<ul class="horseSkillPills">{skillList}</ul>
@@ -768,6 +806,15 @@ export function HorseDef(props) {
 					courseDistance={props.courseDistance}
 					umaIndex={props.umaIndex}
 					onClose={() => setProcDataSkillId(null)}
+				/>
+			)}
+			{props.umaIndex != null && (
+				<StaminaDebuffDialog
+					isOpen={stamDebuffDialogOpen}
+					onClose={() => setStamDebuffDialogOpen(false)}
+					incoming={state.incomingDebuffs}
+					onChange={setter('incomingDebuffs')}
+					distanceType={props.course?.distanceType}
 				/>
 			)}
 		</div>
