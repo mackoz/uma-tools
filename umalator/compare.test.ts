@@ -12,7 +12,7 @@ import {
 	Weather,
 } from '../uma-skill-tools/RaceParameters';
 import { PosKeepMode } from '../uma-skill-tools/RaceSolver';
-import { runComparisonBlock } from './compare';
+import { runComparison, runComparisonBlock } from './compare';
 
 // HP-7: wiring incomingDebuffs into runComparisonBlock. HorseState (components/HorseDefTypes.ts)
 // can't be constructed directly under Vitest -- its Record({...}) default values branch on a bare
@@ -186,6 +186,49 @@ test('runComparisonBlock: survivesCount/baseSurvivesCount are deterministic for 
 	expect(a.baseSurvivesCount).toBeLessThanOrEqual(block.size);
 	expect(a.survivesCount).toBe(b.survivesCount);
 	expect(a.baseSurvivesCount).toBe(b.baseSurvivesCount);
+});
+
+// HP-7 pt.2: incoming stamina debuffs recorded into data.db (runComparison only -- see
+// getActivator's Perspective.Other branch in compare.ts), separately from data.sk. Murmur
+// (201162)'s stripped victim-safe condition is `distance_type==3&phase==1` (mid-race, this
+// 2000m/distanceType-3 course) and All-Seeing Eyes (201441)'s is `phase_random==2` (late-race,
+// any course -- its running_style/order_rate clauses are caster-only and get stripped, same as
+// Murmur's blocked_front_continuetime clause; verified via skill_data.json above). Phase
+// boundaries per CourseData.ts's phaseStart/phaseEnd: phase 1 (mid) is [distance/6,
+// distance*2/3), phase 2 (late) is [distance*2/3, distance).
+test('an incoming stamina debuff proc lands within its real window (Murmur mid, All-Seeing Eyes late)', () => {
+	const uma1 = new TestHorse() as unknown as HorseState;
+	const uma2 = new TestHorse().set(
+		'incomingDebuffs',
+		ImmMap({ '201162': 1, '201441': 1 }),
+	) as unknown as HorseState;
+
+	const result = runComparison(20, course, racedef, uma1, uma2, null, options);
+	const db = result.runData.minrun.db[1] as Map<
+		string,
+		Array<[number, number]>
+	>;
+	expect(db).toBeInstanceOf(Map);
+
+	const murmurActivations = db.get('201162');
+	expect(murmurActivations).toBeDefined();
+	expect(murmurActivations!.length).toBeGreaterThan(0);
+	const [murmurPos] = murmurActivations![0];
+	expect(murmurPos).toBeGreaterThanOrEqual(course.distance / 6);
+	expect(murmurPos).toBeLessThan((course.distance * 2) / 3);
+
+	const eyesActivations = db.get('201441');
+	expect(eyesActivations).toBeDefined();
+	expect(eyesActivations!.length).toBeGreaterThan(0);
+	const [eyesPos] = eyesActivations![0];
+	expect(eyesPos).toBeGreaterThanOrEqual((course.distance * 2) / 3);
+	expect(eyesPos).toBeLessThanOrEqual(course.distance);
+
+	// Must NOT be folded into data.sk (the card's "Skills (N)" count) -- see compare.ts's
+	// getActivator comment on why these are tracked separately.
+	const sk = result.runData.minrun.sk[1] as Map<string, unknown>;
+	expect(sk.has('201162')).toBe(false);
+	expect(sk.has('201441')).toBe(false);
 });
 
 test('runComparisonBlock: survivesCount falls when incoming debuffs are configured, for a stamina-limited uma', () => {

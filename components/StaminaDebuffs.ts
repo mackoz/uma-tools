@@ -212,3 +212,13 @@ export function isOpponentStaminaDebuff(skillId: string): boolean {
 export function isKnownDebuffBucketId(id: string): boolean {
 	return drainById.has(id);
 }
+
+// HP-7 pt.2: drain fraction (0.01 === 1%) for any skill id that is itself an opponent stamina
+// debuff (isOpponentStaminaDebuff above) -- not just a bucket representative id. `drainById` is
+// keyed by every memberIds entry, not only representative ids (see its construction above), so
+// this covers whichever specific skill actually activated in a run, letting callers (e.g.
+// ResultsPane's Incoming Debuffs section) look up a proc's drain % without duplicating or
+// re-deriving the map.
+export function drainForSkill(skillId: string): number | undefined {
+	return drainById.get(skillId);
+}

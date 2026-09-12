@@ -56,6 +56,7 @@ import {
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
 import {
+	drainForSkill,
 	isKnownDebuffBucketId,
 	isOpponentStaminaDebuff,
 } from '../components/StaminaDebuffs';
@@ -1968,7 +1969,12 @@ async function deserialize(hash) {
 								'forcedSkillPositions',
 								ImmMap(o.uma1.forcedSkillPositions || {}),
 							)
-							.set('incomingDebuffs', ImmMap<string, number>(filterKnownIncomingDebuffs(o.uma1.incomingDebuffs))),
+							.set(
+								'incomingDebuffs',
+								ImmMap<string, number>(
+									filterKnownIncomingDebuffs(o.uma1.incomingDebuffs),
+								),
+							),
 					),
 					uma2: reconcileOonige(
 						new HorseState(o.uma2)
@@ -1977,7 +1983,12 @@ async function deserialize(hash) {
 								'forcedSkillPositions',
 								ImmMap(o.uma2.forcedSkillPositions || {}),
 							)
-							.set('incomingDebuffs', ImmMap<string, number>(filterKnownIncomingDebuffs(o.uma2.incomingDebuffs))),
+							.set(
+								'incomingDebuffs',
+								ImmMap<string, number>(
+									filterKnownIncomingDebuffs(o.uma2.incomingDebuffs),
+								),
+							),
 					),
 					pacer: o.pacer
 						? reconcileOonige(
@@ -1989,7 +2000,9 @@ async function deserialize(hash) {
 									)
 									.set(
 										'incomingDebuffs',
-										ImmMap<string, number>(filterKnownIncomingDebuffs(o.pacer.incomingDebuffs)),
+										ImmMap<string, number>(
+											filterKnownIncomingDebuffs(o.pacer.incomingDebuffs),
+										),
 									),
 							)
 						: new HorseState({ strategy: 'Nige' }),
@@ -5216,6 +5229,43 @@ function App(props) {
 					}));
 				});
 
+	// HP-7 pt.2: incoming stamina-debuff procs, drawn as a Marker (vertical tick + label) rather
+	// than a Textbox -- see RaceTrack.tsx's RegionDisplayType.Marker branch. Same per-uma color
+	// convention as skillActivations'/rushedIndicators' `colors`/`rushedColors` above (uma1 blue,
+	// uma2 red). chartData.db is undefined in Skill Chart mode (ChartRunTrace has no `db` field --
+	// see compare.ts's ChartRunTrace), hence the same `|| [[], []]`-style fallback rushedIndicators
+	// uses above.
+	const debuffColors = [{ stroke: '#2a77c5' }, { stroke: '#c52a2a' }];
+	const debuffMarkers =
+		chartData == null
+			? []
+			: (
+					chartData.db || [
+						new Map<string, Array<[number, number]>>(),
+						new Map<string, Array<[number, number]>>(),
+					]
+				).flatMap(
+					(debuffMap: Map<string, Array<[number, number]>>, i: number) => {
+						return Array.from(debuffMap.entries()).flatMap(
+							([id, activations]) => {
+								const drain = drainForSkill(id);
+								const name = skillnames[id]?.[0] ?? id;
+								const label =
+									drain != null
+										? `${name} -${Number.isInteger(drain * 100) ? (drain * 100).toFixed(0) : (drain * 100).toFixed(1)}%`
+										: name;
+								return activations.map((ar) => ({
+									type: RegionDisplayType.Marker,
+									color: debuffColors[i],
+									text: label,
+									umaIndex: i,
+									regions: [{ start: ar[0], end: ar[0] }],
+								}));
+							},
+						);
+					},
+				);
+
 	const posKeepColors = [
 		{ stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.6)' },
 		{ stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.6)' },
@@ -5725,7 +5775,8 @@ function App(props) {
 	// chartRunRef.current is null (no run started yet, or a mode/style switch cleared it -- see
 	// the mode-switch effect/switchCourseChartStyle above), there's nothing to show, correctly
 	// reading false as the default via `??`.
-	const showSurvivesColumn = chartRunRef.current?.survivesColumnLatched ?? false;
+	const showSurvivesColumn =
+		chartRunRef.current?.survivesColumnLatched ?? false;
 
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
@@ -6536,7 +6587,11 @@ function App(props) {
 										mouseMove={rtMouseMove}
 										mouseLeave={rtMouseLeave}
 										onSkillDrag={handleSkillDrag}
-										regions={[...skillActivations, ...rushedIndicators]}
+										regions={[
+											...skillActivations,
+											...rushedIndicators,
+											...debuffMarkers,
+										]}
 										posKeepLabels={showLabels ? posKeepLabels : []}
 										uma1={uma1}
 										uma2={uma2}

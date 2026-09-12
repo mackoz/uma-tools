@@ -882,6 +882,51 @@ export function RaceTrack(props) {
 						);
 					});
 					state.elem.push(<Fragment>{rects}</Fragment>);
+				} else if (desc.type == RegionDisplayType.Marker) {
+					// HP-7 pt.2: incoming stamina-debuff procs -- a vertical tick + label, modeled
+					// on DistanceMarker above, but drawn across the whole region-band height so it
+					// stays visible regardless of the Show HP toggle (which doesn't touch this
+					// `regions` layer at all) and never reads as a skill-activation box (the
+					// Textbox branch above). desc.umaIndex picks which edge the label sits on
+					// (uma1 top, uma2 bottom) purely to keep the two umas' labels from stacking on
+					// top of each other; state.markerSeen nudges a marker sideways only when
+					// another marker already claimed the same rounded x, same idea as the
+					// `state.seen` dedup the Immediate branch above uses for phase boundary lines.
+					const rects = desc.regions.map((r) => {
+						let x = (r.start / course.distance) * 100;
+						const xKey = () => x.toFixed(1);
+						while (state.markerSeen.has(xKey())) {
+							x += (10 / props.width) * 100;
+						}
+						state.markerSeen.add(xKey());
+						const up = desc.umaIndex === 0;
+						return (
+							<Fragment>
+								<line
+									class="debuffMarkerLine"
+									x1={`${x}%`}
+									y1="0"
+									x2={`${x}%`}
+									y2="100%"
+									stroke={desc.color.stroke}
+									stroke-width="1.5"
+									stroke-dasharray="4 3"
+								/>
+								<text
+									class="debuffMarkerText"
+									x={`${x}%`}
+									y={up ? '4%' : '97%'}
+									font-size="9px"
+									text-anchor="middle"
+									dominant-baseline={up ? 'hanging' : 'auto'}
+									fill={desc.color.stroke}
+								>
+									{desc.text}
+								</text>
+							</Fragment>
+						);
+					});
+					state.elem.push(<Fragment>{rects}</Fragment>);
 				} else {
 					state.elem.push(
 						<Fragment>
@@ -902,6 +947,7 @@ export function RaceTrack(props) {
 			},
 			{
 				seen: new Set(),
+				markerSeen: new Set(),
 				rungs: Array(10)
 					.fill(0)
 					.map((_) => []),

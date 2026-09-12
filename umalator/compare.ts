@@ -1,4 +1,5 @@
 import type { HorseState } from '../components/HorseDefTypes';
+import { isOpponentStaminaDebuff } from '../components/StaminaDebuffs';
 import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -182,7 +183,13 @@ export function runComparison(
 
 	const skillPos1 = new Map(),
 		skillPos2 = new Map();
-	function getActivator(skillSet) {
+	// HP-7 pt.2: separate from skillPos1/skillPos2 above -- these track incoming stamina-debuff
+	// procs for the "Incoming Debuffs" card section, and must NOT be folded into skillPos1/2, which
+	// feed the card's "Skills (N)" count and would otherwise make a debuff read as an equipped
+	// skill.
+	const debuffPos1 = new Map(),
+		debuffPos2 = new Map();
+	function getActivator(skillSet, debuffSet) {
 		return (s, id, persp) => {
 			if (
 				persp == Perspective.Self &&
@@ -191,6 +198,26 @@ export function runComparison(
 			) {
 				if (!skillSet.has(id)) skillSet.set(id, []);
 				skillSet.get(id).push([s.pos, -1]);
+			} else if (persp === Perspective.Other && isOpponentStaminaDebuff(id)) {
+				// Deliberate: this records ANY opponent-targeting stamina debuff that lands on
+				// this horse, not only ones configured through the Stam Debuff dialog
+				// (addIncomingDebuffs/addOpponentDebuff above add those with this exact
+				// Perspective.Other -- RaceSolverBuilder.ts:854). A debuff the OPPOSING uma has
+				// equipped and simply activates against this horse in the ordinary
+				// Perspective.Other pass (the uma1_.skills.forEach/uma2_.skills.forEach blocks
+				// below addSkill) fires the same callback with the same Perspective.Other, and is
+				// included here too -- e.g. uma2's own equipped Murmur genuinely drains uma1's HP,
+				// and showing configured debuffs while hiding that would misattribute where the
+				// drain came from.
+				//
+				// The underlying effect (SkillType.Recovery, effect type 9; see
+				// RaceSolver.ts:167,1795 and StaminaDebuffs.ts's own header) is instantaneous --
+				// RaceSolver never calls onSkillDeactivate for it -- so there is no end position to
+				// pair this with. We still store it as a [pos, -1] "no end" pair, matching
+				// skillSet's own shape, purely so ResultsPane's skillEntries/skillSize helpers and
+				// row markup can be reused as-is for this section.
+				if (!debuffSet.has(id)) debuffSet.set(id, []);
+				debuffSet.get(id).push([s.pos, -1]);
 			}
 		};
 	}
@@ -214,9 +241,9 @@ export function runComparison(
 			}
 		};
 	}
-	standard.onSkillActivate(getActivator(skillPos1));
+	standard.onSkillActivate(getActivator(skillPos1, debuffPos1));
 	standard.onSkillDeactivate(getDeactivator(skillPos1));
-	compare.onSkillActivate(getActivator(skillPos2));
+	compare.onSkillActivate(getActivator(skillPos2, debuffPos2));
 	compare.onSkillDeactivate(getDeactivator(skillPos2));
 	const a = standard.build(),
 		b = compare.build();
@@ -324,6 +351,9 @@ export function runComparison(
 			currentLane: [[], []],
 			pacerGap: [[], []],
 			sk: [null, null],
+			// HP-7 pt.2: incoming stamina-debuff proc positions, alongside sk above -- see
+			// debuffPos1/debuffPos2 and getActivator's Perspective.Other branch.
+			db: [null, null],
 			sdly: [0, 0],
 			rushed: [[], []],
 			posKeep: [[], []],
@@ -504,6 +534,8 @@ export function runComparison(
 
 		data.sk[1] = new Map(skillPos2); // NOT ai (NB. why not?)
 		data.sk[0] = new Map(skillPos1); // NOT bi (NB. why not?)
+		data.db[1] = new Map(debuffPos2);
+		data.db[0] = new Map(debuffPos1);
 
 		const runSkillActivations: Array<{
 			skillId: string;
@@ -547,6 +579,8 @@ export function runComparison(
 
 		skillPos2.clear();
 		skillPos1.clear();
+		debuffPos2.clear();
+		debuffPos1.clear();
 
 		retry = false;
 
