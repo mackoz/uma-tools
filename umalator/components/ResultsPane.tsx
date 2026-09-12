@@ -157,6 +157,20 @@ function skillSize(
 	return Object.keys(sk).length;
 }
 
+// Debuffs need a different count than Skills: skillSize() counts distinct entries, which is
+// right for Skills (each equipped skill activates at most once per this display's shape), but
+// wrong here -- configuring N copies of one debuff bucket produces a single map entry holding N
+// positions (compare.ts's debuffPos1/debuffPos2), so the header must sum activation counts, not
+// entries. Skills' own header keeps using skillSize() unchanged.
+function debuffActivationCount(
+	db: Map<string, number[][]> | Record<string, number[][]>,
+): number {
+	return skillEntries(db).reduce(
+		(n, [, activations]) => n + activations.length,
+		0,
+	);
+}
+
 // ── ResultsSummary ────────────────────────────────────────────────────────────
 
 interface ResultsSummaryProps {
@@ -526,7 +540,7 @@ function UmaStatsCard({
 
 				{showDebuffs && (
 					<div class="debuffs-section">
-						<h4>Incoming Debuffs ({skillSize(debuffMap)})</h4>
+						<h4>Incoming Debuffs ({debuffActivationCount(debuffMap)})</h4>
 						<div class="skill-activations">
 							{skillEntries(debuffMap).map(([skillId, activations]) => {
 								const drain = drainForSkill(skillId);

@@ -737,9 +737,9 @@ export function RaceTrack(props) {
 		);
 	}, [props.courseid]);
 
-	const regions = useMemo(() => {
+	const { regions, debuffMarkerLayer } = useMemo(() => {
 		console.log('Regions being processed:', props.regions);
-		return props.regions.reduce(
+		const state = props.regions.reduce(
 			(state, desc) => {
 				if (
 					desc.type == RegionDisplayType.Immediate &&
@@ -883,23 +883,46 @@ export function RaceTrack(props) {
 					});
 					state.elem.push(<Fragment>{rects}</Fragment>);
 				} else if (desc.type == RegionDisplayType.Marker) {
-					// HP-7 pt.2: incoming stamina-debuff procs -- a vertical tick + label, modeled
-					// on DistanceMarker above, but drawn across the whole region-band height so it
-					// stays visible regardless of the Show HP toggle (which doesn't touch this
-					// `regions` layer at all) and never reads as a skill-activation box (the
-					// Textbox branch above). desc.umaIndex picks which edge the label sits on
-					// (uma1 top, uma2 bottom) purely to keep the two umas' labels from stacking on
-					// top of each other; state.markerSeen nudges a marker sideways only when
-					// another marker already claimed the same rounded x, same idea as the
-					// `state.seen` dedup the Immediate branch above uses for phase boundary lines.
+					// HP-7 pt.2 (post-review Finding 1 fix): incoming stamina-debuff procs -- a
+					// vertical tick + short label, modeled on DistanceMarker above, but drawn
+					// across the whole region-band height so it stays visible regardless of the
+					// Show HP toggle (which doesn't touch this `regions` layer at all) and never
+					// reads as a skill-activation box (the Textbox branch above).
+					//
+					// desc.umaIndex picks which edge the label anchors near (uma1 top, uma2
+					// bottom). Within one edge, state.markerRows[umaIndex] is a list of vertical
+					// "rows", each row a list of already-placed {x, half} labels; a new label goes
+					// in the first row none of whose existing labels it would overlap (by
+					// half-width, in the same % units as x), else a brand-new row is opened. This
+					// replaces an earlier x-only jitter that nudged the tick LINE but left the
+					// (much wider) text overlapping -- review caught two same-named procs
+					// rendering as one run-together "Mystifying Mystifying Murmur -3%" string.
+					// app.tsx now also sends a short drain-only `text` (full name moved to
+					// `title`, shown as a hover tooltip) so a cluster of same-bucket procs has
+					// much less width to stack in the first place.
+					if (state.markerRows[desc.umaIndex] == null) {
+						state.markerRows[desc.umaIndex] = [];
+					}
+					const rows: Array<Array<{ x: number; half: number }>> =
+						state.markerRows[desc.umaIndex];
+					const up = desc.umaIndex === 0;
 					const rects = desc.regions.map((r) => {
-						let x = (r.start / course.distance) * 100;
-						const xKey = () => x.toFixed(1);
-						while (state.markerSeen.has(xKey())) {
-							x += (10 / props.width) * 100;
+						const x = (r.start / course.distance) * 100;
+						// Rough label half-width in % units -- 9px font, narrow charset
+						// (letters/digits/%/-), ~3.6px/char plus a little padding so near-misses
+						// still get separated rather than just barely touching.
+						const half = ((desc.text.length * 3.6 + 6) / props.width) * 100;
+						let rowIdx = rows.findIndex((row) =>
+							row.every(
+								(placed) => Math.abs(placed.x - x) >= placed.half + half,
+							),
+						);
+						if (rowIdx === -1) {
+							rowIdx = rows.length;
+							rows.push([]);
 						}
-						state.markerSeen.add(xKey());
-						const up = desc.umaIndex === 0;
+						rows[rowIdx].push({ x, half });
+						const y = up ? 4 + rowIdx * 11 : 97 - rowIdx * 11;
 						return (
 							<Fragment>
 								<line
@@ -911,22 +934,32 @@ export function RaceTrack(props) {
 									stroke={desc.color.stroke}
 									stroke-width="1.5"
 									stroke-dasharray="4 3"
+									pointer-events="none"
 								/>
 								<text
 									class="debuffMarkerText"
 									x={`${x}%`}
-									y={up ? '4%' : '97%'}
+									y={`${y}%`}
 									font-size="9px"
 									text-anchor="middle"
 									dominant-baseline={up ? 'hanging' : 'auto'}
 									fill={desc.color.stroke}
 								>
+									<title>{desc.title || desc.text}</title>
 									{desc.text}
 								</text>
 							</Fragment>
 						);
 					});
-					state.elem.push(<Fragment>{rects}</Fragment>);
+					// Post-review fix: pushed onto its own layer (state.markerElem), not
+					// state.elem -- see the useMemo return below. This layer renders after
+					// {props.children} (the velocity/HP curves) so a debuff label is never
+					// silently painted over by a curve passing through the same point. Confirmed
+					// live: with several clustered procs, one label's <text> was present and
+					// correctly styled in the DOM (checked via getComputedStyle) but simply
+					// invisible on screen because VelocityLines (RaceTrack's children, previously
+					// drawn after `regions`) happened to cross exactly through its y position.
+					state.markerElem.push(<Fragment>{rects}</Fragment>);
 				} else {
 					state.elem.push(
 						<Fragment>
@@ -947,13 +980,18 @@ export function RaceTrack(props) {
 			},
 			{
 				seen: new Set(),
-				markerSeen: new Set(),
+				markerRows: {} as Record<
+					number,
+					Array<Array<{ x: number; half: number }>>
+				>,
 				rungs: Array(10)
 					.fill(0)
 					.map((_) => []),
 				elem: [],
+				markerElem: [],
 			},
-		).elem;
+		);
+		return { regions: state.elem, debuffMarkerLayer: state.markerElem };
 	}, [props.regions, course.distance, props.uma1, props.uma2, props.pacer]);
 
 	const statStrings = useText({
@@ -1044,6 +1082,24 @@ export function RaceTrack(props) {
 							></text>
 						</svg>
 						{props.children}
+						{/* HP-7 pt.2 (post-review fix): debuff markers get their own top layer,
+						    same x/y/width/height as the inner svg above so `%`-based coordinates
+						    still line up, but placed AFTER {props.children} (the velocity/HP
+						    curves) so a label is never painted over by a curve crossing the same
+						    point -- see the useMemo above (debuffMarkerLayer). The tick <line>
+						    itself is pointer-events:none (set per-element in the Marker branch
+						    above) so it can never intercept a drag meant for a skill box beneath
+						    it; the <text> is left interactive so its <title> hover tooltip still
+						    works (pointer-events is inherited in SVG, so it would follow a
+						    none set here instead). */}
+						<svg
+							x={props.xOffset}
+							y={props.yOffset}
+							width={props.width}
+							height={props.height}
+						>
+							{debuffMarkerLayer}
+						</svg>
 					</svg>
 					{/* ANCHOR: stat-thresholds-length-check */}
 					{course.courseSetStatus.length > 0 && (

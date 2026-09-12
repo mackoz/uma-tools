@@ -2199,8 +2199,17 @@ function updateResultsState(
 			courseId: state.courseId,
 			results: o.results,
 			runData: o.runData,
-			chartData: o.runData[state.displaying || 'meanrun'],
-			displaying: state.displaying || 'meanrun',
+			// Post-review fix (Finding 3): must match ResultsPane's own `displayRun` default
+			// ('median', see the App component's `useState` for it) -- these two are otherwise
+			// independent pieces of state (`displaying` here drives the course map's chartData;
+			// `displayRun` drives which run key ResultsPane reads its snapshot from), and before
+			// the user ever clicks a run-selector button (which syncs both via
+			// handleDisplayRunChange) they used to disagree on the very first result: the card
+			// showed the Median run while the map showed a DIFFERENT run's (Mean's) proc
+			// positions for the same debuff -- confirmed live (median run's card read 665m/1450m
+			// while the map's default-shown run put its ticks at ~848m/~1303m).
+			chartData: o.runData[state.displaying || 'medianrun'],
+			displaying: state.displaying || 'medianrun',
 			spurtInfo: o.spurtInfo || null,
 			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null,
@@ -5235,6 +5244,15 @@ function App(props) {
 	// uma2 red). chartData.db is undefined in Skill Chart mode (ChartRunTrace has no `db` field --
 	// see compare.ts's ChartRunTrace), hence the same `|| [[], []]`-style fallback rushedIndicators
 	// uses above.
+	//
+	// Post-review fix (Finding 1): `text` is the drain % ONLY, not "name -N%" -- with a debuff
+	// bucket configured 2-3x (the normal case, not an edge case) several same-named procs land
+	// within a couple hundred meters of each other, and a ~200px-wide "Mystifying Murmur -3%"
+	// label has no room to avoid overlapping its neighbor even with RaceTrack.tsx's marker-x
+	// jitter. A short "-3%" leaves the full name to the card's Incoming Debuffs section, and still
+	// lets RaceTrack.tsx's row-stacking (see its Marker branch) fit several per uma without
+	// overlapping. `title` (rendered as a hover tooltip, RaceTrack.tsx's Marker branch) keeps the
+	// skill name discoverable on the map itself.
 	const debuffColors = [{ stroke: '#2a77c5' }, { stroke: '#c52a2a' }];
 	const debuffMarkers =
 		chartData == null
@@ -5250,14 +5268,17 @@ function App(props) {
 							([id, activations]) => {
 								const drain = drainForSkill(id);
 								const name = skillnames[id]?.[0] ?? id;
-								const label =
+								const pct =
 									drain != null
-										? `${name} -${Number.isInteger(drain * 100) ? (drain * 100).toFixed(0) : (drain * 100).toFixed(1)}%`
-										: name;
+										? `-${Number.isInteger(drain * 100) ? (drain * 100).toFixed(0) : (drain * 100).toFixed(1)}%`
+										: null;
+								const label = pct ?? name;
+								const title = pct != null ? `${name} ${pct}` : name;
 								return activations.map((ar) => ({
 									type: RegionDisplayType.Marker,
 									color: debuffColors[i],
 									text: label,
+									title,
 									umaIndex: i,
 									regions: [{ start: ar[0], end: ar[0] }],
 								}));
