@@ -20,6 +20,7 @@ export interface UmaState {
 	mood: number;
 	skills: string[];
 	forcedSkillPositions: Record<string, number>;
+	incomingDebuffs: Record<string, number>;
 }
 
 export function validateAndParseUmaJson(json: any): UmaState | null {
@@ -60,6 +61,14 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 		}
 	}
 
+	const incomingDebuffs: Record<string, number> = {};
+	if (json.incomingDebuffs && typeof json.incomingDebuffs === 'object') {
+		for (const [skillId, count] of Object.entries(json.incomingDebuffs)) {
+			const num = typeof count === 'number' ? count : parseFloat(count as string);
+			if (!isNaN(num)) incomingDebuffs[skillId] = num;
+		}
+	}
+
 	return {
 		outfitId: typeof json.outfitId === 'string' ? json.outfitId : '',
 		speed: Math.max(1, Math.min(2000, json.speed)),
@@ -74,6 +83,7 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 		mood: json.mood,
 		skills: validSkills,
 		forcedSkillPositions,
+		incomingDebuffs,
 	};
 }
 

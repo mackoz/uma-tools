@@ -1939,7 +1939,8 @@ async function deserialize(hash) {
 							.set(
 								'forcedSkillPositions',
 								ImmMap(o.uma1.forcedSkillPositions || {}),
-							),
+							)
+							.set('incomingDebuffs', ImmMap<string, number>(o.uma1.incomingDebuffs || {})),
 					),
 					uma2: reconcileOonige(
 						new HorseState(o.uma2)
@@ -1947,7 +1948,8 @@ async function deserialize(hash) {
 							.set(
 								'forcedSkillPositions',
 								ImmMap(o.uma2.forcedSkillPositions || {}),
-							),
+							)
+							.set('incomingDebuffs', ImmMap<string, number>(o.uma2.incomingDebuffs || {})),
 					),
 					pacer: o.pacer
 						? reconcileOonige(
@@ -1956,6 +1958,10 @@ async function deserialize(hash) {
 									.set(
 										'forcedSkillPositions',
 										ImmMap(o.pacer.forcedSkillPositions || {}),
+									)
+									.set(
+										'incomingDebuffs',
+										ImmMap<string, number>(o.pacer.incomingDebuffs || {}),
 									),
 							)
 						: new HorseState({ strategy: 'Nige' }),
@@ -2493,6 +2499,9 @@ function horseStateToUmaState(state: HorseState): UmaState {
 		forcedSkillPositions: state.forcedSkillPositions.toJS() as {
 			[key: string]: number;
 		},
+		incomingDebuffs: state.incomingDebuffs.toJS() as {
+			[key: string]: number;
+		},
 	};
 }
 
@@ -2515,6 +2524,7 @@ function umaStateToHorseState(uma: UmaState): HorseState {
 			mood: uma.mood as Mood,
 			skills: SkillSet(uma.skills),
 			forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+			incomingDebuffs: ImmMap<string, number>(uma.incomingDebuffs),
 		}),
 	);
 }
@@ -2563,6 +2573,7 @@ function decodedUmaToUmaState(uma: DecodedUma): UmaState {
 			.filter((s) => skillmeta[s.id] !== undefined)
 			.map((s) => String(s.id)),
 		forcedSkillPositions: {},
+		incomingDebuffs: {},
 	};
 }
 

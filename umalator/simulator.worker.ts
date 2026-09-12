@@ -20,7 +20,8 @@ import {
 function buildHorseState(raw: any): HorseState {
 	return new HorseState(raw)
 		.set('skills', fromJS(raw.skills))
-		.set('forcedSkillPositions', ImmMap(raw.forcedSkillPositions || {}));
+		.set('forcedSkillPositions', ImmMap(raw.forcedSkillPositions || {}))
+		.set('incomingDebuffs', ImmMap<string, number>(raw.incomingDebuffs || {}));
 }
 
 // Replaces whatever's already equipped in `id`'s skill group (if any) with `id` itself -- the

@@ -51,6 +51,7 @@ function ocrDataToUmaState(data: OCRHorseData): UmaState {
 		mood: 2,
 		skills: mapSkillNamesToIds(data.skills || []),
 		forcedSkillPositions: {},
+		incomingDebuffs: {},
 	};
 }
 
