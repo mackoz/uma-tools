@@ -252,6 +252,13 @@ interface ChartRunState {
 	// under, even though in practice mode tabs are disabled for the run's whole lifetime anyway.
 	startTime: number;
 	mode: Mode;
+	// HP-7 fix-round-1: latches true once the Survives column has qualified to show for this run
+	// (see refreshTableRowsNow), and stays true for the rest of the run even if the running
+	// baseline survival rate drifts back above the ~100% hide threshold -- otherwise a
+	// stamina-marginal build with no debuffs configured can flicker the column on/off across
+	// rounds as tableData's weighted average crosses 0.995 in either direction. Reset only by
+	// constructing a fresh ChartRunState (doBasinnChart), never by this field's own recompute.
+	survivesColumnLatched: boolean;
 }
 
 function formatEstimatedRuntime(ms: number): string {
@@ -4002,6 +4009,28 @@ function App(props) {
 				baseSurvivesCount: acc.baseSurvivesCount,
 			});
 		}
+
+		// HP-7 fix-round-1: latch the Survives column on rather than recomputing its visibility
+		// live off tableData every refresh -- a monotonic OR onto run.survivesColumnLatched, never
+		// cleared back off within this run's lifetime (only a fresh run, constructed above in
+		// doBasinnChart, starts with it false again). CourseChart's template uma never carries
+		// incomingDebuffs (see courseChartTemplate), so debuffs are never "configured" there
+		// regardless of what's on uma1/lastRunChartUma.
+		if (!run.survivesColumnLatched) {
+			let n = 0;
+			let base = 0;
+			for (const row of next.values()) {
+				n += row.n;
+				base += row.baseSurvivesCount;
+			}
+			const baselineRate = n > 0 ? base / n : null;
+			const debuffsConfigured =
+				mode !== Mode.CourseChart && lastRunChartUma.incomingDebuffs.size > 0;
+			if (debuffsConfigured || (baselineRate != null && baselineRate < 0.995)) {
+				run.survivesColumnLatched = true;
+			}
+		}
+
 		setTableData(next);
 	}
 
@@ -4892,6 +4921,8 @@ function App(props) {
 			refineCounts: new Map(),
 			startTime: Date.now(),
 			mode,
+			// HP-7 fix-round-1: the one and only reset point -- see the field's own doc comment.
+			survivesColumnLatched: false,
 		};
 		chartRunRef.current = run;
 		detailCacheRef.current.clear();
@@ -5638,10 +5669,13 @@ function App(props) {
 		return new Set(Array.from(tableData.keys()).filter((id) => !allow.has(id)));
 	}, [mode, tableData, shopSkillIds, shopFilterActive]);
 
-	// HP-7: Skill Chart's Survives column visibility + the one baseline survival rate every row's
-	// delta is measured against. Weighted (not row-averaged) across every accumulated row so a
-	// handful of low-n rows early in a round don't skew it -- same "accumulates like n" convention
-	// as SkillAccumulator.baseSurvivesCount itself.
+	// HP-7: the one baseline survival rate every row's delta is measured against, for display only
+	// (not for the column's visibility -- see showSurvivesColumn below). Weighted (not
+	// row-averaged) across every accumulated row so a handful of low-n rows early in a round don't
+	// skew it -- same "accumulates like n" convention as SkillAccumulator.baseSurvivesCount itself.
+	// Deliberately recomputed live every tableData change (unlike showSurvivesColumn) -- this is
+	// informational text, not a show/hide decision, so it's fine for it to keep tracking the
+	// current running average as more samples arrive.
 	const baselineSurvivalRate = useMemo(() => {
 		let n = 0;
 		let base = 0;
@@ -5652,18 +5686,17 @@ function App(props) {
 		return n > 0 ? base / n : null;
 	}, [tableData]);
 
-	// CourseChart's template uma never carries incomingDebuffs (courseChartTemplate always
-	// constructs a fresh HorseState with none set -- see that function above), so debuffs are
-	// never "configured" there regardless of what's on uma1/lastRunChartUma.
-	const debuffsConfigured =
-		mode !== Mode.CourseChart && lastRunChartUma.incomingDebuffs.size > 0;
-
-	// Hidden entirely in the common case: no debuffs configured AND nothing is dying to natural
-	// stamina drain either. ~100% is treated as "close enough to 100 that the column would be
-	// dead weight" rather than requiring an exact 1.
-	const showSurvivesColumn =
-		debuffsConfigured ||
-		(baselineSurvivalRate != null && baselineSurvivalRate < 0.995);
+	// HP-7 fix-round-1: read straight off the run's own latch (refreshTableRowsNow), NOT
+	// recomputed here from tableData/baselineSurvivalRate -- doing the threshold comparison in
+	// this render body directly made the column flicker on/off across rounds for a
+	// stamina-marginal build with no debuffs configured, as the running weighted average crossed
+	// 0.995 in either direction. chartRunRef.current is a plain ref, mutated synchronously by
+	// refreshTableRowsNow before its setTableData call, so by the time this component re-renders
+	// (from that same setTableData) the latch already reflects this refresh's data. When
+	// chartRunRef.current is null (no run started yet, or a mode/style switch cleared it -- see
+	// the mode-switch effect/switchCourseChartStyle above), there's nothing to show, correctly
+	// reading false as the default via `??`.
+	const showSurvivesColumn = chartRunRef.current?.survivesColumnLatched ?? false;
 
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
