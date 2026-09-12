@@ -34,7 +34,7 @@ ConditionParser.ts                   v
 
 ### Entry point: `RaceSolverBuilder`
 
-`RaceSolverBuilder` (`uma-skill-tools/RaceSolverBuilder.ts:394`) is a fluent builder. Callers chain `.course()`, `.horse()`, `.mood()`, `.ground()`, `.addSkill()`, `.pacer()`, etc., then call `.build()` — a **generator** (`RaceSolverBuilder.ts:844`) that `yield`s one configured `RaceSolver` per Monte Carlo sample. Passing `true` back into `.next()` re-rolls that sample.
+`RaceSolverBuilder` (`uma-skill-tools/RaceSolverBuilder.ts:394`) is a fluent builder. Callers chain `.course()`, `.horse()`, `.mood()`, `.ground()`, `.addSkill()`, `.pacer()`, etc., then call `.build()`; `.addOpponentDebuff(skillId)` (HP-7) is the same idea for a debuff landed on this horse *by an opponent* rather than cast by it -- it rewrites the skill's condition down to only its victim-safe (timing/course) terms via `victimSafeCondition()` before adding it, since a caster-state term (the caster's own stats, position, etc.) can't be evaluated against this horse's own race state. `umalator/compare.ts`'s `addIncomingDebuffs()` is the sole caller, feeding `HorseState.incomingDebuffs`. — a **generator** (`RaceSolverBuilder.ts:844`) that `yield`s one configured `RaceSolver` per Monte Carlo sample. Passing `true` back into `.next()` re-rolls that sample.
 
 End-to-end data flow for one `.build()` call:
 

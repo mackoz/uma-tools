@@ -66,6 +66,29 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-12</summary>
+						<ul>
+							<li>
+								New <strong>Stam Debuff → Configure</strong> control on the uma
+								card: set how many of each stamina-draining debuff opponents land
+								on this uma over a race -- <strong>Murmur</strong>,{' '}
+								<strong>Mystifying Murmur</strong>,{' '}
+								<strong>All-Seeing Eyes</strong>, <strong>Trick</strong>,{' '}
+								<strong>Stamina Siphon</strong>, and the Subdued/Flustered family,
+								among others. Each debuff fires at its real in-game timing (All-
+								Seeing Eyes late race, Murmur mid-race, Subdued early) and only on
+								courses where the game could actually land it -- Murmur is Mid-
+								distance only, for example -- and now counts against Stamina
+								Survival Rate, Full Spurt Rate, and HP-death on the Compare tab
+								the same as any other source of drain. The Skill Chart tab gets a
+								new sortable <strong>Survives</strong> column showing each
+								candidate's own stamina survival rate and its delta from the
+								baseline, so a skill that shores up a stamina deficit can be
+								ranked on that, not only on raw length gain.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-11</summary>
 						<ul>
 							<li>
