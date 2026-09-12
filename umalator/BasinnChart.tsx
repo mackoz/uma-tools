@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import { Text } from 'preact-i18n';
 import type { HorseState } from '../components/HorseDef';
 import { getSkillIconSrc } from '../components/SkillIcons';
+import { isOpponentStaminaDebuff } from '../components/StaminaDebuffs';
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -477,15 +478,30 @@ export function BasinnChart(props) {
 								`Share of races this candidate finished without running out of stamina, vs. the baseline's own rate (currently ${formatPercent(props.baselineSurvivalRate ?? undefined)})`,
 							),
 							id: 'survives',
+							// HP-7 fix-round-2 (C1): a candidate row whose own skill IS an opponent
+							// stamina debuff gets no Survives number at all, not a real one. compare.ts's
+							// runComparisonBlock mirrors every candidate skill onto the BASELINE builder
+							// too (Perspective.Other, for the Gain column's benefit) -- for an ordinary
+							// skill that mirror is inert-ish, but for a debuff skill it makes the
+							// baseline itself the debuff's victim (isTarget passes, SkillType.Recovery
+							// drains it), while the candidate side gets SkillType.Noop and no benefit at
+							// all. The result is baseSurvivesCount collapsing toward 0 for exactly these
+							// rows, which read as the CANDIDATE surviving almost every race relative to a
+							// gutted baseline -- e.g. Murmur (201162) measured at 100% survives
+							// (+99.0pp) with zero real effect on the candidate. Suppressing the cell
+							// (not fixing the mirror) is deliberate -- see the task brief -- rather than
+							// adding a third simulation just for this column.
 							accessorFn: (row: ChartRow) =>
-								row.n > 0
+								row.n > 0 && !isOpponentStaminaDebuff(row.id)
 									? row.survivesCount / row.n
 									: Number.NEGATIVE_INFINITY,
 							cell: (info) =>
-								formatSurvives(
-									info.row.original,
-									props.baselineSurvivalRate ?? null,
-								),
+								isOpponentStaminaDebuff(info.row.original.id)
+									? '—'
+									: formatSurvives(
+											info.row.original,
+											props.baselineSurvivalRate ?? null,
+										),
 							sortDescFirst: true,
 						},
 					]

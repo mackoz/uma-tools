@@ -55,6 +55,10 @@ import {
 } from '../components/SkillList';
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
+import {
+	isKnownDebuffBucketId,
+	isOpponentStaminaDebuff,
+} from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
@@ -1909,6 +1913,23 @@ async function serialize(
 	}
 }
 
+// M8 fix (HP-7 fix-round-2): mirrors storage.ts's validateAndParseUmaJson filtering -- a share
+// link's `incomingDebuffs` ids are dataset-derived and differ between JP and Global for the same
+// conceptual debuff, so a JP-produced link opened on the Global build (or vice versa) can carry
+// an id this build's catalog has never heard of. Dropping it here, before it ever reaches
+// HorseState, keeps it out of compare.ts's addIncomingDebuffs -> addOpponentDebuff, which throws
+// "bad skill ID" on anything not in skill_data.json at all.
+function filterKnownIncomingDebuffs(
+	raw: { [key: string]: number } | undefined | null,
+): { [key: string]: number } {
+	const filtered: { [key: string]: number } = {};
+	if (raw == null) return filtered;
+	for (const [skillId, count] of Object.entries(raw)) {
+		if (isKnownDebuffBucketId(skillId)) filtered[skillId] = count;
+	}
+	return filtered;
+}
+
 async function deserialize(hash) {
 	const zipped = atob(decodeURIComponent(hash));
 	const buf = new Uint8Array(zipped.split('').map((c) => c.charCodeAt(0)));
@@ -1947,7 +1968,7 @@ async function deserialize(hash) {
 								'forcedSkillPositions',
 								ImmMap(o.uma1.forcedSkillPositions || {}),
 							)
-							.set('incomingDebuffs', ImmMap<string, number>(o.uma1.incomingDebuffs || {})),
+							.set('incomingDebuffs', ImmMap<string, number>(filterKnownIncomingDebuffs(o.uma1.incomingDebuffs))),
 					),
 					uma2: reconcileOonige(
 						new HorseState(o.uma2)
@@ -1956,7 +1977,7 @@ async function deserialize(hash) {
 								'forcedSkillPositions',
 								ImmMap(o.uma2.forcedSkillPositions || {}),
 							)
-							.set('incomingDebuffs', ImmMap<string, number>(o.uma2.incomingDebuffs || {})),
+							.set('incomingDebuffs', ImmMap<string, number>(filterKnownIncomingDebuffs(o.uma2.incomingDebuffs))),
 					),
 					pacer: o.pacer
 						? reconcileOonige(
@@ -1968,7 +1989,7 @@ async function deserialize(hash) {
 									)
 									.set(
 										'incomingDebuffs',
-										ImmMap<string, number>(o.pacer.incomingDebuffs || {}),
+										ImmMap<string, number>(filterKnownIncomingDebuffs(o.pacer.incomingDebuffs)),
 									),
 							)
 						: new HorseState({ strategy: 'Nige' }),
@@ -5680,6 +5701,14 @@ function App(props) {
 		let n = 0;
 		let base = 0;
 		for (const row of tableData.values()) {
+			// HP-7 fix-round-2 (C1): a debuff-candidate row's baseSurvivesCount is itself the
+			// baseline-mirror artifact (compare.ts's runComparisonBlock adds the candidate skill to
+			// the BASELINE builder too, as Perspective.Other -- for a debuff skill that makes the
+			// baseline the victim of its own candidate, draining baseSurvivesCount toward 0 with no
+			// bearing on the baseline's actual, debuff-free survival rate). A typical pool has ~20
+			// such rows; folding them into this weighted average would drag the single reference
+			// figure down and inflate every ordinary row's +Xpp delta right along with it.
+			if (isOpponentStaminaDebuff(row.id)) continue;
 			n += row.n;
 			base += row.baseSurvivesCount;
 		}

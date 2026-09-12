@@ -16,6 +16,7 @@ import { getSkillName } from './SkillPicker';
 import {
 	bucketsForCourse,
 	type DebuffBucket,
+	excludedDebuffCount,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
 } from './StaminaDebuffs';
@@ -127,7 +128,11 @@ export function StaminaDebuffDialog({
 		);
 	}
 
-	const total = totalDrain(incoming);
+	// I2 fix (HP-7 fix-round-2): course-aware, matching the greyed-out rows above -- a bucket the
+	// current course can't produce is dropped from the total, not just visually disabled while
+	// still counting. `excluded` says so in the footer instead of silently dropping the figure.
+	const total = totalDrain(incoming, distanceType);
+	const excluded = excludedDebuffCount(incoming, distanceType);
 
 	const modal = (
 		<div class="stamDebuffOverlay" onClick={onClose}>
@@ -204,6 +209,7 @@ export function StaminaDebuffDialog({
 						class={`stamDebuffFooterValue${total > 0 ? '' : ' stamDebuffFooterValue--none'}`}
 					>
 						{total > 0 ? `−${formatPercent(total)} max HP` : 'none'}
+						{excluded > 0 && ` (${excluded} excluded, wrong course)`}
 					</span>
 				</div>
 			</div>

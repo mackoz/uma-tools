@@ -142,13 +142,73 @@ export function bucketsForCourse(distanceType: number): DebuffBucket[] {
 	);
 }
 
-export function totalDrain(incoming: ImmMap<string, number>): number {
+// I2 fix (HP-7 fix-round-2): `distanceType` narrows the total to buckets that can actually exist
+// on the current course, the same test `bucketsForCourse()` applies to the dialog's own row
+// gating -- omitted (or null/undefined), every configured bucket counts, matching the pre-fix
+// behavior. Without this, a bucket the engine drops entirely for the wrong course (its regions
+// come out empty and it never activates -- RaceSolverBuilder.ts's condition parsing) still showed
+// up in the "−N% max HP" total, contradicting a same-screen simulation that drains exactly 0 for
+// it. Configured counts themselves are left untouched in `incoming` -- only the displayed total
+// narrows -- so switching the course back restores them.
+export function totalDrain(
+	incoming: ImmMap<string, number>,
+	distanceType?: number | null,
+): number {
+	const possibleIds =
+		distanceType != null
+			? new Set(bucketsForCourse(distanceType).map((b) => b.id))
+			: null;
 	let total = 0;
 	incoming.forEach((count, id) => {
+		if (possibleIds != null && !possibleIds.has(id)) return;
 		const drain = drainById.get(id);
 		if (drain != null) {
 			total += drain * count;
 		}
 	});
 	return total;
+}
+
+// Companion to totalDrain() above: how many configured debuffs (by count, not by distinct bucket)
+// are being excluded from the displayed total because the current course can't produce them --
+// the UI-facing half of the same course-gating so it can say so rather than silently drop them.
+export function excludedDebuffCount(
+	incoming: ImmMap<string, number>,
+	distanceType: number | null | undefined,
+): number {
+	if (distanceType == null) return 0;
+	const possibleIds = new Set(bucketsForCourse(distanceType).map((b) => b.id));
+	let excluded = 0;
+	incoming.forEach((count, id) => {
+		if (!possibleIds.has(id) && drainById.has(id)) {
+			excluded += count;
+		}
+	});
+	return excluded;
+}
+
+// All skill ids that appear as a member of any bucket above -- i.e. every shipped skill that is
+// itself an opponent-targeting stamina debuff (effect type 9, negative modifier, non-Self target;
+// see deriveBuckets()). HP-7 fix-round-2 (C1): used to suppress the Skill Chart's Survives column
+// for these candidates specifically -- see BasinnChart.tsx/app.tsx for why a debuff skill's own
+// Survives number is a simulation artifact, not a real result.
+const opponentStaminaDebuffIds: ReadonlySet<string> = new Set(
+	STAMINA_DEBUFF_BUCKETS.flatMap((b) => b.memberIds),
+);
+
+export function isOpponentStaminaDebuff(skillId: string): boolean {
+	return opponentStaminaDebuffIds.has(skillId);
+}
+
+// M8 fix (HP-7 fix-round-2): is `id` a bucket REPRESENTATIVE id in this build's derived catalog --
+// i.e. a key `incomingDebuffs`/`HorseState.incomingDebuffs` can legitimately carry (see
+// StaminaDebuffDialog.tsx's `incoming.get(bucket.id, 0)`/`setCount`). Bucket representative ids
+// are dataset-derived and differ between JP and Global for the same conceptual debuff (e.g.
+// Murmur's JP-only unique `105901111` vs. Global's `201441`), so a share link or exported uma
+// JSON produced against one dataset can carry an id this build's catalog has never heard of --
+// rehydration call sites (umalator/storage.ts, umalator/app.tsx's share-link decode) filter
+// through this rather than passing the id straight to `buildSkillData`/`addOpponentDebuff`, which
+// throws `bad skill ID <id>` on anything not in `skill_data.json` at all.
+export function isKnownDebuffBucketId(id: string): boolean {
+	return drainById.has(id);
 }

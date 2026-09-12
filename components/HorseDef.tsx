@@ -19,7 +19,7 @@ import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 import { StaminaDebuffDialog } from './StaminaDebuffDialog';
-import { totalDrain } from './StaminaDebuffs';
+import { excludedDebuffCount, totalDrain } from './StaminaDebuffs';
 
 import './HorseDef.css';
 
@@ -618,9 +618,18 @@ export function HorseDef(props) {
 	// progress to sample a live HP from) -- so reusing it here rather than re-deriving the formula
 	// keeps this row fed the same buildBaseStats/buildAdjustedStats-derived quantities the rest of
 	// the card (skill pills, ExpandedSkillView) already renders from, not raw slider values.
+	// I2 fix (HP-7 fix-round-2): course-aware -- a bucket the current course can't produce (e.g.
+	// a Medium-only debuff configured, then the course switched to Mile) is excluded from the
+	// total, matching what the engine actually drains (its regions come out empty, so it never
+	// activates). Configured counts stay in state.incomingDebuffs untouched, so switching the
+	// course back restores them in both the total and excludedCount below.
 	const totalDebuffDrain = useMemo(
-		() => totalDrain(state.incomingDebuffs),
-		[state.incomingDebuffs],
+		() => totalDrain(state.incomingDebuffs, props.course?.distanceType),
+		[state.incomingDebuffs, props.course?.distanceType],
+	);
+	const excludedCount = useMemo(
+		() => excludedDebuffCount(state.incomingDebuffs, props.course?.distanceType),
+		[state.incomingDebuffs, props.course?.distanceType],
 	);
 	const maxHp = scalingContext?.remainingHp;
 
@@ -776,6 +785,10 @@ export function HorseDef(props) {
 										: ''
 								}`
 							: 'none'}
+						{/* I2 fix (HP-7 fix-round-2): say so rather than silently dropping a
+						    course-incompatible configured debuff from the total above. */}
+						{excludedCount > 0 &&
+							` (${excludedCount} excluded, wrong course)`}
 					</span>
 					<button
 						type="button"

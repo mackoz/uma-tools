@@ -2,6 +2,7 @@ import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
 import {
 	bucketsForCourse,
+	isOpponentStaminaDebuff,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
 } from './StaminaDebuffs';
@@ -46,5 +47,11 @@ describe('stamina debuff catalog', () => {
 	test('totalDrain sums count x drain', () => {
 		const m = ImmMap<string, number>({ '201162': 2, '201441': 1 });
 		expect(totalDrain(m)).toBeCloseTo(0.05, 6);
+	});
+
+	test('isOpponentStaminaDebuff identifies known debuff ids and rejects an ordinary skill', () => {
+		expect(isOpponentStaminaDebuff('201162')).toBe(true); // Murmur
+		expect(isOpponentStaminaDebuff('201441')).toBe(true); // All-Seeing Eyes
+		expect(isOpponentStaminaDebuff('200332')).toBe(false); // ordinary skill
 	});
 });

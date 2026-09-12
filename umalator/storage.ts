@@ -1,3 +1,4 @@
+import { isKnownDebuffBucketId } from '../components/StaminaDebuffs';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import umas from '../umas.json';
 
@@ -64,6 +65,13 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 	const incomingDebuffs: Record<string, number> = {};
 	if (json.incomingDebuffs && typeof json.incomingDebuffs === 'object') {
 		for (const [skillId, count] of Object.entries(json.incomingDebuffs)) {
+			// M8 fix (HP-7 fix-round-2): drop a bucket id this build's dataset doesn't recognize --
+			// JP and Global mint different representative ids for the same conceptual debuff, so a
+			// JP share link/export opened against the Global build (or vice versa) can carry an id
+			// that would otherwise reach addOpponentDebuff() and throw "bad skill ID". Dropping it
+			// silently mirrors `skills`' own validSkills filtering just above: the debuff genuinely
+			// doesn't exist in this dataset, not an error to surface.
+			if (!isKnownDebuffBucketId(skillId)) continue;
 			const num = typeof count === 'number' ? count : parseFloat(count as string);
 			if (!isNaN(num)) incomingDebuffs[skillId] = num;
 		}
