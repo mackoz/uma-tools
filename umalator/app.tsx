@@ -5977,6 +5977,11 @@ function App(props) {
 						onResetAll={resetAllUmas}
 						onUmaSelected={(id: string) => handleUmaSelected('pacer', id)}
 						onSkillEvent={handleSkillEvent}
+						// HP-7 fix-round-1: incoming stamina debuffs are meaningless for a virtual
+						// pacemaker (it never runs through addIncomingDebuffs -- see
+						// umalator/compare.ts), so this is the only HorseDef call site that hides
+						// the STAM DEBUFF row/dialog. uma1/uma2 pass nothing and default to shown.
+						showIncomingDebuffs={false}
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}

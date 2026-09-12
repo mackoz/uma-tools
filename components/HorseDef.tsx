@@ -759,7 +759,13 @@ export function HorseDef(props) {
 					/>
 				</div>
 			</div>
-			{props.umaIndex != null && (
+			{/* HP-7 fix-round-1: `showIncomingDebuffs` (optional, defaults true) rather than
+			    `umaIndex != null` -- umaIndex means "which uma's run data to show", not "is this
+			    the pacer", and gating on it hid this row for uma1 in Mode.Chart/UniquesChart too
+			    (umalator/app.tsx passes uma1 umaIndex={mode == Mode.Compare ? 0 : null}). Only the
+			    pacer call site passes showIncomingDebuffs={false}; uma1/uma2 pass nothing and get
+			    the row in every mode. */}
+			{props.showIncomingDebuffs !== false && (
 				<div class="horseStamDebuffRow">
 					<span class="horseStamDebuffLabel">Stam Debuff</span>
 					<span class="horseStamDebuffValue">
@@ -808,7 +814,7 @@ export function HorseDef(props) {
 					onClose={() => setProcDataSkillId(null)}
 				/>
 			)}
-			{props.umaIndex != null && (
+			{props.showIncomingDebuffs !== false && (
 				<StaminaDebuffDialog
 					isOpen={stamDebuffDialogOpen}
 					onClose={() => setStamDebuffDialogOpen(false)}
