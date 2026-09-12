@@ -1,5 +1,5 @@
 import { Map as ImmMap } from 'immutable';
-import { test, expect } from 'vitest';
+import { expect, test } from 'vitest';
 import { validateAndParseUmaJson } from './storage';
 
 // HP-7: incomingDebuffs (a Map of stamina-debuff bucket skill id -> count) is threaded through

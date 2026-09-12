@@ -11,6 +11,22 @@ import {
 } from '../uma-skill-tools/RaceSolverBuilder';
 import { Rule30CARng } from '../uma-skill-tools/Random';
 
+// HP-7: adds every stamina debuff incoming to `uma` onto `uma`'s own builder --
+// addOpponentDebuff (uma-skill-tools/RaceSolverBuilder.ts) adds the effect against the horse
+// that builder is for. Sorted by skill id (not insertion order) so the order is deterministic:
+// build() derives each trigger's RNG seed from `${skillId}:${perspective}:${occurrence}`
+// (confirmed in RaceSolverBuilder.ts's getSamplePolicyKey/build), so a stable order keeps
+// baseline and candidate in sync in the chart's paired comparison -- an unstable order would
+// silently desync the paired comparison and bias every chart row.
+function addIncomingDebuffs(builder: RaceSolverBuilder, uma: HorseState) {
+	uma.incomingDebuffs
+		.entrySeq()
+		.sortBy(([id]) => id)
+		.forEach(([id, count]) => {
+			for (let i = 0; i < count; ++i) builder.addOpponentDebuff(id);
+		});
+}
+
 export function runComparison(
 	nsamples: number,
 	course: CourseData,
@@ -141,6 +157,11 @@ export function runComparison(
 			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
 		}
 	});
+
+	// HP-7: standard is uma1's builder, compare is uma2's -- see addIncomingDebuffs above.
+	addIncomingDebuffs(standard, uma1);
+	addIncomingDebuffs(compare, uma2);
+
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();
 		compare.withAsiwotameru().withStaminaSyoubu();
@@ -1004,6 +1025,11 @@ export function runComparisonBlock(
 			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
 		}
 	});
+
+	// HP-7: standard is uma1's builder, compare is uma2's -- see addIncomingDebuffs above.
+	addIncomingDebuffs(standard, uma1);
+	addIncomingDebuffs(compare, uma2);
+
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();
 		compare.withAsiwotameru().withStaminaSyoubu();
