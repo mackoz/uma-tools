@@ -1,7 +1,7 @@
 // HP-7: the catalog of incoming stamina debuffs the settings UI offers, derived from the shipped
-// skill data rather than hand-maintained. Each shipped debuff effect (type 9 [TargetSpeed... see
-// note below], negative modifier, non-Self target) is grouped into a "bucket" of skills that are
-// indistinguishable from a victim's perspective -- same drain fraction, same victim-safe-stripped
+// skill data rather than hand-maintained. Each shipped debuff effect (type 9, negative modifier,
+// non-Self target) is grouped into a "bucket" of skills that are indistinguishable from a
+// victim's perspective -- same drain fraction, same victim-safe-stripped
 // condition (see VictimSafeConditions in RaceSolverBuilder.ts) -- because the UI only ever needs
 // to offer "how much stamina, when, on what course", not which specific skill caused it.
 //
