@@ -1,4 +1,5 @@
 import type { HorseState } from '../components/HorseDefTypes';
+import { isOpponentStaminaDebuff } from '../components/StaminaDebuffs';
 import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -10,6 +11,22 @@ import {
 	RaceSolverBuilder,
 } from '../uma-skill-tools/RaceSolverBuilder';
 import { Rule30CARng } from '../uma-skill-tools/Random';
+
+// HP-7: adds every stamina debuff incoming to `uma` onto `uma`'s own builder --
+// addOpponentDebuff (uma-skill-tools/RaceSolverBuilder.ts) adds the effect against the horse
+// that builder is for. Sorted by skill id (not insertion order) so the order is deterministic:
+// build() derives each trigger's RNG seed from `${skillId}:${perspective}:${occurrence}`
+// (confirmed in RaceSolverBuilder.ts's getSamplePolicyKey/build), so a stable order keeps
+// baseline and candidate in sync in the chart's paired comparison -- an unstable order would
+// silently desync the paired comparison and bias every chart row.
+function addIncomingDebuffs(builder: RaceSolverBuilder, uma: HorseState) {
+	uma.incomingDebuffs
+		.entrySeq()
+		.sortBy(([id]) => id)
+		.forEach(([id, count]) => {
+			for (let i = 0; i < count; ++i) builder.addOpponentDebuff(id);
+		});
+}
 
 export function runComparison(
 	nsamples: number,
@@ -141,6 +158,11 @@ export function runComparison(
 			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
 		}
 	});
+
+	// HP-7: standard is uma1's builder, compare is uma2's -- see addIncomingDebuffs above.
+	addIncomingDebuffs(standard, uma1);
+	addIncomingDebuffs(compare, uma2);
+
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();
 		compare.withAsiwotameru().withStaminaSyoubu();
@@ -161,7 +183,13 @@ export function runComparison(
 
 	const skillPos1 = new Map(),
 		skillPos2 = new Map();
-	function getActivator(skillSet) {
+	// HP-7 pt.2: separate from skillPos1/skillPos2 above -- these track incoming stamina-debuff
+	// procs for the "Incoming Debuffs" card section, and must NOT be folded into skillPos1/2, which
+	// feed the card's "Skills (N)" count and would otherwise make a debuff read as an equipped
+	// skill.
+	const debuffPos1 = new Map(),
+		debuffPos2 = new Map();
+	function getActivator(skillSet, debuffSet) {
 		return (s, id, persp) => {
 			if (
 				persp == Perspective.Self &&
@@ -170,6 +198,44 @@ export function runComparison(
 			) {
 				if (!skillSet.has(id)) skillSet.set(id, []);
 				skillSet.get(id).push([s.pos, -1]);
+			} else if (persp === Perspective.Other && isOpponentStaminaDebuff(id)) {
+				// Deliberate: this records ANY opponent-targeting stamina debuff that lands on
+				// this horse, not only ones configured through the Stam Debuff dialog
+				// (addIncomingDebuffs/addOpponentDebuff above add those with this exact
+				// Perspective.Other -- RaceSolverBuilder.ts:854). A debuff the OPPOSING uma has
+				// equipped and simply activates against this horse in the ordinary
+				// Perspective.Other pass (the uma1_.skills.forEach/uma2_.skills.forEach blocks
+				// below addSkill) fires the same callback with the same Perspective.Other, and is
+				// included here too -- e.g. uma2's own equipped Murmur genuinely drains uma1's HP,
+				// and showing configured debuffs while hiding that would misattribute where the
+				// drain came from.
+				//
+				// Post-review fix (round 2, issue 2): the PREVIOUS version of this comment claimed
+				// "RaceSolver never calls onSkillDeactivate for it" about the debuff SKILL -- false
+				// for 11 of the 30 shipped debuff skills (e.g. 110301, 201021, 105901111; verified
+				// against skill_data.json), which carry a second, duration-bearing effect alongside
+				// the Recovery one: type 27 TargetSpeed or type 31 Accel or type 22
+				// CurrentSpeedWithNaturalDeceleration. RaceSolver.ts's activate() (~line 1776) pushes
+				// each of THOSE onto its own activeXSkills list with a duration timer, and its
+				// deactivation pass (~line 1548) calls onSkillDeactivate(this, s.skillId,
+				// s.perspective) for whatever is in that list when the timer expires -- Perspective
+				// preserved, so Perspective.Other included. What's actually true and is the reason
+				// this still works: the SkillType.Recovery EFFECT itself (type 9; RaceSolver.ts:167,
+				// 1795-1801) has no duration and never enters an active list, so the HP drain is
+				// always a single point in time, not a range -- hence storing it as a [pos, -1]
+				// "no end" pair, matching skillSet's own shape so ResultsPane's
+				// skillEntries/skillSize helpers and row markup can be reused as-is.
+				//
+				// A skill's OTHER effect (TargetSpeed/Accel/etc, when present) may still fire
+				// onSkillDeactivate with Perspective.Other for the same id, and getDeactivator below
+				// silently ignores it (its own perspective check is `== Perspective.Self`) -- the
+				// `-1` sentinel above survives by that filter, not because the deactivate call never
+				// happens. If getDeactivator is ever widened to handle Perspective.Other, debuff ids
+				// must be routed to debuffSet there too (mirroring this function) BEFORE that widening
+				// lands -- otherwise `skillSet.get(id)` is undefined for a debuff id and `ar.find(...)`
+				// throws.
+				if (!debuffSet.has(id)) debuffSet.set(id, []);
+				debuffSet.get(id).push([s.pos, -1]);
 			}
 		};
 	}
@@ -193,9 +259,9 @@ export function runComparison(
 			}
 		};
 	}
-	standard.onSkillActivate(getActivator(skillPos1));
+	standard.onSkillActivate(getActivator(skillPos1, debuffPos1));
 	standard.onSkillDeactivate(getDeactivator(skillPos1));
-	compare.onSkillActivate(getActivator(skillPos2));
+	compare.onSkillActivate(getActivator(skillPos2, debuffPos2));
 	compare.onSkillDeactivate(getDeactivator(skillPos2));
 	const a = standard.build(),
 		b = compare.build();
@@ -303,6 +369,9 @@ export function runComparison(
 			currentLane: [[], []],
 			pacerGap: [[], []],
 			sk: [null, null],
+			// HP-7 pt.2: incoming stamina-debuff proc positions, alongside sk above -- see
+			// debuffPos1/debuffPos2 and getActivator's Perspective.Other branch.
+			db: [null, null],
 			sdly: [0, 0],
 			rushed: [[], []],
 			posKeep: [[], []],
@@ -483,6 +552,8 @@ export function runComparison(
 
 		data.sk[1] = new Map(skillPos2); // NOT ai (NB. why not?)
 		data.sk[0] = new Map(skillPos1); // NOT bi (NB. why not?)
+		data.db[1] = new Map(debuffPos2);
+		data.db[0] = new Map(debuffPos1);
 
 		const runSkillActivations: Array<{
 			skillId: string;
@@ -526,6 +597,8 @@ export function runComparison(
 
 		skillPos2.clear();
 		skillPos1.clear();
+		debuffPos2.clear();
+		debuffPos1.clear();
 
 		retry = false;
 
@@ -861,6 +934,13 @@ export interface ComparisonBlockOutput {
 	// Flattened proc positions across every simulated sample, in sample order; sample i's own
 	// slice is procPositions[sum(procCounts[0..i-1]) .. +procCounts[i]).
 	procPositions: Float32Array;
+	// HP-7: how many of this block's simulated scenarios did NOT hit hpDied -- uma2/candidate's
+	// count and uma1/baseline's count respectively. Plain numbers (not typed arrays, unlike the
+	// four fields above): this is one aggregate per block, not one value per sample index, so
+	// there's no per-sample array to size or transfer. Matches runComparison's
+	// staminaSurvivalRate definition exactly (compare.ts:722): survival is "did not hit hpDied".
+	survivesCount: number;
+	baseSurvivesCount: number;
 	traces?: Map<number, ChartRunTrace>;
 }
 
@@ -1004,6 +1084,11 @@ export function runComparisonBlock(
 			standard.addSkill(id, Perspective.Other, undefined, uma2Wisdom);
 		}
 	});
+
+	// HP-7: standard is uma1's builder, compare is uma2's -- see addIncomingDebuffs above.
+	addIncomingDebuffs(standard, uma1);
+	addIncomingDebuffs(compare, uma2);
+
 	if (!CC_GLOBAL) {
 		standard.withAsiwotameru().withStaminaSyoubu();
 		compare.withAsiwotameru().withStaminaSyoubu();
@@ -1067,6 +1152,14 @@ export function runComparisonBlock(
 	const procPositionsList: number[] = [];
 	const traces: Map<number, ChartRunTrace> | undefined =
 		traceMode === 'indices' ? new Map() : undefined;
+	// HP-7: plain counters, not typed arrays -- counted only over indices actually simulated (i.e.
+	// past the `block.only` skip below), matching lengths/times/etc's "only" convention. uma1/s1 is
+	// always the baseline builder and uma2/s2 the candidate builder in this function (see the
+	// addIncomingDebuffs call above and the file-level note on this function's uma1/uma2
+	// convention) -- mirrors runComparison's staminaSurvivalRate definition exactly
+	// (compare.ts:722): survival is "did not hit hpDied".
+	let survivesCount = 0;
+	let baseSurvivesCount = 0;
 
 	for (let i = 0; i < nsamples; ++i) {
 		const pacers = [];
@@ -1195,6 +1288,9 @@ export function runComparisonBlock(
 		s2.cleanup();
 		s1.cleanup();
 
+		if (!s1.hpDied) baseSurvivesCount++;
+		if (!s2.hpDied) survivesCount++;
+
 		lengths[i] = posDifference / 2.5;
 		times[i] =
 			interpolateTickPair(prevT0, prevP0, t0, p0, course.distance) -
@@ -1220,6 +1316,8 @@ export function runComparisonBlock(
 		times,
 		procCounts,
 		procPositions: Float32Array.from(procPositionsList),
+		survivesCount,
+		baseSurvivesCount,
 		traces,
 	};
 }

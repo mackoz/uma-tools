@@ -18,6 +18,8 @@ import {
 import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
+import { StaminaDebuffDialog } from './StaminaDebuffDialog';
+import { excludedDebuffCount, totalDrain } from './StaminaDebuffs';
 
 import './HorseDef.css';
 
@@ -397,6 +399,7 @@ export function HorseDef(props) {
 	const [skillPickerOpen, setSkillPickerOpen] = useState(false);
 	const [expanded, setExpanded] = useState(() => ImmSet());
 	const [procDataSkillId, setProcDataSkillId] = useState<string | null>(null);
+	const [stamDebuffDialogOpen, setStamDebuffDialogOpen] = useState(false);
 
 	const tabstart = props.tabstart();
 	let tabi = 0;
@@ -608,6 +611,28 @@ export function HorseDef(props) {
 		props.ground,
 	]);
 
+	// HP-7 Task 9: the STAM DEBUFF row's summary figures. `scalingContext.remainingHp` is exactly
+	// `0.8 * HpStrategyCoefficient[strategy] * stamina + distance` -- ScalingContext.ts's
+	// `contextFrom()` computes it from this same `buildBaseStats()` -> `buildAdjustedStats()`
+	// pipeline (called with the default `hpModeled = true`, i.e. full HP, since there's no race in
+	// progress to sample a live HP from) -- so reusing it here rather than re-deriving the formula
+	// keeps this row fed the same buildBaseStats/buildAdjustedStats-derived quantities the rest of
+	// the card (skill pills, ExpandedSkillView) already renders from, not raw slider values.
+	// I2 fix (HP-7 fix-round-2): course-aware -- a bucket the current course can't produce (e.g.
+	// a Medium-only debuff configured, then the course switched to Mile) is excluded from the
+	// total, matching what the engine actually drains (its regions come out empty, so it never
+	// activates). Configured counts stay in state.incomingDebuffs untouched, so switching the
+	// course back restores them in both the total and excludedCount below.
+	const totalDebuffDrain = useMemo(
+		() => totalDrain(state.incomingDebuffs, props.course?.distanceType),
+		[state.incomingDebuffs, props.course?.distanceType],
+	);
+	const excludedCount = useMemo(
+		() => excludedDebuffCount(state.incomingDebuffs, props.course?.distanceType),
+		[state.incomingDebuffs, props.course?.distanceType],
+	);
+	const maxHp = scalingContext?.remainingHp;
+
 	const skillList = useMemo(() => {
 		const u = uniqueSkillForUma(umaId);
 		const hasRunData = props.runData != null && props.umaIndex != null;
@@ -743,6 +768,38 @@ export function HorseDef(props) {
 					/>
 				</div>
 			</div>
+			{/* HP-7 fix-round-1: `showIncomingDebuffs` (optional, defaults true) rather than
+			    `umaIndex != null` -- umaIndex means "which uma's run data to show", not "is this
+			    the pacer", and gating on it hid this row for uma1 in Mode.Chart/UniquesChart too
+			    (umalator/app.tsx passes uma1 umaIndex={mode == Mode.Compare ? 0 : null}). Only the
+			    pacer call site passes showIncomingDebuffs={false}; uma1/uma2 pass nothing and get
+			    the row in every mode. */}
+			{props.showIncomingDebuffs !== false && (
+				<div class="horseStamDebuffRow">
+					<span class="horseStamDebuffLabel">Stam Debuff</span>
+					<span class="horseStamDebuffValue">
+						{totalDebuffDrain > 0
+							? `−${Number((totalDebuffDrain * 100).toFixed(2))}% max HP${
+									maxHp != null
+										? ` (≈ −${Math.round(totalDebuffDrain * maxHp)} HP)`
+										: ''
+								}`
+							: 'none'}
+						{/* I2 fix (HP-7 fix-round-2): say so rather than silently dropping a
+						    course-incompatible configured debuff from the total above. */}
+						{excludedCount > 0 &&
+							` (${excludedCount} excluded, wrong course)`}
+					</span>
+					<button
+						type="button"
+						class="horseStamDebuffBtn"
+						onClick={() => setStamDebuffDialogOpen(true)}
+						tabindex={tabnext()}
+					>
+						Configure
+					</button>
+				</div>
+			)}
 			<div class="horseSectionLabel">Skills</div>
 			<div class="horseSkillListWrapper" onClick={handleSkillClick}>
 				<ul class="horseSkillPills">{skillList}</ul>
@@ -768,6 +825,15 @@ export function HorseDef(props) {
 					courseDistance={props.courseDistance}
 					umaIndex={props.umaIndex}
 					onClose={() => setProcDataSkillId(null)}
+				/>
+			)}
+			{props.showIncomingDebuffs !== false && (
+				<StaminaDebuffDialog
+					isOpen={stamDebuffDialogOpen}
+					onClose={() => setStamDebuffDialogOpen(false)}
+					incoming={state.incomingDebuffs}
+					onChange={setter('incomingDebuffs')}
+					distanceType={props.course?.distanceType}
 				/>
 			)}
 		</div>

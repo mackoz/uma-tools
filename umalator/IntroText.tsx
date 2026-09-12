@@ -66,6 +66,39 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-12</summary>
+						<ul>
+							<li>
+								New <strong>Stam Debuff → Configure</strong> control on the uma
+								card: set how many of each stamina-draining debuff opponents
+								land on this uma over a race -- <strong>Murmur</strong>,{' '}
+								<strong>Mystifying Murmur</strong>,{' '}
+								<strong>All-Seeing Eyes</strong>, <strong>Trick</strong>,{' '}
+								<strong>Stamina Siphon</strong>, and the Subdued/Flustered
+								family, among others. Each debuff fires at its real in-game
+								timing (All- Seeing Eyes late race, Murmur mid-race, Subdued
+								early) and only on courses where the game could actually land it
+								-- Murmur is Mid- distance only, for example -- and now counts
+								against Stamina Survival Rate, Full Spurt Rate, and HP-death on
+								the Compare tab the same as any other source of drain. The Skill
+								Chart tab gets a new sortable <strong>Survives</strong> column
+								showing each candidate's own stamina survival rate and its delta
+								from the baseline, so a skill that shores up a stamina deficit
+								can be ranked on that, not only on raw length gain. The Compare
+								tab now also shows <em>where</em> those debuffs actually landed:
+								each result card gets a new <strong>Incoming Debuffs</strong>{' '}
+								section listing every proc's position and drain (separate from
+								the <strong>Skills</strong> section, so a debuff never inflates
+								that count), and the course map marks each one as a small tick +
+								label, tinted per uma, visible regardless of the{' '}
+								<strong>Show HP</strong> toggle. The map's default displayed run
+								also changed from Mean to Median, matching the card (they could
+								previously default to different runs before a run was explicitly
+								selected).
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-11</summary>
 						<ul>
 							<li>

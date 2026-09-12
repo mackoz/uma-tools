@@ -55,6 +55,12 @@ import {
 } from '../components/SkillList';
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
+import {
+	drainForSkill,
+	formatPercent,
+	isKnownDebuffBucketId,
+	isOpponentStaminaDebuff,
+} from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
 import { TRACKNAMES_en, TRACKNAMES_ja } from '../strings/common';
@@ -252,6 +258,13 @@ interface ChartRunState {
 	// under, even though in practice mode tabs are disabled for the run's whole lifetime anyway.
 	startTime: number;
 	mode: Mode;
+	// HP-7 fix-round-1: latches true once the Survives column has qualified to show for this run
+	// (see refreshTableRowsNow), and stays true for the rest of the run even if the running
+	// baseline survival rate drifts back above the ~100% hide threshold -- otherwise a
+	// stamina-marginal build with no debuffs configured can flicker the column on/off across
+	// rounds as tableData's weighted average crosses 0.995 in either direction. Reset only by
+	// constructing a fresh ChartRunState (doBasinnChart), never by this field's own recompute.
+	survivesColumnLatched: boolean;
 }
 
 function formatEstimatedRuntime(ms: number): string {
@@ -1902,6 +1915,23 @@ async function serialize(
 	}
 }
 
+// M8 fix (HP-7 fix-round-2): mirrors storage.ts's validateAndParseUmaJson filtering -- a share
+// link's `incomingDebuffs` ids are dataset-derived and differ between JP and Global for the same
+// conceptual debuff, so a JP-produced link opened on the Global build (or vice versa) can carry
+// an id this build's catalog has never heard of. Dropping it here, before it ever reaches
+// HorseState, keeps it out of compare.ts's addIncomingDebuffs -> addOpponentDebuff, which throws
+// "bad skill ID" on anything not in skill_data.json at all.
+function filterKnownIncomingDebuffs(
+	raw: { [key: string]: number } | undefined | null,
+): { [key: string]: number } {
+	const filtered: { [key: string]: number } = {};
+	if (raw == null) return filtered;
+	for (const [skillId, count] of Object.entries(raw)) {
+		if (isKnownDebuffBucketId(skillId)) filtered[skillId] = count;
+	}
+	return filtered;
+}
+
 async function deserialize(hash) {
 	const zipped = atob(decodeURIComponent(hash));
 	const buf = new Uint8Array(zipped.split('').map((c) => c.charCodeAt(0)));
@@ -1939,6 +1969,12 @@ async function deserialize(hash) {
 							.set(
 								'forcedSkillPositions',
 								ImmMap(o.uma1.forcedSkillPositions || {}),
+							)
+							.set(
+								'incomingDebuffs',
+								ImmMap<string, number>(
+									filterKnownIncomingDebuffs(o.uma1.incomingDebuffs),
+								),
 							),
 					),
 					uma2: reconcileOonige(
@@ -1947,6 +1983,12 @@ async function deserialize(hash) {
 							.set(
 								'forcedSkillPositions',
 								ImmMap(o.uma2.forcedSkillPositions || {}),
+							)
+							.set(
+								'incomingDebuffs',
+								ImmMap<string, number>(
+									filterKnownIncomingDebuffs(o.uma2.incomingDebuffs),
+								),
 							),
 					),
 					pacer: o.pacer
@@ -1956,6 +1998,12 @@ async function deserialize(hash) {
 									.set(
 										'forcedSkillPositions',
 										ImmMap(o.pacer.forcedSkillPositions || {}),
+									)
+									.set(
+										'incomingDebuffs',
+										ImmMap<string, number>(
+											filterKnownIncomingDebuffs(o.pacer.incomingDebuffs),
+										),
 									),
 							)
 						: new HorseState({ strategy: 'Nige' }),
@@ -2152,8 +2200,17 @@ function updateResultsState(
 			courseId: state.courseId,
 			results: o.results,
 			runData: o.runData,
-			chartData: o.runData[state.displaying || 'meanrun'],
-			displaying: state.displaying || 'meanrun',
+			// Post-review fix (Finding 3): must match ResultsPane's own `displayRun` default
+			// ('median', see the App component's `useState` for it) -- these two are otherwise
+			// independent pieces of state (`displaying` here drives the course map's chartData;
+			// `displayRun` drives which run key ResultsPane reads its snapshot from), and before
+			// the user ever clicks a run-selector button (which syncs both via
+			// handleDisplayRunChange) they used to disagree on the very first result: the card
+			// showed the Median run while the map showed a DIFFERENT run's (Mean's) proc
+			// positions for the same debuff -- confirmed live (median run's card read 665m/1450m
+			// while the map's default-shown run put its ticks at ~848m/~1303m).
+			chartData: o.runData[state.displaying || 'medianrun'],
+			displaying: state.displaying || 'medianrun',
 			spurtInfo: o.spurtInfo || null,
 			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null,
@@ -2493,6 +2550,9 @@ function horseStateToUmaState(state: HorseState): UmaState {
 		forcedSkillPositions: state.forcedSkillPositions.toJS() as {
 			[key: string]: number;
 		},
+		incomingDebuffs: state.incomingDebuffs.toJS() as {
+			[key: string]: number;
+		},
 	};
 }
 
@@ -2515,6 +2575,7 @@ function umaStateToHorseState(uma: UmaState): HorseState {
 			mood: uma.mood as Mood,
 			skills: SkillSet(uma.skills),
 			forcedSkillPositions: ImmMap(uma.forcedSkillPositions),
+			incomingDebuffs: ImmMap<string, number>(uma.incomingDebuffs),
 		}),
 	);
 }
@@ -2563,6 +2624,7 @@ function decodedUmaToUmaState(uma: DecodedUma): UmaState {
 			.filter((s) => skillmeta[s.id] !== undefined)
 			.map((s) => String(s.id)),
 		forcedSkillPositions: {},
+		incomingDebuffs: {},
 	};
 }
 
@@ -2956,9 +3018,6 @@ function App(props) {
 	const [runOnceCounter, setRunOnceCounter] = useState(0);
 	const [isSimulationRunning, setIsSimulationRunning] = useState(false);
 	const [simulationError, setSimulationError] = useState('');
-	const [displayRun, setDisplayRun] = useState<
-		'mean' | 'median' | 'min' | 'max'
-	>('median');
 	// round/totalRounds drive the "Run (round/total)" label; pct is this round's completion
 	// fraction (skills whose batch has finished / total skills entering this round).
 	const [simulationProgress, setSimulationProgress] = useState<{
@@ -3411,6 +3470,25 @@ function App(props) {
 	const setCourseId = setSimState;
 	const setResults = setSimState;
 	const setChartData = setSimState;
+
+	// Post-review fix (round 2, issue 3): `displayRun` used to be its own `useState('median')`,
+	// entirely independent of `displaying` above (which drives the course map's chartData and is
+	// also read by the Skill Chart's expanded-row "Showing" select -- see createExpandedContent
+	// below). Two independent stores meant they could silently disagree: expand a Skill Chart row,
+	// set its "Showing" to Min (which only ever touched `displaying`, never `displayRun`), then
+	// switch to Compare mode -- the card (driven by `displayRun`) still showed Median while the map
+	// (driven by `displaying`) showed Min. Deriving `displayRun` from `displaying` makes that
+	// structurally impossible: there is only one stored value now. The four `displaying` values
+	// this reducer ever produces are exactly 'meanrun'/'medianrun'/'minrun'/'maxrun' (updateResultsState
+	// above, and the 'string' dispatch branch that always receives one of those four from
+	// handleDisplayRunChange/the Skill Chart's own selector), so slicing off the trailing 'run' is
+	// an exact, lossless inverse of the `${run}run` template used to build `displaying` -- not a
+	// heuristic.
+	const displayRun = (displaying || 'medianrun').slice(0, -3) as
+		| 'mean'
+		| 'median'
+		| 'min'
+		| 'max';
 
 	// tableData is purely a rendered view of chartRunRef.current -- see refreshTableRowsNow(). It's
 	// still a useState (not a ref) because BasinnChart needs to re-render when it changes.
@@ -3987,8 +4065,32 @@ function App(props) {
 				statistics,
 				status: acc.n > 0 ? 'refining' : 'pending',
 				eliminationReason: null,
+				survivesCount: acc.survivesCount,
+				baseSurvivesCount: acc.baseSurvivesCount,
 			});
 		}
+
+		// HP-7 fix-round-1: latch the Survives column on rather than recomputing its visibility
+		// live off tableData every refresh -- a monotonic OR onto run.survivesColumnLatched, never
+		// cleared back off within this run's lifetime (only a fresh run, constructed above in
+		// doBasinnChart, starts with it false again). CourseChart's template uma never carries
+		// incomingDebuffs (see courseChartTemplate), so debuffs are never "configured" there
+		// regardless of what's on uma1/lastRunChartUma.
+		if (!run.survivesColumnLatched) {
+			let n = 0;
+			let base = 0;
+			for (const row of next.values()) {
+				n += row.n;
+				base += row.baseSurvivesCount;
+			}
+			const baselineRate = n > 0 ? base / n : null;
+			const debuffsConfigured =
+				mode !== Mode.CourseChart && lastRunChartUma.incomingDebuffs.size > 0;
+			if (debuffsConfigured || (baselineRate != null && baselineRate < 0.995)) {
+				run.survivesColumnLatched = true;
+			}
+		}
+
 		setTableData(next);
 	}
 
@@ -4020,6 +4122,8 @@ function App(props) {
 			statistics,
 			status,
 			eliminationReason,
+			survivesCount: acc.survivesCount,
+			baseSurvivesCount: acc.baseSurvivesCount,
 		};
 		run.finalizedRows.set(id, row);
 		return row;
@@ -4877,6 +4981,8 @@ function App(props) {
 			refineCounts: new Map(),
 			startTime: Date.now(),
 			mode,
+			// HP-7 fix-round-1: the one and only reset point -- see the field's own doc comment.
+			survivesColumnLatched: false,
 		};
 		chartRunRef.current = run;
 		detailCacheRef.current.clear();
@@ -5149,6 +5255,59 @@ function App(props) {
 					}));
 				});
 
+	// HP-7 pt.2: incoming stamina-debuff procs, drawn as a Marker (vertical tick + label) rather
+	// than a Textbox -- see RaceTrack.tsx's RegionDisplayType.Marker branch. Same per-uma color
+	// convention as skillActivations'/rushedIndicators' `colors`/`rushedColors` above (uma1 blue,
+	// uma2 red). chartData.db is undefined in Skill Chart mode (ChartRunTrace has no `db` field --
+	// see compare.ts's ChartRunTrace), hence the same `|| [[], []]`-style fallback rushedIndicators
+	// uses above.
+	//
+	// Post-review fix (Finding 1): `text` is the drain % ONLY, not "name −N%" -- with a debuff
+	// bucket configured 2-3x (the normal case, not an edge case) several same-named procs land
+	// within a couple hundred meters of each other, and a ~200px-wide "Mystifying Murmur −3%"
+	// label has no room to avoid overlapping its neighbor even with RaceTrack.tsx's marker-x
+	// jitter. A short "−3%" leaves the full name to the card's Incoming Debuffs section, and still
+	// lets RaceTrack.tsx's row-stacking (see its Marker branch) fit several per uma without
+	// overlapping. `title` (rendered as a hover tooltip, RaceTrack.tsx's Marker branch) keeps the
+	// skill name discoverable on the map itself.
+	//
+	// Post-review fix (round 2, issue 1): use the shared `formatPercent` (components/
+	// StaminaDebuffs.ts) instead of a locally re-derived rounding rule -- the earlier
+	// `Number.isInteger(...) ? toFixed(0) : toFixed(1)` rounded bucket 910301's 0.25% drain up to
+	// "0.3%", the only one of the four shipped drain values it got wrong, and in the direction
+	// that overstates the debuff. `formatPercent` returns the unsigned magnitude; the U+2212 minus
+	// sign is prepended here to match the rest of the app's convention (HorseDef.tsx, StaminaDebuffDialog.tsx), not an ASCII hyphen.
+	const debuffColors = [{ stroke: '#2a77c5' }, { stroke: '#c52a2a' }];
+	const debuffMarkers =
+		chartData == null
+			? []
+			: (
+					chartData.db || [
+						new Map<string, Array<[number, number]>>(),
+						new Map<string, Array<[number, number]>>(),
+					]
+				).flatMap(
+					(debuffMap: Map<string, Array<[number, number]>>, i: number) => {
+						return Array.from(debuffMap.entries()).flatMap(
+							([id, activations]) => {
+								const drain = drainForSkill(id);
+								const name = skillnames[id]?.[0] ?? id;
+								const pct = drain != null ? `−${formatPercent(drain)}` : null;
+								const label = pct ?? name;
+								const title = pct != null ? `${name} ${pct}` : name;
+								return activations.map((ar) => ({
+									type: RegionDisplayType.Marker,
+									color: debuffColors[i],
+									text: label,
+									title,
+									umaIndex: i,
+									regions: [{ start: ar[0], end: ar[0] }],
+								}));
+							},
+						);
+					},
+				);
+
 	const posKeepColors = [
 		{ stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.6)' },
 		{ stroke: 'rgb(197, 42, 42)', fill: 'rgba(197, 42, 42, 0.6)' },
@@ -5415,7 +5574,10 @@ function App(props) {
 			const tieRate = stats ? stats.tieRate * 100 : 0;
 			const barChartRunData = { allruns: synthesizeAllRuns(acc) };
 			const detail = detailCacheRef.current.get(skillId);
-			const currentDisplaying = displaying || 'meanrun';
+			// Kept in sync with `displayRun`'s own fallback above ('medianrun', not 'meanrun') --
+			// same single default across the whole app now that `displayRun` is derived from
+			// `displaying` instead of tracked separately.
+			const currentDisplaying = displaying || 'medianrun';
 			const baseCost = (skillmeta as any)[skillId]?.baseCost;
 
 			return (
@@ -5568,7 +5730,8 @@ function App(props) {
 			: null;
 
 	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
-		setDisplayRun(run);
+		// `displayRun` is now derived from `displaying` (see its declaration above) -- setting
+		// `displaying` here is the only state change needed; `displayRun` follows automatically.
 		setChartData(`${run}run`);
 	}
 
@@ -5622,6 +5785,44 @@ function App(props) {
 		const allow = new Set(shopSkillIds);
 		return new Set(Array.from(tableData.keys()).filter((id) => !allow.has(id)));
 	}, [mode, tableData, shopSkillIds, shopFilterActive]);
+
+	// HP-7: the one baseline survival rate every row's delta is measured against, for display only
+	// (not for the column's visibility -- see showSurvivesColumn below). Weighted (not
+	// row-averaged) across every accumulated row so a handful of low-n rows early in a round don't
+	// skew it -- same "accumulates like n" convention as SkillAccumulator.baseSurvivesCount itself.
+	// Deliberately recomputed live every tableData change (unlike showSurvivesColumn) -- this is
+	// informational text, not a show/hide decision, so it's fine for it to keep tracking the
+	// current running average as more samples arrive.
+	const baselineSurvivalRate = useMemo(() => {
+		let n = 0;
+		let base = 0;
+		for (const row of tableData.values()) {
+			// HP-7 fix-round-2 (C1): a debuff-candidate row's baseSurvivesCount is itself the
+			// baseline-mirror artifact (compare.ts's runComparisonBlock adds the candidate skill to
+			// the BASELINE builder too, as Perspective.Other -- for a debuff skill that makes the
+			// baseline the victim of its own candidate, draining baseSurvivesCount toward 0 with no
+			// bearing on the baseline's actual, debuff-free survival rate). A typical pool has ~20
+			// such rows; folding them into this weighted average would drag the single reference
+			// figure down and inflate every ordinary row's +Xpp delta right along with it.
+			if (isOpponentStaminaDebuff(row.id)) continue;
+			n += row.n;
+			base += row.baseSurvivesCount;
+		}
+		return n > 0 ? base / n : null;
+	}, [tableData]);
+
+	// HP-7 fix-round-1: read straight off the run's own latch (refreshTableRowsNow), NOT
+	// recomputed here from tableData/baselineSurvivalRate -- doing the threshold comparison in
+	// this render body directly made the column flicker on/off across rounds for a
+	// stamina-marginal build with no debuffs configured, as the running weighted average crossed
+	// 0.995 in either direction. chartRunRef.current is a plain ref, mutated synchronously by
+	// refreshTableRowsNow before its setTableData call, so by the time this component re-renders
+	// (from that same setTableData) the latch already reflects this refresh's data. When
+	// chartRunRef.current is null (no run started yet, or a mode/style switch cleared it -- see
+	// the mode-switch effect/switchCourseChartStyle above), there's nothing to show, correctly
+	// reading false as the default via `??`.
+	const showSurvivesColumn =
+		chartRunRef.current?.survivesColumnLatched ?? false;
 
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
@@ -5722,6 +5923,8 @@ function App(props) {
 							expandedContent={createExpandedContent}
 							bestValueId={bestValue?.id ?? null}
 							bestValueTooltip={bestValueTooltip}
+							showSurvivesColumn={showSurvivesColumn}
+							baselineSurvivalRate={baselineSurvivalRate}
 						/>
 						<button
 							class={`basinnChartRefresh${dirty ? '' : ' hidden'}`}
@@ -5780,6 +5983,8 @@ function App(props) {
 								showConditionalBadge={true}
 								courseDistance={course.distance}
 								expandedContent={createExpandedContent}
+								showSurvivesColumn={showSurvivesColumn}
+								baselineSurvivalRate={baselineSurvivalRate}
 							/>
 							<button
 								class={`basinnChartRefresh${courseChartDirty ? '' : ' hidden'}`}
@@ -5898,6 +6103,11 @@ function App(props) {
 						onResetAll={resetAllUmas}
 						onUmaSelected={(id: string) => handleUmaSelected('pacer', id)}
 						onSkillEvent={handleSkillEvent}
+						// HP-7 fix-round-1: incoming stamina debuffs are meaningless for a virtual
+						// pacemaker (it never runs through addIncomingDebuffs -- see
+						// umalator/compare.ts), so this is the only HorseDef call site that hides
+						// the STAM DEBUFF row/dialog. uma1/uma2 pass nothing and default to shown.
+						showIncomingDebuffs={false}
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}
@@ -6423,7 +6633,11 @@ function App(props) {
 										mouseMove={rtMouseMove}
 										mouseLeave={rtMouseLeave}
 										onSkillDrag={handleSkillDrag}
-										regions={[...skillActivations, ...rushedIndicators]}
+										regions={[
+											...skillActivations,
+											...rushedIndicators,
+											...debuffMarkers,
+										]}
 										posKeepLabels={showLabels ? posKeepLabels : []}
 										uma1={uma1}
 										uma2={uma2}

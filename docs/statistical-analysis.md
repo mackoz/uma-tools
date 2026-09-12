@@ -573,6 +573,36 @@ most length per SP spent?" A **Best value** badge renders on that one row's skil
   datasets (verified 2119/2119 JP, 737/737 Global), so the zero-cost guard above is the only
   behavior that depends on it, and that guard is data-driven, not build-driven.
 
+## Survives column (incoming stamina debuffs)
+
+HP-7 lets an uma's card configure how many of each stamina-draining debuff opponents land on it
+during a race (Murmur, All-Seeing Eyes, Trick, the Subdued/Flustered family, etc. -- see
+`components/StaminaDebuffDialog.tsx`, `components/StaminaDebuffs.ts`). `umalator/compare.ts`'s
+`addIncomingDebuffs()` feeds each configured debuff into the *victim's* own `RaceSolverBuilder`
+via the engine's `addOpponentDebuff()` (`uma-skill-tools/RaceSolverBuilder.ts`), which strips the
+skill's condition down to only its victim-safe (timing/course) terms before evaluating it --
+caster-specific terms like the caster's own stats or position can't be checked against the
+victim's own race state, so they're dropped rather than misevaluated.
+
+On the Skill Chart / Uniques Chart tables (`BasinnChart.tsx`), every `ChartRow` now also carries
+`survivesCount`/`baseSurvivesCount` -- how many of a candidate's own paired samples, and how many
+of the *baseline*'s (uma1-with-the-candidate-added, run once per block via
+`runComparisonBlock`'s Perspective.Other addition) survived to the finish without running out of
+stamina. A **Survives** column renders these as `<candidate rate>% (<delta>pp)` against the
+baseline, and is sortable like any other column (`accessorFn` returns
+`row.survivesCount / row.n`, or `-Infinity` for a not-yet-sampled row so it sorts last).
+
+The column only appears (`app.tsx`'s `showSurvivesColumn`) once either incoming debuffs are
+actually configured on the charted uma, or the baseline itself isn't already finishing near-100%
+of its races on natural stamina drain alone (`baselineRate < 0.995`) -- an always-100%/100%
+column on an ordinary chart run with no debuffs and no stamina pressure would just be noise. Once
+qualified for a given chart run, the column's *visibility* is latched on for the rest of that run
+(`ChartRunState.survivesColumnLatched`, a one-way `false -> true` flag reset only when a fresh run
+starts) so it can't flicker in and out as the running weighted-average baseline rate crosses the
+threshold block to block; the rate *numbers* shown once the column is visible are still the live,
+unlatched running averages. Course Chart never shows the column -- its template uma never carries
+`incomingDebuffs`.
+
 ## Reproducibility
 
 Same race setup, Uma, Model, Preset, Pruning, seed, and Skill Wit Check setting reproduce an

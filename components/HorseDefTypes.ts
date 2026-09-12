@@ -125,4 +125,7 @@ export class HorseState extends Record({
 	skills: SkillSet([]),
 	// Map of skillId -> forced position (in meters). If a skill is in this map, it will be forced to activate at that position.
 	forcedSkillPositions: ImmMap(),
+	// Map of a stamina-debuff bucket's representative skill id -> count (0-9). See
+	// components/StaminaDebuffs.ts for the bucket catalog.
+	incomingDebuffs: ImmMap() as ImmMap<string, number>,
 }) {}

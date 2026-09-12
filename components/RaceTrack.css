@@ -33,6 +33,17 @@
 	text-anchor: middle;
 }
 
+/* HP-7 pt.2: incoming stamina-debuff markers (RegionDisplayType.Marker, RaceTrack.tsx). fill is
+   set inline per-uma (matches skillActivations'/rushedIndicators' color convention in app.tsx) --
+   only the legibility halo lives here, same paint-order trick as .distanceMarker/.sectionText
+   above. */
+.debuffMarkerText {
+	font-weight: 600;
+	paint-order: stroke;
+	stroke: white;
+	stroke-width: 2px;
+}
+
 .racetrackName {
 	color: rgb(121, 64, 22);
 	font-family: Inter, "Noto Sans JP", sans-serif;
@@ -235,6 +246,9 @@
 }
 .dark .distanceMarkerLine {
 	stroke: #fff;
+}
+.dark .debuffMarkerText {
+	stroke: #2a2a2a;
 }
 .dark .mouseoverLine {
 	stroke: #fff;
