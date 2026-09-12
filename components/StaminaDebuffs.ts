@@ -31,11 +31,12 @@ export interface DebuffBucket {
 	memberIds: string[];
 }
 
-// Effect type 9 is "TargetSpeed" (see uma-skill-tools/RaceSolver.ts SkillType); a negative
-// modifier on it read as a debuff to the victim's target speed... except HP-7's engine tasks
-// (1-4) established these particular skills model incoming stamina drain, not a speed debuff --
-// see the engine-side ADR (docs/adr/0014-victim-safe-debuff-conditions.md) for why type 9 with a
-// negative modifier and a non-Self target is the shape this game data uses for that.
+// Effect type 9 is `SkillType.Recovery` (checked in uma-skill-tools/RaceSolver.ts:167,1795).
+// Its handler (RaceSolver.ts:1795-1801) is `this.hp.recover(ef.modifier)`, and `HpPolicy.recover()`
+// adds `maxHp * modifier` -- so a negative modifier drains rather than heals, and a non-Self
+// target means the drain lands on someone else. See the engine-side ADR
+// (uma-skill-tools/docs/adr/0014-victim-safe-debuff-conditions.md) for the victim-safe-condition
+// rationale referenced above.
 const DEBUFF_EFFECT_TYPE = 9;
 
 // Non-`Self` values of SkillTarget (RaceSolverBuilder.ts's `enum SkillTarget`) that a debuff can
