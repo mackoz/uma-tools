@@ -57,6 +57,10 @@ interface ChartBatchRow {
 	times: Float32Array;
 	procCounts: Uint16Array;
 	procPositions: Float32Array;
+	// HP-7: plain numbers straight off ComparisonBlockOutput -- see that interface's comment.
+	// No new transferable, so `flush`'s transfer list below is unchanged.
+	survivesCount: number;
+	baseSurvivesCount: number;
 }
 
 function runChartBatch(data: {
@@ -130,6 +134,8 @@ function runChartBatch(data: {
 				times: result.times,
 				procCounts: result.procCounts,
 				procPositions: result.procPositions,
+				survivesCount: result.survivesCount,
+				baseSurvivesCount: result.baseSurvivesCount,
 			});
 		} catch (e) {
 			post({

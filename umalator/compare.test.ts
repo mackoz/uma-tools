@@ -139,3 +139,89 @@ test('runComparisonBlock with incomingDebuffs is deterministic for a fixed seed'
 	expect(Array.from(a.lengths)).toEqual(Array.from(b.lengths));
 	expect(Array.from(a.times)).toEqual(Array.from(b.times));
 });
+
+// HP-7 task 8: survivesCount/baseSurvivesCount -- how many of a block's scenarios did NOT hit
+// hpDied, counted separately for uma2/candidate (survivesCount) and uma1/baseline
+// (baseSurvivesCount). Matches runComparison's staminaSurvivalRate definition exactly
+// (compare.ts:722, "(total - hpDiedCount) / total"): survival is "did not hit hpDied".
+//
+// CONTROLLER RULING (overrides this task's original brief text): the brief asked for a test
+// asserting baseSurvivesCount is identical across two different candidate skills on the same block
+// seed. That's not asserted here -- it rests on an invariant that isn't actually guaranteed:
+// runComparisonBlock adds the candidate uma's skill to the BASELINE builder too, as
+// Perspective.Other (see addIncomingDebuffs's call sites above and this file's runComparisonBlock
+// file-level note), so the baseline build is not provably identical across two different candidate
+// rows -- most candidate skills happen to contribute only a Noop there, but that's not a
+// guarantee worth pinning a test to. Determinism and the debuff-lowers-survival property below are
+// asserted instead.
+test('runComparisonBlock: survivesCount/baseSurvivesCount are deterministic for a fixed (candidate, seed)', () => {
+	const uma1 = new TestHorse() as unknown as HorseState;
+	const uma2 = new TestHorse().set(
+		'incomingDebuffs',
+		ImmMap({ '201162': 8 }),
+	) as unknown as HorseState;
+
+	const block = { seed: 999, size: 64 };
+
+	const a = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		null,
+		options,
+	);
+	const b = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		null,
+		options,
+	);
+
+	expect(a.survivesCount).toBeLessThanOrEqual(block.size);
+	expect(a.baseSurvivesCount).toBeLessThanOrEqual(block.size);
+	expect(a.survivesCount).toBe(b.survivesCount);
+	expect(a.baseSurvivesCount).toBe(b.baseSurvivesCount);
+});
+
+test('runComparisonBlock: survivesCount falls when incoming debuffs are configured, for a stamina-limited uma', () => {
+	// Stamina high enough that this build survives the course with no debuffs at all (baseline
+	// case: 0 stacks), but not high enough to shrug off 8 stacks of Murmur's drain -- see this
+	// file's header comment on why COURSE_ID/skill 201162 fire deterministically every sample.
+	const uma1 = new TestHorse().set('stamina', 900) as unknown as HorseState;
+	const uma2NoDebuff = new TestHorse({ stamina: 900 }) as unknown as HorseState;
+	const uma2Debuffed = new TestHorse({ stamina: 900 }).set(
+		'incomingDebuffs',
+		ImmMap({ '201162': 8 }),
+	) as unknown as HorseState;
+
+	const block = { seed: 12345, size: 200 };
+
+	const without = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2NoDebuff,
+		null,
+		options,
+	);
+	const withDebuffs = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2Debuffed,
+		null,
+		options,
+	);
+
+	// Sanity: this build really does survive the course by default, so the drop below is actually
+	// caused by the debuff, not by the build already dying from natural drain alone.
+	expect(without.survivesCount).toBe(block.size);
+	expect(withDebuffs.survivesCount).toBeLessThan(without.survivesCount);
+});

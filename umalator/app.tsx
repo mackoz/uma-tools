@@ -3998,6 +3998,8 @@ function App(props) {
 				statistics,
 				status: acc.n > 0 ? 'refining' : 'pending',
 				eliminationReason: null,
+				survivesCount: acc.survivesCount,
+				baseSurvivesCount: acc.baseSurvivesCount,
 			});
 		}
 		setTableData(next);
@@ -4031,6 +4033,8 @@ function App(props) {
 			statistics,
 			status,
 			eliminationReason,
+			survivesCount: acc.survivesCount,
+			baseSurvivesCount: acc.baseSurvivesCount,
 		};
 		run.finalizedRows.set(id, row);
 		return row;
@@ -5634,6 +5638,33 @@ function App(props) {
 		return new Set(Array.from(tableData.keys()).filter((id) => !allow.has(id)));
 	}, [mode, tableData, shopSkillIds, shopFilterActive]);
 
+	// HP-7: Skill Chart's Survives column visibility + the one baseline survival rate every row's
+	// delta is measured against. Weighted (not row-averaged) across every accumulated row so a
+	// handful of low-n rows early in a round don't skew it -- same "accumulates like n" convention
+	// as SkillAccumulator.baseSurvivesCount itself.
+	const baselineSurvivalRate = useMemo(() => {
+		let n = 0;
+		let base = 0;
+		for (const row of tableData.values()) {
+			n += row.n;
+			base += row.baseSurvivesCount;
+		}
+		return n > 0 ? base / n : null;
+	}, [tableData]);
+
+	// CourseChart's template uma never carries incomingDebuffs (courseChartTemplate always
+	// constructs a fresh HorseState with none set -- see that function above), so debuffs are
+	// never "configured" there regardless of what's on uma1/lastRunChartUma.
+	const debuffsConfigured =
+		mode !== Mode.CourseChart && lastRunChartUma.incomingDebuffs.size > 0;
+
+	// Hidden entirely in the common case: no debuffs configured AND nothing is dying to natural
+	// stamina drain either. ~100% is treated as "close enough to 100 that the column would be
+	// dead weight" rather than requiring an exact 1.
+	const showSurvivesColumn =
+		debuffsConfigured ||
+		(baselineSurvivalRate != null && baselineSurvivalRate < 0.995);
+
 	let resultsPane: any;
 	if (mode == Mode.Compare) {
 		const showIntroOnCompare = compareResults === null && !isSimulationRunning;
@@ -5733,6 +5764,8 @@ function App(props) {
 							expandedContent={createExpandedContent}
 							bestValueId={bestValue?.id ?? null}
 							bestValueTooltip={bestValueTooltip}
+							showSurvivesColumn={showSurvivesColumn}
+							baselineSurvivalRate={baselineSurvivalRate}
 						/>
 						<button
 							class={`basinnChartRefresh${dirty ? '' : ' hidden'}`}
@@ -5791,6 +5824,8 @@ function App(props) {
 								showConditionalBadge={true}
 								courseDistance={course.distance}
 								expandedContent={createExpandedContent}
+								showSurvivesColumn={showSurvivesColumn}
+								baselineSurvivalRate={baselineSurvivalRate}
 							/>
 							<button
 								class={`basinnChartRefresh${courseChartDirty ? '' : ' hidden'}`}

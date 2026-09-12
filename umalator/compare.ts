@@ -882,6 +882,13 @@ export interface ComparisonBlockOutput {
 	// Flattened proc positions across every simulated sample, in sample order; sample i's own
 	// slice is procPositions[sum(procCounts[0..i-1]) .. +procCounts[i]).
 	procPositions: Float32Array;
+	// HP-7: how many of this block's simulated scenarios did NOT hit hpDied -- uma2/candidate's
+	// count and uma1/baseline's count respectively. Plain numbers (not typed arrays, unlike the
+	// four fields above): this is one aggregate per block, not one value per sample index, so
+	// there's no per-sample array to size or transfer. Matches runComparison's
+	// staminaSurvivalRate definition exactly (compare.ts:722): survival is "did not hit hpDied".
+	survivesCount: number;
+	baseSurvivesCount: number;
 	traces?: Map<number, ChartRunTrace>;
 }
 
@@ -1093,6 +1100,14 @@ export function runComparisonBlock(
 	const procPositionsList: number[] = [];
 	const traces: Map<number, ChartRunTrace> | undefined =
 		traceMode === 'indices' ? new Map() : undefined;
+	// HP-7: plain counters, not typed arrays -- counted only over indices actually simulated (i.e.
+	// past the `block.only` skip below), matching lengths/times/etc's "only" convention. uma1/s1 is
+	// always the baseline builder and uma2/s2 the candidate builder in this function (see the
+	// addIncomingDebuffs call above and the file-level note on this function's uma1/uma2
+	// convention) -- mirrors runComparison's staminaSurvivalRate definition exactly
+	// (compare.ts:722): survival is "did not hit hpDied".
+	let survivesCount = 0;
+	let baseSurvivesCount = 0;
 
 	for (let i = 0; i < nsamples; ++i) {
 		const pacers = [];
@@ -1221,6 +1236,9 @@ export function runComparisonBlock(
 		s2.cleanup();
 		s1.cleanup();
 
+		if (!s1.hpDied) baseSurvivesCount++;
+		if (!s2.hpDied) survivesCount++;
+
 		lengths[i] = posDifference / 2.5;
 		times[i] =
 			interpolateTickPair(prevT0, prevP0, t0, p0, course.distance) -
@@ -1246,6 +1264,8 @@ export function runComparisonBlock(
 		times,
 		procCounts,
 		procPositions: Float32Array.from(procPositionsList),
+		survivesCount,
+		baseSurvivesCount,
 		traces,
 	};
 }

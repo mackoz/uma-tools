@@ -172,6 +172,23 @@ function formatPercent(v: number | undefined): string {
 	return `${(v * 100).toFixed(0)}%`;
 }
 
+// HP-7: the candidate's own stamina-survival rate for this row, plus its delta (in percentage
+// points) from `baselineRate` -- a single value shared by every row (BasinnChart's caller
+// computes it as a weighted average across the whole accumulated table, not per-row), because the
+// baseline build isn't provably identical row to row (runComparisonBlock adds the candidate skill
+// to the baseline builder too, as Perspective.Other -- see compare.ts's addIncomingDebuffs/
+// runComparisonBlock file-level note) and a per-row-varying "baseline" would misrepresent what is
+// meant to read as one constant reference point.
+function formatSurvives(row: ChartRow, baselineRate: number | null): string {
+	if (row.n === 0) return '—';
+	const rate = row.survivesCount / row.n;
+	const pct = formatPercent(rate);
+	if (baselineRate == null) return pct;
+	const deltaPp = (rate - baselineRate) * 100;
+	const sign = deltaPp > 0 ? '+' : '';
+	return `${pct} (${sign}${deltaPp.toFixed(1)}pp)`;
+}
+
 const STATUS_LABEL: Record<string, string> = {
 	pending: 'Waiting to run',
 	refining: 'Still sampling',
@@ -448,6 +465,31 @@ export function BasinnChart(props) {
 				cell: (info) => info.getValue(),
 				sortDescFirst: true,
 			},
+			// HP-7: only shown when incoming stamina debuffs are actually configured, or when the
+			// baseline itself isn't surviving to the finish ~100% of the time from natural drain
+			// alone -- see app.tsx's showSurvivesColumn. A dead 100%/100% column on every ordinary
+			// chart run would be noise.
+			...(props.showSurvivesColumn
+				? [
+						{
+							header: headerLabel(
+								'Survives',
+								`Share of races this candidate finished without running out of stamina, vs. the baseline's own rate (currently ${formatPercent(props.baselineSurvivalRate ?? undefined)})`,
+							),
+							id: 'survives',
+							accessorFn: (row: ChartRow) =>
+								row.n > 0
+									? row.survivesCount / row.n
+									: Number.NEGATIVE_INFINITY,
+							cell: (info) =>
+								formatSurvives(
+									info.row.original,
+									props.baselineSurvivalRate ?? null,
+								),
+							sortDescFirst: true,
+						},
+					]
+				: []),
 		],
 		[
 			props.showUmaIcons,
@@ -456,6 +498,8 @@ export function BasinnChart(props) {
 			props.bestValueId,
 			props.bestValueTooltip,
 			props.showConditionalBadge,
+			props.showSurvivesColumn,
+			props.baselineSurvivalRate,
 		],
 	);
 

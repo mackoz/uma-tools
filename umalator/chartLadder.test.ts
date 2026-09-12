@@ -39,6 +39,8 @@ describe('SkillAccumulator: incremental mean/variance, concatenation, inert/proc
 				times: Float32Array.from([0.1, 0.2, 0.3]),
 				procCounts: Uint16Array.from([1, 0, 1]),
 				procPositions: Float32Array.from([100, 250]),
+				survivesCount: 3,
+				baseSurvivesCount: 3,
 			},
 			{ blockSeed: 111, blockSize: 3 },
 		);
@@ -54,11 +56,15 @@ describe('SkillAccumulator: incremental mean/variance, concatenation, inert/proc
 				times: Float32Array.from([0.4, 0.5]),
 				procCounts: Uint16Array.from([1, 1]),
 				procPositions: Float32Array.from([300, 400]),
+				survivesCount: 2,
+				baseSurvivesCount: 1,
 			},
 			{ blockSeed: 222, blockSize: 2 },
 		);
 		assert.equal(acc.n, 5);
 		assert.equal(acc.procTotal, 4);
+		assert.equal(acc.survivesCount, 5);
+		assert.equal(acc.baseSurvivesCount, 4);
 		mv = acc.meanVariance();
 		assert.equal(mv.mean, 3); // mean of 1..5
 		assert.deepEqual(Array.from(acc.lengths()), [1, 2, 3, 4, 5]);
@@ -104,6 +110,8 @@ describe('SkillAccumulator: incremental mean/variance, concatenation, inert/proc
 				times: Float32Array.from([0, 0, 0, 0]),
 				procCounts: Uint16Array.from([0, 0, 0, 0]),
 				procPositions: Float32Array.from([]),
+				survivesCount: 4,
+				baseSurvivesCount: 4,
 			},
 			{ blockSeed: 333, blockSize: 4 },
 		);
@@ -123,6 +131,8 @@ describe('SkillAccumulator: incremental mean/variance, concatenation, inert/proc
 				times: Float32Array.from([0, 0, 0]),
 				procCounts: Uint16Array.from([0, 0, 0]),
 				procPositions: Float32Array.from([]),
+				survivesCount: 3,
+				baseSurvivesCount: 3,
 			},
 			{ blockSeed: 1, blockSize: 3 },
 		);
