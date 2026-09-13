@@ -1,4 +1,7 @@
-import { isKnownDebuffBucketId } from '../components/StaminaDebuffs';
+import {
+	clampDebuffCount,
+	normalizeDebuffId,
+} from '../components/StaminaDebuffs';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import umas from '../umas.json';
 
@@ -71,9 +74,23 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 			// that would otherwise reach addOpponentDebuff() and throw "bad skill ID". Dropping it
 			// silently mirrors `skills`' own validSkills filtering just above: the debuff genuinely
 			// doesn't exist in this dataset, not an error to surface.
-			if (!isKnownDebuffBucketId(skillId)) continue;
-			const num = typeof count === 'number' ? count : parseFloat(count as string);
-			if (!isNaN(num)) incomingDebuffs[skillId] = num;
+			// Peer-review fix (HP-7 Important 3): normalizeDebuffId both checks that the id is known
+			// at all (any bucket member) AND normalises it to its bucket's representative id, so a
+			// non-representative member id doesn't silently become invisible/uneditable in the
+			// dialog -- see that function's own comment.
+			const representativeId = normalizeDebuffId(skillId);
+			if (representativeId == null) continue;
+			// Peer-review fix (HP-7 Critical 2): this used to only NaN-guard, with no upper bound --
+			// a large finite hand-edited count (or one from a corrupted/malicious saved slot) hangs
+			// the tab the same way an infinite count from a share link does (see app.tsx's
+			// filterKnownIncomingDebuffs). clampDebuffCount enforces the same [0, 9] range
+			// StaminaDebuffDialog.tsx's own stepper does; a count that isn't a usable number at all,
+			// or clamps to 0, is dropped.
+			const clamped = clampDebuffCount(count);
+			if (clamped != null && clamped > 0) {
+				incomingDebuffs[representativeId] =
+					(incomingDebuffs[representativeId] ?? 0) + clamped;
+			}
 		}
 	}
 

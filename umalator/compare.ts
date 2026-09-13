@@ -24,7 +24,15 @@ function addIncomingDebuffs(builder: RaceSolverBuilder, uma: HorseState) {
 		.entrySeq()
 		.sortBy(([id]) => id)
 		.forEach(([id, count]) => {
-			for (let i = 0; i < count; ++i) builder.addOpponentDebuff(id);
+			// Peer-review fix (HP-7 Critical 2): defense in depth -- both rehydration paths
+			// (umalator/app.tsx's filterKnownIncomingDebuffs, umalator/storage.ts's
+			// validateAndParseUmaJson) now clamp count to a finite [0, 9] integer before it ever
+			// reaches HorseState, but a loop bound that CAN be Infinity/NaN shouldn't rely solely on
+			// every caller having validated it -- so clamp again here rather than trust it blindly.
+			const n = Number.isFinite(count)
+				? Math.max(0, Math.min(9, Math.floor(count)))
+				: 0;
+			for (let i = 0; i < n; ++i) builder.addOpponentDebuff(id);
 		});
 }
 

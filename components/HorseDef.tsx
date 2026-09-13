@@ -19,7 +19,11 @@ import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';
 import { StaminaDebuffDialog } from './StaminaDebuffDialog';
-import { excludedDebuffCount, totalDrain } from './StaminaDebuffs';
+import {
+	excludedDebuffCount,
+	formatPercent,
+	totalDrain,
+} from './StaminaDebuffs';
 
 import './HorseDef.css';
 
@@ -628,7 +632,8 @@ export function HorseDef(props) {
 		[state.incomingDebuffs, props.course?.distanceType],
 	);
 	const excludedCount = useMemo(
-		() => excludedDebuffCount(state.incomingDebuffs, props.course?.distanceType),
+		() =>
+			excludedDebuffCount(state.incomingDebuffs, props.course?.distanceType),
 		[state.incomingDebuffs, props.course?.distanceType],
 	);
 	const maxHp = scalingContext?.remainingHp;
@@ -779,7 +784,12 @@ export function HorseDef(props) {
 					<span class="horseStamDebuffLabel">Stam Debuff</span>
 					<span class="horseStamDebuffValue">
 						{totalDebuffDrain > 0
-							? `−${Number((totalDebuffDrain * 100).toFixed(2))}% max HP${
+							? // Peer-review fix (HP-7 Important 4): use the one shared rounding rule
+								// (StaminaDebuffs.ts's formatPercent) instead of reimplementing it inline --
+								// this card is exactly the site the Round 3 consolidation was meant to
+								// cover, and a duplicate copy here re-opens the 0.25%->0.3% bug class a
+								// future fix to the shared helper wouldn't reach.
+								`−${formatPercent(totalDebuffDrain)} max HP${
 									maxHp != null
 										? ` (≈ −${Math.round(totalDebuffDrain * maxHp)} HP)`
 										: ''
@@ -787,8 +797,7 @@ export function HorseDef(props) {
 							: 'none'}
 						{/* I2 fix (HP-7 fix-round-2): say so rather than silently dropping a
 						    course-incompatible configured debuff from the total above. */}
-						{excludedCount > 0 &&
-							` (${excludedCount} excluded, wrong course)`}
+						{excludedCount > 0 && ` (${excludedCount} excluded, wrong course)`}
 					</span>
 					<button
 						type="button"

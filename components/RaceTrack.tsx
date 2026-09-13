@@ -43,6 +43,11 @@ interface MarkerCluster {
 	x: number;
 	half: number;
 	text: string;
+	// Peer-review fix (HP-7 Important 5): the id the row-cap merge below matches clusters on.
+	// Undefined for a marker with no id of its own (none currently exist -- debuff markers are the
+	// only Marker producer and always carry one -- but matching falls back to `text` in that case
+	// rather than silently merging every id-less marker together regardless of label).
+	skillId?: string;
 	count: number;
 	titles: string[];
 	color: string;
@@ -961,6 +966,7 @@ export function RaceTrack(props) {
 								x,
 								half,
 								text: desc.text,
+								skillId: desc.skillId,
 								count: 1,
 								titles: [title],
 								color: desc.color.stroke,
@@ -968,14 +974,24 @@ export function RaceTrack(props) {
 							return;
 						}
 						// Row cap reached and this proc doesn't cleanly fit any existing row:
-						// merge into the nearest cluster that shares this proc's exact label
-						// (same skill bucket + drain, the common real-world case -- several
-						// stacks of one configured debuff) rather than draw an overlapping tick.
+						// merge into the nearest cluster that shares this proc's skill/bucket id
+						// (falling back to the rendered label when a marker has no id of its own)
+						// rather than draw an overlapping tick.
+						//
+						// Peer-review fix (HP-7 Important 5): matching on `text` alone used to merge
+						// clusters that only share a rendered drain-% label -- only 4 distinct drain
+						// magnitudes exist across 15-21 debuff buckets, so e.g. two entirely
+						// different skills both labelled "−1%" (one of which alone covers ~16
+						// shipped skills) could merge into one cluster whose tooltip then
+						// misattributes which skill fired and where. Matching on `skillId` (the
+						// bucket id, set by app.tsx's debuffMarkers) fixes this; the `?? desc.text`
+						// fallback only matters for a marker with no id (none currently ship one).
+						const matchKey = desc.skillId ?? desc.text;
 						let best: MarkerCluster | null = null;
 						let bestDist = Infinity;
 						rows.forEach((row) => {
 							row.forEach((c) => {
-								if (c.text !== desc.text) return;
+								if ((c.skillId ?? c.text) !== matchKey) return;
 								const d = Math.abs(c.x - x);
 								if (d < bestDist) {
 									bestDist = d;
@@ -984,15 +1000,31 @@ export function RaceTrack(props) {
 							});
 						});
 						if (best == null) {
-							// Rare: every capped row is saturated with OTHER labels (several
-							// distinct debuff buckets all clustering at once) so there is no
-							// same-label cluster to fold into. Attach to the last row anyway --
-							// an occasional visual overlap here is preferable to silently
-							// dropping a proc the card does list.
+							// Rare: every capped row is saturated with OTHER skills/buckets (several
+							// distinct debuffs all clustering at once) so there is no matching
+							// cluster to fold into. Attach to the last row anyway -- an occasional
+							// visual overlap here is preferable to silently dropping a proc the card
+							// does list.
+							//
+							// Peer-review fix (HP-7 Important 5), reassessed: switching the merge
+							// above from label-text to skill-id makes this branch reachable in
+							// strictly more cases than before (two different ids that used to share
+							// one label -- e.g. two of the ~16 skills all rendering "−1%" -- no
+							// longer merge into each other, so each independently competes for the
+							// same MARKER_ROW_CAP row slots). This is still expected to be rare in
+							// practice: it requires several *distinct* debuff buckets landing within
+							// the same tight x-window in the same race, and the dialog's realistic
+							// usage is 1-3 configured buckets, not the full 15-21-bucket catalog at
+							// once. No overlap check is added here -- an occasional visual overlap in
+							// this already-rare, already-documented fallback is preferable to the
+							// complexity of a second stacking pass, and each cluster's own
+							// (now-correct) skillId/titles still make its tooltip attribute
+							// correctly even when two ticks visually overlap.
 							best = {
 								x,
 								half,
 								text: desc.text,
+								skillId: desc.skillId,
 								count: 0,
 								titles: [],
 								color: desc.color.stroke,

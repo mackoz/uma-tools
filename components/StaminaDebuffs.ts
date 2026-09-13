@@ -41,8 +41,11 @@ const DEBUFF_EFFECT_TYPE = 9;
 
 // Non-`Self` values of SkillTarget (RaceSolverBuilder.ts's `enum SkillTarget`) that a debuff can
 // be aimed at from the victim's perspective. Verified against the shipped data: this exact set
-// yields 30 debuff effects across 30 distinct skill ids, grouping into 15 buckets over 8 distinct
-// stripped conditions.
+// yields 30 debuff effects across 30 distinct skill ids, grouping into 21 buckets over 14 distinct
+// stripped conditions (JP; peer-review fix restoring the four running_style_count_*_otherself
+// terms to VictimSafeConditions -- see RaceSolverBuilder.ts -- re-split what used to be 15 buckets
+// over 8 conditions. Global's shipped data yields 20 buckets, not exercised by this repo's Vitest
+// suite since it only loads JP -- see StaminaDebuffs.test.ts).
 const OTHER_TARGETS: ReadonlySet<number> = new Set([
 	2, 4, 9, 11, 18, 19, 20, 21, 22, 23,
 ]);
@@ -129,10 +132,18 @@ function deriveBuckets(): DebuffBucket[] {
 
 export const STAMINA_DEBUFF_BUCKETS: readonly DebuffBucket[] = deriveBuckets();
 
-// Lowest-id member -> drain, for totalDrain() below.
+// Every member id (not just the lowest/representative) -> drain, for totalDrain() and
+// drainForSkill() below.
 const drainById: ReadonlyMap<string, number> = new Map(
 	STAMINA_DEBUFF_BUCKETS.flatMap((b) =>
 		b.memberIds.map((id) => [id, b.drain] as const),
+	),
+);
+
+// Every member id -> its bucket's representative id, for normalizeDebuffId() below.
+const representativeIdByMemberId: ReadonlyMap<string, string> = new Map(
+	STAMINA_DEBUFF_BUCKETS.flatMap((b) =>
+		b.memberIds.map((id) => [id, b.id] as const),
 	),
 );
 
@@ -200,17 +211,41 @@ export function isOpponentStaminaDebuff(skillId: string): boolean {
 	return opponentStaminaDebuffIds.has(skillId);
 }
 
-// M8 fix (HP-7 fix-round-2): is `id` a bucket REPRESENTATIVE id in this build's derived catalog --
-// i.e. a key `incomingDebuffs`/`HorseState.incomingDebuffs` can legitimately carry (see
-// StaminaDebuffDialog.tsx's `incoming.get(bucket.id, 0)`/`setCount`). Bucket representative ids
-// are dataset-derived and differ between JP and Global for the same conceptual debuff (e.g.
-// Murmur's JP-only unique `105901111` vs. Global's `201441`), so a share link or exported uma
-// JSON produced against one dataset can carry an id this build's catalog has never heard of --
-// rehydration call sites (umalator/storage.ts, umalator/app.tsx's share-link decode) filter
-// through this rather than passing the id straight to `buildSkillData`/`addOpponentDebuff`, which
-// throws `bad skill ID <id>` on anything not in `skill_data.json` at all.
+// M8 fix (HP-7 fix-round-2): is `id` a KNOWN debuff skill id in this build's derived catalog at
+// all -- i.e. any `memberIds` entry of any bucket, not just its representative (`drainById`, per
+// its own comment above, is keyed by every member id). Bucket ids are dataset-derived and differ
+// between JP and Global for the same conceptual debuff (e.g. Murmur's JP-only unique `105901111`
+// vs. Global's `201441`), so a share link or exported uma JSON produced against one dataset can
+// carry an id this build's catalog has never heard of -- rehydration call sites
+// (umalator/storage.ts, umalator/app.tsx's share-link decode) filter through this rather than
+// passing the id straight to `buildSkillData`/`addOpponentDebuff`, which throws `bad skill ID
+// <id>` on anything not in `skill_data.json` at all.
+//
+// Peer-review fix (HP-7 Important 3): this was previously documented as checking a bucket's
+// *representative* id specifically, which the implementation never actually did (`drainById.has`
+// is true for any member id) -- a real doc/impl mismatch, now corrected to describe what the code
+// has always done. Both rehydration call sites now call `normalizeDebuffId()` below instead of
+// this function directly, so a non-representative member id is normalised to its bucket's
+// representative rather than passing this check and then reaching `HorseState.incomingDebuffs`
+// unnormalised -- see that function's own comment for why that mattered.
 export function isKnownDebuffBucketId(id: string): boolean {
 	return drainById.has(id);
+}
+
+// Peer-review fix (HP-7 Important 3): `id` -> its bucket's REPRESENTATIVE id, covering every
+// member id of every bucket (not just representatives) -- returns null for an id this build's
+// catalog doesn't recognize at all (same universe as isKnownDebuffBucketId above). Before this,
+// a non-representative member id in a saved config or share link passed isKnownDebuffBucketId
+// (true for any member) unnormalised, and reached HorseState.incomingDebuffs keyed by that
+// non-representative id -- invisible and uneditable in StaminaDebuffDialog.tsx (keyed by
+// `bucket.id`, the representative) and miscounted by totalDrain()/excludedDebuffCount() (which
+// build representative-only id sets), while still firing normally via addIncomingDebuffs. Both
+// rehydration call sites (umalator/storage.ts, umalator/app.tsx's share-link decode) call this
+// instead of isKnownDebuffBucketId directly, so any known id -- representative or not -- ends up
+// stored under its bucket's representative id, visible and editable like any other configured
+// debuff.
+export function normalizeDebuffId(id: string): string | null {
+	return representativeIdByMemberId.get(id) ?? null;
 }
 
 // HP-7 pt.2: drain fraction (0.01 === 1%) for any skill id that is itself an opponent stamina
@@ -236,4 +271,22 @@ export function formatPercent(fraction: number): string {
 	const pct = fraction * 100;
 	// Trims to at most 2 decimal places without trailing zeros (0.25%, 1%, 3%).
 	return `${Number(pct.toFixed(2))}%`;
+}
+
+// Peer-review fix (HP-7 Critical 2): the single source of truth for a valid incoming-debuff count.
+// StaminaDebuffDialog.tsx's stepper caps a count at 9 (`disabled={... || value >= 9}`), but neither
+// rehydration path that reads a count from outside the dialog -- umalator/app.tsx's share-link
+// decode (`filterKnownIncomingDebuffs`) nor umalator/storage.ts's saved-slot decode
+// (`validateAndParseUmaJson`) -- enforced that cap, or even that the value was a finite number:
+// `JSON.parse('{"count": 1e400}')` parses to `Infinity`, and `compare.ts`'s
+// `addIncomingDebuffs` does `for (let i = 0; i < count; ++i)`, an infinite loop for a crafted or
+// corrupted share link. Coerces to a number, rejects non-finite (Infinity/-Infinity/NaN), floors
+// to an integer, and clamps to [0, 9] -- the same range the dialog itself enforces. Returns null
+// for a count that isn't a usable number at all (the caller drops the entry, same as an unknown
+// skill id); a value that clamps to 0 is returned as 0, not null, so callers can choose whether
+// "explicitly zero" is worth keeping or dropping.
+export function clampDebuffCount(raw: unknown): number | null {
+	const num = typeof raw === 'number' ? raw : parseFloat(raw as string);
+	if (!Number.isFinite(num)) return null;
+	return Math.max(0, Math.min(9, Math.floor(num)));
 }

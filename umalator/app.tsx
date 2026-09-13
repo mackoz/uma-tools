@@ -56,10 +56,11 @@ import {
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
 import {
+	clampDebuffCount,
 	drainForSkill,
 	formatPercent,
-	isKnownDebuffBucketId,
 	isOpponentStaminaDebuff,
+	normalizeDebuffId,
 } from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
@@ -1921,13 +1922,30 @@ async function serialize(
 // an id this build's catalog has never heard of. Dropping it here, before it ever reaches
 // HorseState, keeps it out of compare.ts's addIncomingDebuffs -> addOpponentDebuff, which throws
 // "bad skill ID" on anything not in skill_data.json at all.
+//
+// Peer-review fix (HP-7 Critical 2): a share link's `count` came straight out of parsed JSON with
+// no numeric validation -- `JSON.parse('{"count": 1e400}')` yields `Infinity`, and
+// compare.ts's addIncomingDebuffs loops `for (let i = 0; i < count; ++i)`, hanging the tab on a
+// crafted or corrupted link. clampDebuffCount coerces to a number, rejects non-finite values, and
+// clamps to [0, 9] -- the same range StaminaDebuffDialog.tsx's own stepper enforces; a count that
+// isn't a usable number at all is dropped, same as an unknown skill id above.
+//
+// Peer-review fix (HP-7 Important 3): normalizeDebuffId both checks that the id is known at all
+// (any bucket member, not just a representative) AND normalises it to its bucket's representative
+// id, so a non-representative member id from a share link doesn't silently become
+// invisible/uneditable in StaminaDebuffDialog.tsx -- see that function's own comment.
 function filterKnownIncomingDebuffs(
 	raw: { [key: string]: number } | undefined | null,
 ): { [key: string]: number } {
 	const filtered: { [key: string]: number } = {};
 	if (raw == null) return filtered;
 	for (const [skillId, count] of Object.entries(raw)) {
-		if (isKnownDebuffBucketId(skillId)) filtered[skillId] = count;
+		const representativeId = normalizeDebuffId(skillId);
+		if (representativeId == null) continue;
+		const clamped = clampDebuffCount(count);
+		if (clamped != null && clamped > 0) {
+			filtered[representativeId] = (filtered[representativeId] ?? 0) + clamped;
+		}
 	}
 	return filtered;
 }
@@ -5300,6 +5318,12 @@ function App(props) {
 									color: debuffColors[i],
 									text: label,
 									title,
+									// Peer-review fix (HP-7 Important 5): the bucket id, so
+									// RaceTrack.tsx's row-cap cluster merge can match on which
+									// debuff actually fired instead of on the rendered label text
+									// (the drain % alone -- only 4 distinct magnitudes exist across
+									// 15-21 buckets, so several distinct debuffs share one label).
+									skillId: id,
 									umaIndex: i,
 									regions: [{ start: ar[0], end: ar[0] }],
 								}));

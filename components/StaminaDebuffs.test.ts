@@ -2,15 +2,25 @@ import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
 import {
 	bucketsForCourse,
+	clampDebuffCount,
 	formatPercent,
 	isOpponentStaminaDebuff,
+	normalizeDebuffId,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
 } from './StaminaDebuffs';
 
 describe('stamina debuff catalog', () => {
-	test('derives 15 buckets from the shipped data', () => {
-		expect(STAMINA_DEBUFF_BUCKETS.length).toBe(15);
+	// HP-7 peer-review fix: VictimSafeConditions used to wrongly strip
+	// running_style_count_{nige,senko,sashi,oikomi}_otherself as "caster state" (they are not --
+	// see RaceSolverBuilder.ts's ANCHOR victim-safe-condition-allowlist comment). Restoring them to
+	// the allowlist re-splits the Subdued/Flustered debuff family by the victim's running style,
+	// raising JP's bucket count from 15 to 21. Vitest only ever loads the JP dataset (the build
+	// plugin redirects Global's import at build time, not at test time), so Global's count -- also
+	// measured directly against uma-skill-tools/data/global/skill_data.json with this same
+	// allowlist: 14 -> 20 -- isn't exercised here; recorded for anyone diffing Global's behavior.
+	test('derives 21 buckets from the shipped JP data', () => {
+		expect(STAMINA_DEBUFF_BUCKETS.length).toBe(21);
 	});
 
 	test('each bucket is named after its lowest-id member and has a positive drain', () => {
@@ -77,5 +87,61 @@ describe('stamina debuff catalog', () => {
 		expect([...distinctDrains].sort((a, b) => a - b)).toEqual([
 			0.0025, 0.005, 0.01, 0.03,
 		]);
+	});
+
+	// HP-7 peer-review Critical 2: both incoming-debuff-count rehydration paths (umalator/app.tsx's
+	// filterKnownIncomingDebuffs, umalator/storage.ts's validateAndParseUmaJson) delegate their
+	// numeric validation to this one function -- see its own comment for why an unvalidated count
+	// is an infinite-loop vector via compare.ts's `for (let i = 0; i < count; ++i)`.
+	describe('clampDebuffCount', () => {
+		test('rejects a non-finite value (the JSON.parse(\'{"count":1e400}\') === Infinity case)', () => {
+			expect(clampDebuffCount(JSON.parse('1e400'))).toBeNull();
+			expect(clampDebuffCount(Infinity)).toBeNull();
+			expect(clampDebuffCount(-Infinity)).toBeNull();
+		});
+
+		test('rejects NaN and non-numeric strings', () => {
+			expect(clampDebuffCount(NaN)).toBeNull();
+			expect(clampDebuffCount('not a number')).toBeNull();
+		});
+
+		test('clamps a negative value to 0', () => {
+			expect(clampDebuffCount(-5)).toBe(0);
+		});
+
+		test('floors a non-integer value', () => {
+			expect(clampDebuffCount(2.7)).toBe(2);
+		});
+
+		test("clamps an over-cap value to 9, matching StaminaDebuffDialog.tsx's stepper cap", () => {
+			expect(clampDebuffCount(500)).toBe(9);
+		});
+
+		test('passes an in-range integer through unchanged', () => {
+			expect(clampDebuffCount(3)).toBe(3);
+			expect(clampDebuffCount(0)).toBe(0);
+			expect(clampDebuffCount(9)).toBe(9);
+		});
+	});
+
+	// HP-7 peer-review Important 3: isKnownDebuffBucketId was documented as checking a bucket's
+	// representative id but implemented as "any member id" -- normalizeDebuffId is the function
+	// that actually normalises to the representative, used by both rehydration call sites so a
+	// non-representative member id becomes visible/editable (keyed by bucket.id) instead of
+	// silently bypassing the dialog and the totalDrain()/excludedDebuffCount() representative-only
+	// id sets.
+	describe('normalizeDebuffId', () => {
+		test('a bucket with multiple members normalises every member id to the same representative', () => {
+			const multiMemberBucket = STAMINA_DEBUFF_BUCKETS.find(
+				(b) => b.memberIds.length > 1,
+			)!;
+			for (const memberId of multiMemberBucket.memberIds) {
+				expect(normalizeDebuffId(memberId)).toBe(multiMemberBucket.id);
+			}
+		});
+
+		test('an unknown id returns null', () => {
+			expect(normalizeDebuffId('not-a-real-skill-id')).toBeNull();
+		});
 	});
 });

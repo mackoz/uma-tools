@@ -168,7 +168,17 @@ function formatRange(row: ChartRow): string {
 	return `${p10.toFixed(1)} – ${p90.toFixed(1)}`;
 }
 
-function formatPercent(v: number | undefined): string {
+// Peer-review fix (HP-7 Important 4): renamed from formatPercent to formatRatePercent to avoid
+// confusion with components/StaminaDebuffs.ts's exported formatPercent, which this file also
+// imports (isOpponentStaminaDebuff, above). The two are deliberately different, not a duplicate to
+// unify: this one formats a statistical Survives/Gain RATE (0-1, undefined-safe, always whole
+// percent -- these are sampled proportions across hundreds/thousands of runs, where sub-percent
+// precision would be false confidence) while StaminaDebuffs.ts's formats an exact DRAIN fraction
+// (trimmed to 2 decimal places so e.g. a real 0.25% bucket doesn't misround to "0.3%" -- see that
+// function's own comment for the bug this guards against). Same shape, different domain and
+// different rounding rule; keep them separate but distinctly named so a future edit to one doesn't
+// get mistakenly applied to both.
+function formatRatePercent(v: number | undefined): string {
 	if (v == null) return '—';
 	return `${(v * 100).toFixed(0)}%`;
 }
@@ -183,7 +193,7 @@ function formatPercent(v: number | undefined): string {
 function formatSurvives(row: ChartRow, baselineRate: number | null): string {
 	if (row.n === 0) return '—';
 	const rate = row.survivesCount / row.n;
-	const pct = formatPercent(rate);
+	const pct = formatRatePercent(rate);
 	if (baselineRate == null) return pct;
 	const deltaPp = (rate - baselineRate) * 100;
 	const sign = deltaPp > 0 ? '+' : '';
@@ -412,6 +422,26 @@ export function BasinnChart(props) {
 					'Expected length gain vs. the baseline uma, with a confidence interval on that mean',
 				),
 				id: 'mean',
+				// Peer-review fix (HP-7 Important 6), assessed and left as-is: for a debuff
+				// candidate, Gain reads the same mirrored-and-drained baseline the Survives column
+				// suppresses above (compare.ts's runComparisonBlock adds the candidate's own skill
+				// to the BASELINE builder too, as Perspective.Other -- see the Survives column's own
+				// comment) -- so it is genuinely the same artifact, not a separate bug: the baseline
+				// is handicapped by a debuff that gives the candidate no benefit of its own, and the
+				// candidate reads as having "gained" ground the baseline actually lost. Measured
+				// directly (stamina-limited build, 2000-sample block, Murmur/201162 vs an ordinary
+				// accel skill/210042): Murmur's Gain came out to 0.064 lengths against a baseline
+				// whose survival rate the mirror pushed from a natural 1783/2000 down to 1215/2000,
+				// vs. 0.402 lengths for the ordinary skill under the same setup with no such
+				// baseline handicapping -- consistent with the Round-2 reviewer's own prior spot
+				// measurement (0.02 vs 0.30). The artifact is real but, unlike Survives (a knife-edge
+				// boolean that read as +99.0pp), it inflates Gain by a fraction of an ordinary
+				// skill's own value rather than fabricating the number outright -- judged not worth
+				// suppressing a real, if imperfect, chart cell over. Left live rather than suppressed
+				// like Survives; revisit if a future skill's own drain magnitude (this bucket's own
+				// 4-value range tops out at 3%) or a stamina-limited default build makes the
+				// inflation larger in practice.
+				//
 				// Muted rows (screened/inert/pending -- see isMutedRow) sort as if their gain were
 				// MUTED_SORT_PENALTY lower, so the default Gain-descending view shows every surviving
 				// row first and the eliminated noise (0.00 L, n=64) sinks below it instead of
@@ -443,7 +473,7 @@ export function BasinnChart(props) {
 				),
 				id: 'helpRate',
 				accessorFn: (row: ChartRow) => row.statistics?.helpRate,
-				cell: (info) => formatPercent(info.getValue()),
+				cell: (info) => formatRatePercent(info.getValue()),
 				sortDescFirst: true,
 			},
 			{
@@ -453,7 +483,7 @@ export function BasinnChart(props) {
 				),
 				id: 'procRate',
 				accessorFn: (row: ChartRow) => row.statistics?.procRate,
-				cell: (info) => formatPercent(info.getValue()),
+				cell: (info) => formatRatePercent(info.getValue()),
 				sortDescFirst: true,
 			},
 			{
@@ -475,7 +505,7 @@ export function BasinnChart(props) {
 						{
 							header: headerLabel(
 								'Survives',
-								`Share of races this candidate finished without running out of stamina, vs. the baseline's own rate (currently ${formatPercent(props.baselineSurvivalRate ?? undefined)})`,
+								`Share of races this candidate finished without running out of stamina, vs. the baseline's own rate (currently ${formatRatePercent(props.baselineSurvivalRate ?? undefined)})`,
 							),
 							id: 'survives',
 							// HP-7 fix-round-2 (C1): a candidate row whose own skill IS an opponent
