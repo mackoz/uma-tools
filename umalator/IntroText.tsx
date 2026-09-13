@@ -66,6 +66,24 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-13</summary>
+						<ul>
+							<li>
+								Fixed: a gold-skill effect that force-activates a random pending
+								skill (Summer Goldship's unique,{' '}
+								<strong>Adventure of 564</strong>, and its inherited form) could
+								occasionally cause a <strong>Stam Debuff → Configure</strong>{' '}
+								entry to be silently dropped instead of firing, if the opponent
+								also happened to equip an ordinary copy of that same debuff
+								skill -- one configured debuff activation would vanish, and the
+								opponent's ordinary copy would double-fire later to compensate.
+								Both no longer happen: a gold-skill force-activation now always
+								removes the specific pending activation that actually fired,
+								never a different one that merely shares the same skill.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-12</summary>
 						<ul>
 							<li>
