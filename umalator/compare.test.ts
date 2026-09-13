@@ -142,8 +142,8 @@ test('runComparisonBlock with incomingDebuffs is deterministic for a fixed seed'
 
 // HP-7 task 8: survivesCount/baseSurvivesCount -- how many of a block's scenarios did NOT hit
 // hpDied, counted separately for uma2/candidate (survivesCount) and uma1/baseline
-// (baseSurvivesCount). Matches runComparison's staminaSurvivalRate definition exactly
-// (compare.ts:722, "(total - hpDiedCount) / total"): survival is "did not hit hpDied".
+// (baseSurvivesCount). Matches runComparison's `staminaStatsSummary.staminaSurvivalRate`
+// definition exactly ("(total - hpDiedCount) / total"): survival is "did not hit hpDied".
 //
 // CONTROLLER RULING (overrides this task's original brief text): the brief asked for a test
 // asserting baseSurvivesCount is identical across two different candidate skills on the same block
@@ -195,7 +195,9 @@ test('runComparisonBlock: survivesCount/baseSurvivesCount are deterministic for 
 // any course -- its running_style/order_rate clauses are caster-only and get stripped, same as
 // Murmur's blocked_front_continuetime clause; verified via skill_data.json above). Phase
 // boundaries per CourseData.ts's phaseStart/phaseEnd: phase 1 (mid) is [distance/6,
-// distance*2/3), phase 2 (late) is [distance*2/3, distance).
+// distance*2/3), phase 2 (late) is [distance*2/3, distance*5/6] -- phase 3 is
+// [distance*5/6, distance], not phase 2 (fixed HP-7 review-4, M3: this comment previously said
+// phase 2 ran all the way to `distance`).
 test('an incoming stamina debuff proc lands within its real window (Murmur mid, All-Seeing Eyes late)', () => {
 	const uma1 = new TestHorse() as unknown as HorseState;
 	const uma2 = new TestHorse().set(
@@ -222,7 +224,7 @@ test('an incoming stamina debuff proc lands within its real window (Murmur mid, 
 	expect(eyesActivations!.length).toBeGreaterThan(0);
 	const [eyesPos] = eyesActivations![0];
 	expect(eyesPos).toBeGreaterThanOrEqual((course.distance * 2) / 3);
-	expect(eyesPos).toBeLessThanOrEqual(course.distance);
+	expect(eyesPos).toBeLessThanOrEqual((course.distance * 5) / 6);
 
 	// Must NOT be folded into data.sk (the card's "Skills (N)" count) -- see compare.ts's
 	// getActivator comment on why these are tracked separately.

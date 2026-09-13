@@ -168,7 +168,12 @@ export function StaminaDebuffDialog({
 					{WINDOW_ORDER.map((window) => {
 						const buckets = STAMINA_DEBUFF_BUCKETS.filter(
 							(b) => b.window === window,
-						).sort((a, b) => b.drain - a.drain || (a.id < b.id ? -1 : 1));
+							// HP-7 review-4 (M7): numeric tie-break, not lexicographic -- same
+							// numerically-lowest-id convention settled decision #4 and the round-3
+							// representative-id fix use everywhere else in this feature. `.sort()` is
+							// safe here: it mutates the fresh array `.filter()` just returned, not
+							// STAMINA_DEBUFF_BUCKETS itself.
+						).sort((a, b) => b.drain - a.drain || +a.id - +b.id);
 						if (buckets.length === 0) return null;
 						return (
 							<div class="stamDebuffGroup" key={window}>

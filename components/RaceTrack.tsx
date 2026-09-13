@@ -980,7 +980,13 @@ export function RaceTrack(props) {
 					desc.regions.forEach((r) => {
 						const x = (r.start / course.distance) * 100;
 						const half = labelHalf(desc.text);
-						const title = desc.title || desc.text;
+						// HP-7 fix-round-4 (C-I2): carry this proc's own position into its title --
+						// without it, every entry a merge folds into one cluster's `titles` list is the
+						// identical string (they only ever merge on matching skillId), so a cluster of
+						// N procs rendered "Murmur -1%, Murmur -1%, Murmur -1%" with no way to tell them
+						// apart. Round to whole meters; the merge path's tooltip is the only place this
+						// number is read back out, not anything precision-sensitive.
+						const title = `${desc.title || desc.text} @ ${Math.round(r.start)}m`;
 						let rowIdx = rows.findIndex((row) =>
 							row.every(
 								(placed) => Math.abs(placed.x - x) >= placed.half + half,
@@ -1115,8 +1121,12 @@ export function RaceTrack(props) {
 					const title = cluster.titles.join(', ');
 					debuffMarkerLayer.push(
 						<Fragment key={`${umaIndex}-${rowIdx}-${ci}`}>
+							{/* HP-7 review-4 (M6): no `.debuffMarkerLine` CSS rule exists -- this tick's
+							    styling is entirely the inline attributes below (stroke is per-uma
+							    colour, set from cluster.color). Dropped the dead class rather than
+							    adding a rule for it, since a later CSS rule targeting this class would
+							    silently override that per-uma colour. */}
 							<line
-								class="debuffMarkerLine"
 								x1={`${cluster.x}%`}
 								y1="0"
 								x2={`${cluster.x}%`}

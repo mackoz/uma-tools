@@ -62,10 +62,14 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 		}
 	}
 
-	// M8 fix (HP-7 fix-round-2): drop a bucket id this build's dataset doesn't recognize -- JP and
-	// Global mint different representative ids for the same conceptual debuff, so a JP share
-	// link/export opened against the Global build (or vice versa) can carry an id that would
-	// otherwise reach addOpponentDebuff() and throw "bad skill ID". Dropping it silently mirrors
+	// M8 fix (HP-7 fix-round-2): drop a bucket id this build's dataset doesn't recognize. Corrected
+	// HP-7 review-4 (code Minor 2): the two datasets do NOT mint different representative ids for
+	// the same conceptual debuff -- all 20 buckets shared between JP and Global elect the identical
+	// representative id. The real asymmetry: JP has one bucket Global lacks entirely (Noise
+	// Cancellation, 103602121) plus several JP-only member ids folded into shared buckets, so a JP
+	// share link/export can carry an id Global has never heard of; the reverse can't happen. Either
+	// way, opening it against a dataset that doesn't recognize the id would otherwise reach
+	// addOpponentDebuff() and throw "bad skill ID". Dropping it silently mirrors
 	// `skills`' own validSkills filtering just above: the debuff genuinely doesn't exist in this
 	// dataset, not an error to surface. sanitizeIncomingDebuffs (HP-7 review-3, Minor 10) is the
 	// shared normalize->clamp->sum->re-clamp sequence, also used by app.tsx's

@@ -269,6 +269,28 @@ interface ChartRunState {
 	survivesColumnLatched: boolean;
 }
 
+// HP-7 fix-round-4 (C-I1): the one weighted-average helper both the Survives column's *visibility*
+// latch (refreshTableRowsNow) and its *displayed* rate (baselineSurvivalRate) must call -- a
+// debuff-candidate row's baseSurvivesCount is itself the baseline-mirror artifact (compare.ts's
+// runComparisonBlock adds the candidate skill to the BASELINE builder too, as Perspective.Other --
+// for a debuff skill that makes the baseline the victim of its own candidate, draining
+// baseSurvivesCount toward 0 with no bearing on the baseline's actual, debuff-free survival rate),
+// so it's excluded here once, rather than reimplemented at each call site: a fix-round-2 exclusion
+// landed only on the displayed rate and not on this same average's use as the latch's threshold
+// input, letting the artifact alone flip the column on for an ordinary debuff-free run.
+function weightedBaselineSurvivalRate(
+	rows: Iterable<{ id: string; n: number; baseSurvivesCount: number }>,
+): number | null {
+	let n = 0;
+	let base = 0;
+	for (const row of rows) {
+		if (isOpponentStaminaDebuff(row.id)) continue;
+		n += row.n;
+		base += row.baseSurvivesCount;
+	}
+	return n > 0 ? base / n : null;
+}
+
 function formatEstimatedRuntime(ms: number): string {
 	if (!Number.isFinite(ms) || ms <= 0) return '?';
 	const s = ms / 1000;
@@ -1918,9 +1940,13 @@ async function serialize(
 }
 
 // M8 fix (HP-7 fix-round-2): mirrors storage.ts's validateAndParseUmaJson filtering -- a share
-// link's `incomingDebuffs` ids are dataset-derived and differ between JP and Global for the same
-// conceptual debuff, so a JP-produced link opened on the Global build (or vice versa) can carry
-// an id this build's catalog has never heard of. Dropping it here, before it ever reaches
+// link's `incomingDebuffs` ids are dataset-derived, and the two datasets aren't identical (fixed
+// HP-7 review-4, code Minor 2: this comment previously claimed JP and Global mint different
+// representative ids for the same conceptual debuff -- they don't; all 20 shared buckets pick the
+// identical representative id in both. The real asymmetry is that JP has one bucket -- and several
+// member ids -- Global has never heard of at all), so a JP-produced link opened on the Global
+// build can carry an id this build's catalog has never heard of (the reverse can't happen).
+// Dropping it here, before it ever reaches
 // HorseState, keeps it out of compare.ts's addIncomingDebuffs -> addOpponentDebuff, which throws
 // "bad skill ID" on anything not in skill_data.json at all.
 //
@@ -2217,15 +2243,16 @@ function updateResultsState(
 			courseId: state.courseId,
 			results: o.results,
 			runData: o.runData,
-			// Post-review fix (Finding 3): must match ResultsPane's own `displayRun` default
-			// ('median', see the App component's `useState` for it) -- these two are otherwise
-			// independent pieces of state (`displaying` here drives the course map's chartData;
-			// `displayRun` drives which run key ResultsPane reads its snapshot from), and before
-			// the user ever clicks a run-selector button (which syncs both via
-			// handleDisplayRunChange) they used to disagree on the very first result: the card
-			// showed the Median run while the map showed a DIFFERENT run's (Mean's) proc
-			// positions for the same debuff -- confirmed live (median run's card read 665m/1450m
-			// while the map's default-shown run put its ticks at ~848m/~1303m).
+			// Post-review fix (Finding 3): must match `displayRun`'s own fallback ('medianrun', not
+			// 'meanrun') -- same single default across the whole app now that `displayRun` is
+			// derived from `displaying` instead of tracked separately (fixed HP-7 review-4, M4: this
+			// comment previously described a now-deleted independent `useState` for `displayRun`).
+			// Before the fallbacks were kept in sync, `displaying` (drives the course map's
+			// chartData) and `displayRun` (drives which run key ResultsPane reads its snapshot from)
+			// disagreed on the very first result: the card showed the Median run while the map
+			// showed a DIFFERENT run's (Mean's) proc positions for the same debuff -- confirmed live
+			// (median run's card read 665m/1450m while the map's default-shown run put its ticks at
+			// ~848m/~1303m).
 			chartData: o.runData[state.displaying || 'medianrun'],
 			displaying: state.displaying || 'medianrun',
 			spurtInfo: o.spurtInfo || null,
@@ -4094,13 +4121,9 @@ function App(props) {
 		// incomingDebuffs (see courseChartTemplate), so debuffs are never "configured" there
 		// regardless of what's on uma1/lastRunChartUma.
 		if (!run.survivesColumnLatched) {
-			let n = 0;
-			let base = 0;
-			for (const row of next.values()) {
-				n += row.n;
-				base += row.baseSurvivesCount;
-			}
-			const baselineRate = n > 0 ? base / n : null;
+			// HP-7 fix-round-4 (C-I1): same weightedBaselineSurvivalRate helper baselineSurvivalRate
+			// below calls, so the debuff-row exclusion can't land on only one of the two sites again.
+			const baselineRate = weightedBaselineSurvivalRate(next.values());
 			const debuffsConfigured =
 				mode !== Mode.CourseChart && lastRunChartUma.incomingDebuffs.size > 0;
 			if (debuffsConfigured || (baselineRate != null && baselineRate < 0.995)) {
@@ -5821,23 +5844,10 @@ function App(props) {
 	// Deliberately recomputed live every tableData change (unlike showSurvivesColumn) -- this is
 	// informational text, not a show/hide decision, so it's fine for it to keep tracking the
 	// current running average as more samples arrive.
-	const baselineSurvivalRate = useMemo(() => {
-		let n = 0;
-		let base = 0;
-		for (const row of tableData.values()) {
-			// HP-7 fix-round-2 (C1): a debuff-candidate row's baseSurvivesCount is itself the
-			// baseline-mirror artifact (compare.ts's runComparisonBlock adds the candidate skill to
-			// the BASELINE builder too, as Perspective.Other -- for a debuff skill that makes the
-			// baseline the victim of its own candidate, draining baseSurvivesCount toward 0 with no
-			// bearing on the baseline's actual, debuff-free survival rate). A typical pool has ~20
-			// such rows; folding them into this weighted average would drag the single reference
-			// figure down and inflate every ordinary row's +Xpp delta right along with it.
-			if (isOpponentStaminaDebuff(row.id)) continue;
-			n += row.n;
-			base += row.baseSurvivesCount;
-		}
-		return n > 0 ? base / n : null;
-	}, [tableData]);
+	const baselineSurvivalRate = useMemo(
+		() => weightedBaselineSurvivalRate(tableData.values()),
+		[tableData],
+	);
 
 	// HP-7 fix-round-1: read straight off the run's own latch (refreshTableRowsNow), NOT
 	// recomputed here from tableData/baselineSurvivalRate -- doing the threshold comparison in

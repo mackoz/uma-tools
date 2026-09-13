@@ -38,8 +38,9 @@ export interface DebuffBucket {
 	memberIds: string[];
 }
 
-// Effect type 9 is `SkillType.Recovery` (checked in uma-skill-tools/RaceSolver.ts:167,1795).
-// Its handler (RaceSolver.ts:1795-1801) is `this.hp.recover(ef.modifier)`, and `HpPolicy.recover()`
+// Effect type 9 is `SkillType.Recovery` (checked in uma-skill-tools/RaceSolver.ts's `SkillType`
+// enum). Its handler (RaceSolver.ts's `activateSkill()`) is `this.hp.recover(ef.modifier)`, and
+// `HpPolicy.recover()`
 // adds `maxHp * modifier` -- so a negative modifier drains rather than heals, and a non-Self
 // target means the drain lands on someone else. See the engine-side ADR
 // (uma-skill-tools/docs/adr/0014-victim-safe-debuff-conditions.md) for the victim-safe-condition
@@ -54,7 +55,7 @@ const DEBUFF_EFFECT_TYPE = 9;
 // over 8 conditions. Global's shipped data yields 20 buckets, not exercised by this repo's Vitest
 // suite since it only loads JP -- see StaminaDebuffs.test.ts).
 const OTHER_TARGETS: ReadonlySet<number> = new Set([
-	2, 4, 9, 11, 18, 19, 20, 21, 22, 23,
+	2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23,
 ]);
 
 function parseWindow(stripped: string): 'early' | 'mid' | 'late' | null {

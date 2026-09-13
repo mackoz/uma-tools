@@ -76,9 +76,9 @@ export function IntroText(props) {
 								<strong>All-Seeing Eyes</strong>, <strong>Trick</strong>,{' '}
 								<strong>Stamina Siphon</strong>, and the Subdued/Flustered
 								family, among others. Each debuff fires at its real in-game
-								timing (All- Seeing Eyes late race, Murmur mid-race, Subdued
+								timing (All-Seeing Eyes late race, Murmur mid-race, Subdued
 								early) and only on courses where the game could actually land it
-								-- Murmur is Mid- distance only, for example -- and now counts
+								-- Murmur is Mid-distance only, for example -- and now counts
 								against Stamina Survival Rate, Full Spurt Rate, and HP-death on
 								the Compare tab the same as any other source of drain. The Skill
 								Chart tab gets a new sortable <strong>Survives</strong> column
@@ -95,10 +95,11 @@ export function IntroText(props) {
 								also changed from Mean to Median, matching the card (they could
 								previously default to different runs before a run was explicitly
 								selected). The Subdued/Flustered family also only lands on an
-								uma running the matching style -- e.g. "Restrained Runners" only
-								fires against a Nige (or Oonige) victim -- and the dialog now
-								greys out and explains a row that can't fire for either reason,
-								course or style, across its full 21 (JP) / 20 (Global) rows.
+								uma running the matching style -- e.g. "Subdued Front Runners"
+								only fires against a Nige (or Oonige) victim -- and the dialog
+								now greys out and explains a row that can't fire for either
+								reason, course or style, across its full 21 (JP) / 20 (Global)
+								rows.
 							</li>
 						</ul>
 					</details>

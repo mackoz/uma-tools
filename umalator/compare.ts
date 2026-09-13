@@ -218,7 +218,7 @@ export function runComparison(
 				// Deliberate: this records ANY opponent-targeting stamina debuff that lands on
 				// this horse, not only ones configured through the Stam Debuff dialog
 				// (addIncomingDebuffs/addOpponentDebuff above add those with this exact
-				// Perspective.Other -- RaceSolverBuilder.ts:854). A debuff the OPPOSING uma has
+				// Perspective.Other -- RaceSolverBuilder.ts's `addOpponentDebuff()`). A debuff the OPPOSING uma has
 				// equipped and simply activates against this horse in the ordinary
 				// Perspective.Other pass (the uma1_.skills.forEach/uma2_.skills.forEach blocks
 				// below addSkill) fires the same callback with the same Perspective.Other, and is
@@ -231,14 +231,14 @@ export function runComparison(
 				// for 11 of the 30 shipped debuff skills (e.g. 110301, 201021, 105901111; verified
 				// against skill_data.json), which carry a second, duration-bearing effect alongside
 				// the Recovery one: type 27 TargetSpeed or type 31 Accel or type 22
-				// CurrentSpeedWithNaturalDeceleration. RaceSolver.ts's activate() (~line 1776) pushes
-				// each of THOSE onto its own activeXSkills list with a duration timer, and its
-				// deactivation pass (~line 1548) calls onSkillDeactivate(this, s.skillId,
-				// s.perspective) for whatever is in that list when the timer expires -- Perspective
-				// preserved, so Perspective.Other included. What's actually true and is the reason
-				// this still works: the SkillType.Recovery EFFECT itself (type 9; RaceSolver.ts:167,
-				// 1795-1801) has no duration and never enters an active list, so the HP drain is
-				// always a single point in time, not a range -- hence storing it as a [pos, -1]
+				// CurrentSpeedWithNaturalDeceleration. RaceSolver.ts's `activateSkill()` pushes each
+				// of THOSE onto its own activeXSkills list with a duration timer, and
+				// `processSkillActivations()`'s deactivation pass calls onSkillDeactivate(this,
+				// s.skillId, s.perspective) for whatever is in that list when the timer expires --
+				// Perspective preserved, so Perspective.Other included. What's actually true and is
+				// the reason this still works: the `SkillType.Recovery` EFFECT itself (type 9,
+				// handled in `activateSkill()`) has no duration and never enters an active list, so
+				// the HP drain is always a single point in time, not a range -- hence storing it as a [pos, -1]
 				// "no end" pair, matching skillSet's own shape so ResultsPane's
 				// skillEntries/skillSize helpers and row markup can be reused as-is.
 				//
@@ -954,7 +954,8 @@ export interface ComparisonBlockOutput {
 	// count and uma1/baseline's count respectively. Plain numbers (not typed arrays, unlike the
 	// four fields above): this is one aggregate per block, not one value per sample index, so
 	// there's no per-sample array to size or transfer. Matches runComparison's
-	// staminaSurvivalRate definition exactly (compare.ts:722): survival is "did not hit hpDied".
+	// `staminaStatsSummary.staminaSurvivalRate` definition exactly: survival is "did not hit
+	// hpDied".
 	survivesCount: number;
 	baseSurvivesCount: number;
 	traces?: Map<number, ChartRunTrace>;
@@ -1172,8 +1173,8 @@ export function runComparisonBlock(
 	// past the `block.only` skip below), matching lengths/times/etc's "only" convention. uma1/s1 is
 	// always the baseline builder and uma2/s2 the candidate builder in this function (see the
 	// addIncomingDebuffs call above and the file-level note on this function's uma1/uma2
-	// convention) -- mirrors runComparison's staminaSurvivalRate definition exactly
-	// (compare.ts:722): survival is "did not hit hpDied".
+	// convention) -- mirrors runComparison's `staminaStatsSummary.staminaSurvivalRate` definition
+	// exactly: survival is "did not hit hpDied".
 	let survivesCount = 0;
 	let baseSurvivesCount = 0;
 

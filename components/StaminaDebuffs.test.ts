@@ -2,7 +2,10 @@ import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
 import globalSkillData from '../uma-skill-tools/data/global/skill_data.json';
 import jpSkillData from '../uma-skill-tools/data/jp/skill_data.json';
-import { victimSafeCondition } from '../uma-skill-tools/RaceSolverBuilder';
+import {
+	SkillTarget,
+	victimSafeCondition,
+} from '../uma-skill-tools/RaceSolverBuilder';
 import {
 	bucketsForCourse,
 	clampDebuffCount,
@@ -32,7 +35,7 @@ import {
 // distance_type before it silently vanishes from the catalog (still draining HP, still invisible
 // to isOpponentStaminaDebuff, so it would ALSO lose the Gain caveat and Survives suppression).
 function deriveBucketKeys(data: object): Set<string> {
-	const OTHER_TARGETS = new Set([2, 4, 9, 11, 18, 19, 20, 21, 22, 23]);
+	const OTHER_TARGETS = new Set([2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23]);
 	const keys = new Set<string>();
 	for (const skillId of Object.keys(data)) {
 		const skill = (data as any)[skillId];
@@ -80,6 +83,57 @@ describe('stamina debuff catalog', () => {
 		expect(STAMINA_DEBUFF_BUCKETS.length).toBe(
 			deriveBucketKeys(jpSkillData).size,
 		);
+	});
+
+	// HP-7 review-4 (C-I3): OTHER_TARGETS (StaminaDebuffs.ts, mirrored above in this file's
+	// deriveBucketKeys) is documented as "the non-`Self` values of SkillTarget" but used to omit
+	// AheadOfPosition (7) and BehindSelf (10) -- the same silent-miss failure mode this feature's
+	// ADR-0014 allowlist argument exists to avoid, since a future debuff on either target would get
+	// no bucket at all, with no signal. This pins the mirrored set against "every SkillTarget value
+	// except Self", derived straight from the engine's own enum, so the two can't drift apart again.
+	test('the mirrored OTHER_TARGETS matches every non-Self SkillTarget value', () => {
+		// Referenced via property access (not Object.values(SkillTarget)) because SkillTarget is a
+		// `const enum` -- tsc rejects anything but a property/index access or import/export/type
+		// query on one. Each member is still read from the enum itself, not restated as a literal,
+		// so a member added to or removed from SkillTarget in RaceSolverBuilder.ts still moves this
+		// set and can disagree with the mirror below.
+		const nonSelfTargets = new Set<number>([
+			SkillTarget.All,
+			SkillTarget.InFov,
+			SkillTarget.AheadOfPosition,
+			SkillTarget.AheadOfSelf,
+			SkillTarget.BehindSelf,
+			SkillTarget.AllAllies,
+			SkillTarget.EnemyStrategy,
+			SkillTarget.KakariAhead,
+			SkillTarget.KakariBehind,
+			SkillTarget.KakariStrategy,
+			SkillTarget.UmaId,
+			SkillTarget.UsedRecovery,
+		]);
+		const otherTargetsMirror = new Set([
+			2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23,
+		]);
+		expect(nonSelfTargets).toEqual(otherTargetsMirror);
+	});
+
+	// HP-7 review-4 (C-I3): the same silent-miss axis, checked directly against the shipped data
+	// rather than against the enum -- a future debuff using a target neither the catalog nor this
+	// mirror knows about would otherwise vanish from both without either failing.
+	test('no negative type-9 effect in either dataset targets outside {Self} union OTHER_TARGETS', () => {
+		const allowed = new Set([1, 2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23]);
+		for (const data of [jpSkillData, globalSkillData]) {
+			for (const skillId of Object.keys(data)) {
+				const skill = (data as any)[skillId];
+				for (const alt of skill.alternatives) {
+					for (const ef of alt.effects) {
+						if (ef.type === 9 && ef.modifier < 0) {
+							expect(allowed.has(ef.target)).toBe(true);
+						}
+					}
+				}
+			}
+		}
 	});
 
 	test('each bucket is named after its lowest-id member and has a positive drain', () => {

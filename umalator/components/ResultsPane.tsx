@@ -135,7 +135,11 @@ function getMaxVelocity(snapshot: RaceSnapshot, umaIndex: 0 | 1): number {
 }
 
 function getSkillName(skillId: string, dict: Record<string, string>): string {
-	return dict[skillId] ?? skillId;
+	// HP-7 review-4 (code Minor 8): `||`, not `??` -- some JP English-name entries are the empty
+	// string (e.g. skillnames['910301'] is ["Drain for rose", ""]), and `""` isn't nullish, so `??`
+	// let a real dictionary hit render as a blank name. Matches SkillPicker.tsx's own
+	// `getSkillName`'s `|| \`Skill ${skillId}\`` fallback precedent.
+	return dict[skillId] || skillId;
 }
 
 function skillEntries(
