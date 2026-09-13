@@ -278,30 +278,55 @@ function ConditionalBadge() {
 	);
 }
 
-// Peer-review fix (HP-7 review-2, Important 4): a small caveat marker on the Gain cell for a
-// candidate whose own skill is an opponent stamina debuff (isOpponentStaminaDebuff) -- see the
-// Gain column's own comment above for why that number is 100% the baseline's mirror-induced loss,
-// not any real benefit the candidate earned. Same shape as BestValueBadge/ConditionalBadge above
-// (focusable, keyboard/screen-reader accessible span), but visually lighter (no background fill)
-// since it sits inline in a numeric cell rather than next to a skill name -- a full badge here
-// would be wider than the number it annotates in most rows.
-function GainDebuffCaveatMarker() {
-	const tooltip =
-		'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
-		'benefit from its own effect (Perspective.Self filters non-Self targets to a no-op). This ' +
-		"row's Gain is entirely the baseline's mirror-induced stamina loss, not anything the " +
-		'candidate earned; treat it as noise, not a ranking signal.';
+// Peer-review fix (HP-7 review-2, Important 4), generalized (HP-7 review-3, Important 5): a
+// small caveat marker for a cell whose number, for a candidate whose own skill is an opponent
+// stamina debuff (isOpponentStaminaDebuff), is entirely an artifact of compare.ts's
+// runComparisonBlock mirroring that debuff onto the baseline builder too -- see the Gain column's
+// own comment above for the full mechanism. Gain was the first cell caveated this way; helpRate
+// (below) and the Helps/Ties/Hurts line in app.tsx's expanded-row detail share the exact same
+// bias (the candidate gets zero benefit from its own effect, so a "help"/"tie"/"hurt" reading is
+// really just where the mirrored baseline's drain happened to land) and previously carried no
+// marker at all. Same shape as BestValueBadge/ConditionalBadge above (focusable,
+// keyboard/screen-reader accessible span), but visually lighter (no background fill) since it
+// sits inline after a number rather than beside a skill name -- a full badge here would be wider
+// than the figure it annotates in most rows.
+export function DebuffCaveatMarker(props: { tooltip: string }) {
 	return (
 		<span
-			class="basinnChartGainCaveatMarker"
-			data-tip={tooltip}
+			class="basinnChartDebuffCaveatMarker"
+			data-tip={props.tooltip}
 			tabIndex={0}
-			aria-label={tooltip}
+			aria-label={props.tooltip}
 		>
 			†
 		</span>
 	);
 }
+
+const GAIN_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	'benefit from its own effect (Perspective.Self filters non-Self targets to a no-op). This ' +
+	"row's Gain is entirely the baseline's mirror-induced stamina loss, not anything the " +
+	'candidate earned; treat it as noise, not a ranking signal.';
+
+// HP-7 review-3, Important 5: same underlying bias as Gain above, applied to the Helps rate --
+// a debuff candidate's own effect gives it nothing (Perspective.Self filters non-Self targets to
+// a no-op), so any race this row counts as a "help" is really the mirrored baseline's
+// debuff-induced loss reading as a relative gain, not the candidate accomplishing anything.
+export const HELP_RATE_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	'benefit from its own effect. A "help" here just means the mirrored baseline (which DOES take ' +
+	"the debuff, per compare.ts's runComparisonBlock) happened to lose more ground than the " +
+	'candidate; treat this rate as noise, not a real help share.';
+
+// HP-7 review-3, Important 5: the expanded-row Helps/Ties/Hurts breakdown (app.tsx) shares the
+// same bias across all three rates, not just Helps -- every one of them is really "how the
+// mirrored baseline's debuff-induced loss happened to compare to the candidate's own (zero) gain".
+export const DETAIL_RATE_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	"benefit from its own effect. These Helps/Ties/Hurts rates reflect the mirrored baseline's " +
+	"debuff-induced loss (compare.ts's runComparisonBlock adds the same debuff to the baseline), " +
+	'not anything the candidate did; treat them as noise, not a real breakdown.';
 
 function SkillNameCell(props) {
 	const {
@@ -468,7 +493,7 @@ export function BasinnChart(props) {
 				// this chart's primary sort and the row's only ranking signal) -- instead marked, via
 				// the same isOpponentStaminaDebuff predicate the Survives column already imports, so
 				// a viewer sees the caveat rather than reading a fabricated number as earned. See
-				// GainDebuffCaveatMarker below for the marker itself.
+				// DebuffCaveatMarker below for the marker itself.
 				//
 				// Muted rows (screened/inert/pending -- see isMutedRow) sort as if their gain were
 				// MUTED_SORT_PENALTY lower, so the default Gain-descending view shows every surviving
@@ -484,7 +509,7 @@ export function BasinnChart(props) {
 					<Fragment>
 						{formatInterval(info.row.original)}
 						{isOpponentStaminaDebuff(info.row.original.id) && (
-							<GainDebuffCaveatMarker />
+							<DebuffCaveatMarker tooltip={GAIN_DEBUFF_CAVEAT_TOOLTIP} />
 						)}
 					</Fragment>
 				),
@@ -508,7 +533,16 @@ export function BasinnChart(props) {
 				),
 				id: 'helpRate',
 				accessorFn: (row: ChartRow) => row.statistics?.helpRate,
-				cell: (info) => formatRatePercent(info.getValue()),
+				// HP-7 review-3, Important 5: same caveat as the Gain cell above -- see
+				// HELP_RATE_DEBUFF_CAVEAT_TOOLTIP.
+				cell: (info) => (
+					<Fragment>
+						{formatRatePercent(info.getValue())}
+						{isOpponentStaminaDebuff(info.row.original.id) && (
+							<DebuffCaveatMarker tooltip={HELP_RATE_DEBUFF_CAVEAT_TOOLTIP} />
+						)}
+					</Fragment>
+				),
 				sortDescFirst: true,
 			},
 			{

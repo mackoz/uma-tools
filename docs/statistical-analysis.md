@@ -580,9 +580,13 @@ during a race (Murmur, All-Seeing Eyes, Trick, the Subdued/Flustered family, etc
 `components/StaminaDebuffDialog.tsx`, `components/StaminaDebuffs.ts`). `umalator/compare.ts`'s
 `addIncomingDebuffs()` feeds each configured debuff into the *victim's* own `RaceSolverBuilder`
 via the engine's `addOpponentDebuff()` (`uma-skill-tools/RaceSolverBuilder.ts`), which strips the
-skill's condition down to only its victim-safe (timing/course) terms before evaluating it --
-caster-specific terms like the caster's own stats or position can't be checked against the
-victim's own race state, so they're dropped rather than misevaluated.
+skill's condition down to only an **allowlist** of victim-safe terms before evaluating it --
+`phase`/`phase_random`/`accumulatetime`/`distance_type` (timing/course, true identically for
+caster and victim) plus the four `running_style_count_{nige,senko,sashi,oikomi}_otherself` terms
+(the *victim's* own running style once rewritten, not the caster's) -- while caster-specific terms
+like the caster's own stats or position can't be checked against the victim's own race state, so
+they're dropped rather than misevaluated. See
+`uma-skill-tools/docs/adr/0014-victim-safe-debuff-conditions.md` for the full allowlist.
 
 On the Skill Chart / Uniques Chart tables (`BasinnChart.tsx`), every `ChartRow` now also carries
 `survivesCount`/`baseSurvivesCount` -- how many of a candidate's own paired samples, and how many

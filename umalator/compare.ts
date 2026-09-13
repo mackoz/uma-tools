@@ -1,7 +1,7 @@
 import type { HorseState } from '../components/HorseDefTypes';
 import {
+	clampDebuffCount,
 	isOpponentStaminaDebuff,
-	MAX_DEBUFF_COUNT,
 } from '../components/StaminaDebuffs';
 import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
@@ -27,14 +27,19 @@ function addIncomingDebuffs(builder: RaceSolverBuilder, uma: HorseState) {
 		.entrySeq()
 		.sortBy(([id]) => id)
 		.forEach(([id, count]) => {
-			// Peer-review fix (HP-7 Critical 2): defense in depth -- both rehydration paths
-			// (umalator/app.tsx's filterKnownIncomingDebuffs, umalator/storage.ts's
-			// validateAndParseUmaJson) now clamp count to a finite [0, 9] integer before it ever
-			// reaches HorseState, but a loop bound that CAN be Infinity/NaN shouldn't rely solely on
-			// every caller having validated it -- so clamp again here rather than trust it blindly.
-			const n = Number.isFinite(count)
-				? Math.max(0, Math.min(MAX_DEBUFF_COUNT, Math.floor(count)))
-				: 0;
+			// Peer-review fix (HP-7 Critical 2): defense in depth -- every incomingDebuffs
+			// construction site (umalator/app.tsx's filterKnownIncomingDebuffs, umalator/storage.ts's
+			// validateAndParseUmaJson, umalator/simulator.worker.ts's buildHorseState) now clamps
+			// count to a finite [0, 9] integer before it ever reaches HorseState, but a loop bound
+			// that CAN be Infinity/NaN shouldn't rely solely on every caller having validated it --
+			// so clamp again here rather than trust it blindly.
+			//
+			// HP-7 review-3, Minor 10: re-derives from the raw `count` via clampDebuffCount (the
+			// same function backing those callers' sanitizeIncomingDebuffs) instead of hand-rolling
+			// the same math -- but deliberately does NOT call sanitizeIncomingDebuffs itself, so this
+			// stays a genuinely independent re-check of whatever `uma.incomingDebuffs` actually holds
+			// at solve time, not one that trusts a caller already ran it.
+			const n = clampDebuffCount(count) ?? 0;
 			for (let i = 0; i < n; ++i) builder.addOpponentDebuff(id);
 		});
 }

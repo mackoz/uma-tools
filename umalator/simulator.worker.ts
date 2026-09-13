@@ -7,6 +7,7 @@ const post: (message: any, transfer?: Transferable[]) => void =
 	postMessage as any;
 
 import { HorseState } from '../components/HorseDefTypes';
+import { sanitizeIncomingDebuffs } from '../components/StaminaDebuffs';
 import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -21,7 +22,18 @@ function buildHorseState(raw: any): HorseState {
 	return new HorseState(raw)
 		.set('skills', fromJS(raw.skills))
 		.set('forcedSkillPositions', ImmMap(raw.forcedSkillPositions || {}))
-		.set('incomingDebuffs', ImmMap<string, number>(raw.incomingDebuffs || {}));
+		.set(
+			'incomingDebuffs',
+			// HP-7 review-3, Important 6: this is the third incomingDebuffs construction site
+			// (alongside umalator/storage.ts and umalator/app.tsx's share-link decode) -- the other
+			// two run every incoming id/count through sanitizeIncomingDebuffs
+			// (normalizeDebuffId + clampDebuffCount) before it reaches a live HorseState; this one
+			// didn't, an asymmetry in the defence-in-depth pattern built for the infinite-loop fix
+			// (Critical 2). Currently safe in practice -- every postMessage into this worker traces
+			// back to an already-hardened live HorseState on the main thread -- but hardening this
+			// site too keeps the invariant true regardless of caller, not just of today's callers.
+			ImmMap<string, number>(sanitizeIncomingDebuffs(raw.incomingDebuffs)),
+		);
 }
 
 // Replaces whatever's already equipped in `id`'s skill group (if any) with `id` itself -- the

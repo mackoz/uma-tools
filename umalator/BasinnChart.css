@@ -300,13 +300,15 @@
 	outline-offset: 1px;
 }
 
-/* Peer-review fix (HP-7 review-2, Important 4): caveat marker on the Gain cell for a debuff
-   candidate row -- see BasinnChart.tsx's GainDebuffCaveatMarker for what it's warning about.
-   Deliberately lighter than Best value/Conditional above (no background fill, no border) since it
-   sits inline after a number in a numeric cell rather than beside a skill name -- a full pill
-   badge here would be wider than the Gain figure it annotates in most rows. Reuses --warning
-   (a caveat, like Conditional, not a commendation like Best value) for just the glyph color. */
-.basinnChartGainCaveatMarker {
+/* Peer-review fix (HP-7 review-2, Important 4), generalized (HP-7 review-3, Important 5): caveat
+   marker for a cell whose number is an artifact of the baseline-mirroring bias -- see
+   BasinnChart.tsx's DebuffCaveatMarker for what it's warning about. Shared by the Gain cell, the
+   Helps cell, and app.tsx's expanded-row Helps/Ties/Hurts line. Deliberately lighter than Best
+   value/Conditional above (no background fill, no border) since it sits inline after a number
+   rather than beside a skill name -- a full pill badge here would be wider than the figure it
+   annotates in most rows. Reuses --warning (a caveat, like Conditional, not a commendation like
+   Best value) for just the glyph color. */
+.basinnChartDebuffCaveatMarker {
 	color: var(--warning);
 	cursor: help;
 	font-weight: bold;
@@ -314,8 +316,8 @@
 	position: relative;
 }
 
-.basinnChartGainCaveatMarker:hover::after,
-.basinnChartGainCaveatMarker:focus-visible::after {
+.basinnChartDebuffCaveatMarker:hover::after,
+.basinnChartDebuffCaveatMarker:focus-visible::after {
 	background: var(--card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -337,7 +339,7 @@
 	z-index: 10;
 }
 
-.basinnChartGainCaveatMarker:focus-visible {
+.basinnChartDebuffCaveatMarker:focus-visible {
 	outline: 2px solid var(--warning);
 	outline-offset: 1px;
 }

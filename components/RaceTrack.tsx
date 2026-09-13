@@ -941,16 +941,45 @@ export function RaceTrack(props) {
 					// app.tsx now also sends a short drain-only `text` (full name moved to
 					// `title`, shown as a hover tooltip) so a cluster of same-bucket procs has
 					// much less width to stack in the first place.
+					//
+					// HP-7 review-3, Minor 10: this row-packing deliberately does NOT share
+					// state.rungs (the Textbox branch above, ~30 lines up) despite both stacking
+					// same-kind items into vertical rows to avoid overlap. Textbox packs
+					// SKILL-ACTIVATION BOXES with real [start, end) extents known up front (a
+					// skill's own duration), checks true interval overlap against 10 fixed rungs,
+					// and on overflow wraps back to rung 0 via `i % 10` -- silent visual overlap
+					// past 10 simultaneous boxes is acceptable there because skill activations
+					// this dense are rare and the boxes are wide targets anyway. Marker packs
+					// DEBUFF-PROC LABELS, which are point ticks with no natural extent -- "width"
+					// is a rendered-text estimate (labelHalf, and it must be recomputed when a
+					// merge widens a cluster's label -- see fix 4 above), and it doesn't wrap on
+					// overflow because wrapping would silently overlap two DIFFERENT skills'
+					// labels (unreadable, and worse, undiagnosable without the tooltip); merging
+					// same-bucket procs into one counted cluster instead is safe here because the
+					// Incoming Debuffs card section already lists every proc individually, so nothing
+					// is lost. Sharing one packing implementation was not attempted: Textbox's
+					// interval-overlap check and Marker's half-width-distance check answer genuinely
+					// different questions (do two ranges overlap vs. are two points too close to
+					// read), and reconciling the overflow behavior (wrap vs. merge) would change
+					// Textbox's long-standing accepted-overlap behavior for a benefit only Marker
+					// needs.
 					if (state.markerRows[desc.umaIndex] == null) {
 						state.markerRows[desc.umaIndex] = [];
 					}
 					const rows: Array<MarkerCluster[]> = state.markerRows[desc.umaIndex];
+					// Rough label half-width in % units -- 9px font, narrow charset
+					// (letters/digits/%/-), ~3.6px/char plus a little padding so near-misses
+					// still get separated rather than just barely touching. Shared by both the
+					// single-proc case below and the overflow-merge path (HP-7 review-3 fix 4),
+					// which must recompute this from the WIDER `${count}× ${label}` text a merged
+					// cluster ends up rendering -- a half-width computed once from the single-proc
+					// label at creation and never updated left a later placement's overlap check
+					// trusting a too-narrow reservation once that cluster's rendered text grew.
+					const labelHalf = (text: string) =>
+						((text.length * 3.6 + 6) / props.width) * 100;
 					desc.regions.forEach((r) => {
 						const x = (r.start / course.distance) * 100;
-						// Rough label half-width in % units -- 9px font, narrow charset
-						// (letters/digits/%/-), ~3.6px/char plus a little padding so near-misses
-						// still get separated rather than just barely touching.
-						const half = ((desc.text.length * 3.6 + 6) / props.width) * 100;
+						const half = labelHalf(desc.text);
 						const title = desc.title || desc.text;
 						let rowIdx = rows.findIndex((row) =>
 							row.every(
@@ -1033,6 +1062,14 @@ export function RaceTrack(props) {
 						}
 						best.count += 1;
 						best.titles.push(title);
+						// The rendered label becomes `${count}× ${text}` once count > 1 (see the
+						// debuffMarkerLayer render pass below) -- wider than the single-proc label
+						// `half` was reserved for at creation, so recompute it from that same
+						// widened text or a later placement's overlap check trusts a stale,
+						// too-narrow reservation.
+						best.half = labelHalf(
+							best.count > 1 ? `${best.count}× ${best.text}` : best.text,
+						);
 					});
 				} else {
 					state.elem.push(

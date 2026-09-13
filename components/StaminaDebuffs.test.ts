@@ -1,6 +1,7 @@
 import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
 import globalSkillData from '../uma-skill-tools/data/global/skill_data.json';
+import jpSkillData from '../uma-skill-tools/data/jp/skill_data.json';
 import { victimSafeCondition } from '../uma-skill-tools/RaceSolverBuilder';
 import {
 	bucketsForCourse,
@@ -23,11 +24,18 @@ import {
 // the *import redirect* that sends the built Global app at it is build-time -- see this file's
 // own top-of-describe comment above), so this is a real regression check, not a restatement of a
 // number in prose.
-function deriveGlobalBucketKeys(): Set<string> {
+// HP-7 review-3, Important 7: generalized (was Global-only) so the JP invariant test below can
+// reuse it too -- deriveBuckets() (StaminaDebuffs.ts) silently drops any grouping whose
+// victimSafeCondition-stripped condition has no phase/phase_random clause (parseWindow returns
+// null), with nothing asserting that invariant. Comparing this independently-derived key count
+// against STAMINA_DEBUFF_BUCKETS.length catches a future debuff gated purely on e.g.
+// distance_type before it silently vanishes from the catalog (still draining HP, still invisible
+// to isOpponentStaminaDebuff, so it would ALSO lose the Gain caveat and Survives suppression).
+function deriveBucketKeys(data: object): Set<string> {
 	const OTHER_TARGETS = new Set([2, 4, 9, 11, 18, 19, 20, 21, 22, 23]);
 	const keys = new Set<string>();
-	for (const skillId of Object.keys(globalSkillData)) {
-		const skill = (globalSkillData as any)[skillId];
+	for (const skillId of Object.keys(data)) {
+		const skill = (data as any)[skillId];
 		for (const alt of skill.alternatives) {
 			for (const ef of alt.effects) {
 				if (ef.type === 9 && ef.modifier < 0 && OTHER_TARGETS.has(ef.target)) {
@@ -56,17 +64,45 @@ describe('stamina debuff catalog', () => {
 
 	// Minor fix (HP-7 review-2): the Global half of the 21 -> 20 claim above, made regression-proof
 	// (not just prose) by re-deriving the grouping directly against data/global/skill_data.json --
-	// see deriveGlobalBucketKeys above.
+	// see deriveBucketKeys above.
 	test('derives 20 buckets from the shipped Global data', () => {
-		expect(deriveGlobalBucketKeys().size).toBe(20);
+		expect(deriveBucketKeys(globalSkillData).size).toBe(20);
+	});
+
+	// HP-7 review-3, Important 7: pins the invariant deriveBuckets() (StaminaDebuffs.ts) never
+	// silently asserted -- every independently-derived grouping actually makes it into the
+	// catalog. If a future data refresh ships a debuff gated purely on e.g. distance_type (no
+	// phase/phase_random clause survives stripping), parseWindow() returns null and deriveBuckets()
+	// currently drops that group instead of producing a bucket for it -- this count comparison
+	// would go red (STAMINA_DEBUFF_BUCKETS.length < the independently-derived key count) instead of
+	// the debuff silently vanishing from the catalog while still draining HP in the engine.
+	test('no derived bucket key is dropped from the shipped JP catalog', () => {
+		expect(STAMINA_DEBUFF_BUCKETS.length).toBe(
+			deriveBucketKeys(jpSkillData).size,
+		);
 	});
 
 	test('each bucket is named after its lowest-id member and has a positive drain', () => {
 		for (const b of STAMINA_DEBUFF_BUCKETS) {
 			expect(b.memberIds).toContain(b.id);
-			expect(b.id).toBe([...b.memberIds].sort()[0]);
+			// Numeric minimum, not a default (lexicographic) string sort -- see the
+			// "picks the numerically-lowest id" test below for a bucket where the two disagree.
+			expect(b.id).toBe([...b.memberIds].sort((a, b2) => +a - +b2)[0]);
 			expect(b.drain).toBeGreaterThan(0);
 		}
+	});
+
+	// HP-7 review-3 fix 2 (Important): deriveBuckets() used to `.sort()` member ids as strings,
+	// which picks the wrong representative whenever a 9-digit id lexicographically precedes a
+	// numerically-lower one -- 4 of the 21 JP buckets were affected (a 9-digit pink unique beating
+	// a numerically-lower generic). This pins the numeric minimum for a real multi-member bucket
+	// where lexicographic and numeric order disagree.
+	test('picks the numerically-lowest id, not the lexicographically-lowest, for a bucket with a 9-digit member', () => {
+		const bucket = STAMINA_DEBUFF_BUCKETS.find((b) =>
+			b.memberIds.includes('200772'),
+		)!;
+		expect(bucket.memberIds).toContain('100502111');
+		expect(bucket.id).toBe('200772');
 	});
 
 	test('Murmur is 1%, mid-race, Mid-distance only', () => {

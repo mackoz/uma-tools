@@ -56,12 +56,10 @@ import {
 import { SkillPickerModal } from '../components/SkillPicker';
 import { hasEvolvedSkills, matchRarity } from '../components/SkillRarity';
 import {
-	clampDebuffCount,
 	drainForSkill,
 	formatPercent,
 	isOpponentStaminaDebuff,
-	MAX_DEBUFF_COUNT,
-	normalizeDebuffId,
+	sanitizeIncomingDebuffs,
 } from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
 import skillmeta from '../skill_meta.json';
@@ -87,6 +85,8 @@ import unreleased from '../unreleased.json';
 import {
 	acrParser,
 	BasinnChart,
+	DETAIL_RATE_DEBUFF_CAVEAT_TOOLTIP,
+	DebuffCaveatMarker,
 	getActivateableSkills,
 	isMutedRow,
 	isPurpleSkill,
@@ -1942,22 +1942,12 @@ async function serialize(
 // blowing past the [0, 9] invariant HorseDefTypes.ts documents (compare.ts re-clamps its loop
 // bound, so this didn't hang, but the card/dialog displayed 18x drain while the engine applied
 // only 9x). Clamping again after the sum, not just each addend before it, closes that gap.
-function filterKnownIncomingDebuffs(
-	raw: { [key: string]: number } | undefined | null,
-): { [key: string]: number } {
-	const filtered: { [key: string]: number } = {};
-	if (raw == null) return filtered;
-	for (const [skillId, count] of Object.entries(raw)) {
-		const representativeId = normalizeDebuffId(skillId);
-		if (representativeId == null) continue;
-		const clamped = clampDebuffCount(count);
-		if (clamped != null && clamped > 0) {
-			const summed = (filtered[representativeId] ?? 0) + clamped;
-			filtered[representativeId] = Math.min(summed, MAX_DEBUFF_COUNT);
-		}
-	}
-	return filtered;
-}
+//
+// HP-7 review-3, Minor 10: this exact sequence was duplicated in umalator/storage.ts's
+// validateAndParseUmaJson (this comment's history of hand-applied fixes is why it's now shared
+// instead) -- both now delegate to StaminaDebuffs.ts's sanitizeIncomingDebuffs, along with
+// simulator.worker.ts's buildHorseState.
+const filterKnownIncomingDebuffs = sanitizeIncomingDebuffs;
 
 async function deserialize(hash) {
 	const zipped = atob(decodeURIComponent(hash));
@@ -5634,6 +5624,11 @@ function App(props) {
 						<div class="expandedMetaLine">
 							Helps: {helpRate.toFixed(1)}% · Ties: {tieRate.toFixed(1)}% ·
 							Hurts: {hurtRate.toFixed(1)}%
+							{isOpponentStaminaDebuff(skillId) && (
+								<DebuffCaveatMarker
+									tooltip={DETAIL_RATE_DEBUFF_CAVEAT_TOOLTIP}
+								/>
+							)}
 						</div>
 						<div class="expandedRateBar">
 							<div

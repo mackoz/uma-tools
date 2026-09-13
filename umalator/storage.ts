@@ -1,8 +1,4 @@
-import {
-	clampDebuffCount,
-	MAX_DEBUFF_COUNT,
-	normalizeDebuffId,
-} from '../components/StaminaDebuffs';
+import { sanitizeIncomingDebuffs } from '../components/StaminaDebuffs';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import umas from '../umas.json';
 
@@ -66,39 +62,18 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 		}
 	}
 
-	const incomingDebuffs: Record<string, number> = {};
-	if (json.incomingDebuffs && typeof json.incomingDebuffs === 'object') {
-		for (const [skillId, count] of Object.entries(json.incomingDebuffs)) {
-			// M8 fix (HP-7 fix-round-2): drop a bucket id this build's dataset doesn't recognize --
-			// JP and Global mint different representative ids for the same conceptual debuff, so a
-			// JP share link/export opened against the Global build (or vice versa) can carry an id
-			// that would otherwise reach addOpponentDebuff() and throw "bad skill ID". Dropping it
-			// silently mirrors `skills`' own validSkills filtering just above: the debuff genuinely
-			// doesn't exist in this dataset, not an error to surface.
-			// Peer-review fix (HP-7 Important 3): normalizeDebuffId both checks that the id is known
-			// at all (any bucket member) AND normalises it to its bucket's representative id, so a
-			// non-representative member id doesn't silently become invisible/uneditable in the
-			// dialog -- see that function's own comment.
-			const representativeId = normalizeDebuffId(skillId);
-			if (representativeId == null) continue;
-			// Peer-review fix (HP-7 Critical 2): this used to only NaN-guard, with no upper bound --
-			// a large finite hand-edited count (or one from a corrupted/malicious saved slot) hangs
-			// the tab the same way an infinite count from a share link does (see app.tsx's
-			// filterKnownIncomingDebuffs). clampDebuffCount enforces the same [0, 9] range
-			// StaminaDebuffDialog.tsx's own stepper does; a count that isn't a usable number at all,
-			// or clamps to 0, is dropped.
-			//
-			// Peer-review fix (HP-7 review-2, Important 3): re-clamp after summing, not just each
-			// addend before it -- a multi-member bucket (e.g. {200771, 200781}) can carry a
-			// separately-clamped-to-9 count under each member id, and summing two 9s produced 18,
-			// past the [0, 9] invariant this function's return type documents.
-			const clamped = clampDebuffCount(count);
-			if (clamped != null && clamped > 0) {
-				const summed = (incomingDebuffs[representativeId] ?? 0) + clamped;
-				incomingDebuffs[representativeId] = Math.min(summed, MAX_DEBUFF_COUNT);
-			}
-		}
-	}
+	// M8 fix (HP-7 fix-round-2): drop a bucket id this build's dataset doesn't recognize -- JP and
+	// Global mint different representative ids for the same conceptual debuff, so a JP share
+	// link/export opened against the Global build (or vice versa) can carry an id that would
+	// otherwise reach addOpponentDebuff() and throw "bad skill ID". Dropping it silently mirrors
+	// `skills`' own validSkills filtering just above: the debuff genuinely doesn't exist in this
+	// dataset, not an error to surface. sanitizeIncomingDebuffs (HP-7 review-3, Minor 10) is the
+	// shared normalize->clamp->sum->re-clamp sequence, also used by app.tsx's
+	// filterKnownIncomingDebuffs and simulator.worker.ts's buildHorseState.
+	const incomingDebuffs: Record<string, number> =
+		json.incomingDebuffs && typeof json.incomingDebuffs === 'object'
+			? sanitizeIncomingDebuffs(json.incomingDebuffs)
+			: {};
 
 	return {
 		outfitId: typeof json.outfitId === 'string' ? json.outfitId : '',

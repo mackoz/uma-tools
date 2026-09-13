@@ -24,7 +24,7 @@ import {
 export { VictimSafeConditions };
 
 export interface DebuffBucket {
-	id: string; // representative skill id = lowest id (string sort) among memberIds
+	id: string; // representative skill id = numerically lowest id among memberIds
 	drain: number; // fraction of maxHp, positive (0.01 === 1%)
 	window: 'early' | 'mid' | 'late';
 	distanceType: number | null; // null === any course
@@ -184,7 +184,11 @@ function deriveBuckets(): DebuffBucket[] {
 			// can't meaningfully place in a window rather than crash the whole derivation.
 			continue;
 		}
-		const ids = [...memberIds].sort();
+		// Numeric sort, matching compare.ts's `(a, b) => +a - +b` -- these are all numeric skill ids,
+		// and a default string sort picks the lexicographically-least id rather than the spec's
+		// "lowest-ID member" (e.g. a 9-digit pink unique like 100502111 sorts before 200772 as a
+		// string despite being numerically larger).
+		const ids = [...memberIds].sort((a, b) => +a - +b);
 		buckets.push({
 			id: ids[0],
 			drain,
@@ -268,8 +272,11 @@ export function totalDrain(
 // are being excluded from the displayed total, broken down by WHY -- the current course can't
 // produce them, or the victim's own running style doesn't match their gate. The two are reported
 // separately (rather than one combined count) so the dialog/card can word each reason correctly;
-// no shipped bucket is gated on both axes at once (verified against the current data), but a
-// bucket that somehow were would count under both rather than being silently miscounted.
+// no shipped bucket is gated on both axes at once (verified against the current data). A bucket
+// gated on both is counted under wrongCourse only (course checked first), matching totalDrain's
+// own single `if...return` exclusion above -- HP-7 review-3, Minor 10: this used to add the same
+// count to BOTH categories for such a bucket, so wrongCourse + wrongStyle could overcount relative
+// to totalDrain's one-time exclusion (zero shipped buckets are affected either way).
 export interface ExcludedDebuffCounts {
 	wrongCourse: number;
 	wrongStyle: number;
@@ -290,8 +297,7 @@ export function excludedDebuffCount(
 			bucket.distanceType !== distanceType
 		) {
 			result.wrongCourse += count;
-		}
-		if (!strategyMatchesBucket(strategy, bucket.strategy)) {
+		} else if (!strategyMatchesBucket(strategy, bucket.strategy)) {
 			result.wrongStyle += count;
 		}
 	});
@@ -385,4 +391,31 @@ export function clampDebuffCount(raw: unknown): number | null {
 	const num = typeof raw === 'number' ? raw : parseFloat(raw as string);
 	if (!Number.isFinite(num)) return null;
 	return Math.max(0, Math.min(MAX_DEBUFF_COUNT, Math.floor(num)));
+}
+
+// HP-7 review-3, Minor 10: the ONE normalize->clamp->sum->re-clamp sequence for a raw
+// (untrusted) incomingDebuffs record, shared by every construction site instead of each
+// hand-rolling it -- umalator/app.tsx's `filterKnownIncomingDebuffs` (share-link decode) and
+// umalator/storage.ts's `validateAndParseUmaJson` (saved-slot decode) previously duplicated this
+// exact logic, and it has already needed two hand-applied fixes (Critical 2's clamp, review-2
+// Important 3's re-clamp-after-sum) during this feature's own review history. Drops any entry
+// whose id isn't a known bucket member (normalizeDebuffId) or whose count isn't a usable number
+// (clampDebuffCount), folds every member id of a multi-member bucket onto its representative id,
+// sums duplicate representative ids, and re-clamps the sum to [0, MAX_DEBUFF_COUNT] so two
+// already-clamped-to-9 counts under different member ids of the same bucket can't add up past 9.
+export function sanitizeIncomingDebuffs(
+	raw: { [key: string]: number } | undefined | null,
+): { [key: string]: number } {
+	const sanitized: { [key: string]: number } = {};
+	if (raw == null) return sanitized;
+	for (const [skillId, count] of Object.entries(raw)) {
+		const representativeId = normalizeDebuffId(skillId);
+		if (representativeId == null) continue;
+		const clamped = clampDebuffCount(count);
+		if (clamped != null && clamped > 0) {
+			const summed = (sanitized[representativeId] ?? 0) + clamped;
+			sanitized[representativeId] = Math.min(summed, MAX_DEBUFF_COUNT);
+		}
+	}
+	return sanitized;
 }
