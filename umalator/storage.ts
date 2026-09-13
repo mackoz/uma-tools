@@ -1,5 +1,6 @@
 import {
 	clampDebuffCount,
+	MAX_DEBUFF_COUNT,
 	normalizeDebuffId,
 } from '../components/StaminaDebuffs';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
@@ -86,10 +87,15 @@ export function validateAndParseUmaJson(json: any): UmaState | null {
 			// filterKnownIncomingDebuffs). clampDebuffCount enforces the same [0, 9] range
 			// StaminaDebuffDialog.tsx's own stepper does; a count that isn't a usable number at all,
 			// or clamps to 0, is dropped.
+			//
+			// Peer-review fix (HP-7 review-2, Important 3): re-clamp after summing, not just each
+			// addend before it -- a multi-member bucket (e.g. {200771, 200781}) can carry a
+			// separately-clamped-to-9 count under each member id, and summing two 9s produced 18,
+			// past the [0, 9] invariant this function's return type documents.
 			const clamped = clampDebuffCount(count);
 			if (clamped != null && clamped > 0) {
-				incomingDebuffs[representativeId] =
-					(incomingDebuffs[representativeId] ?? 0) + clamped;
+				const summed = (incomingDebuffs[representativeId] ?? 0) + clamped;
+				incomingDebuffs[representativeId] = Math.min(summed, MAX_DEBUFF_COUNT);
 			}
 		}
 	}

@@ -94,7 +94,11 @@ export function IntroText(props) {
 								<strong>Show HP</strong> toggle. The map's default displayed run
 								also changed from Mean to Median, matching the card (they could
 								previously default to different runs before a run was explicitly
-								selected).
+								selected). The Subdued/Flustered family also only lands on an
+								uma running the matching style -- e.g. "Restrained Runners" only
+								fires against a Nige (or Oonige) victim -- and the dialog now
+								greys out and explains a row that can't fire for either reason,
+								course or style, across its full 21 (JP) / 20 (Global) rows.
 							</li>
 						</ul>
 					</details>

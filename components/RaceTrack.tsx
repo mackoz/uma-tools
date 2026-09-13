@@ -980,7 +980,7 @@ export function RaceTrack(props) {
 						//
 						// Peer-review fix (HP-7 Important 5): matching on `text` alone used to merge
 						// clusters that only share a rendered drain-% label -- only 4 distinct drain
-						// magnitudes exist across 15-21 debuff buckets, so e.g. two entirely
+						// magnitudes exist across 21 (JP) / 20 (Global) debuff buckets, so e.g. two entirely
 						// different skills both labelled "−1%" (one of which alone covers ~16
 						// shipped skills) could merge into one cluster whose tooltip then
 						// misattributes which skill fired and where. Matching on `skillId` (the
@@ -1014,8 +1014,8 @@ export function RaceTrack(props) {
 							// same MARKER_ROW_CAP row slots). This is still expected to be rare in
 							// practice: it requires several *distinct* debuff buckets landing within
 							// the same tight x-window in the same race, and the dialog's realistic
-							// usage is 1-3 configured buckets, not the full 15-21-bucket catalog at
-							// once. No overlap check is added here -- an occasional visual overlap in
+							// usage is 1-3 configured buckets, not the full 21-bucket (JP) / 20-bucket
+							// (Global) catalog at once. No overlap check is added here -- an occasional visual overlap in
 							// this already-rare, already-documented fallback is preferable to the
 							// complexity of a second stacking pass, and each cluster's own
 							// (now-correct) skillId/titles still make its tooltip attribute

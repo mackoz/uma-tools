@@ -128,3 +128,20 @@ test('a non-representative member id is normalized to its bucket representative'
 	expect(restored.has('200781')).toBe(false);
 	expect(restored.get('200771')).toBe(3);
 });
+
+// Peer-review fix (HP-7 review-2, Important 3): two DIFFERENT member ids of the SAME bucket
+// ({200771, 200781}) each carrying an already-clamped-to-cap count both normalise to
+// representative 200771 -- summing two 9s used to produce 18, blowing past the [0, 9] invariant
+// HorseDefTypes.ts documents for incomingDebuffs (the exact threat model Critical 2's own count
+// clamp was meant to close off, reopened by collision after normalisation rather than by an
+// unclamped single value). The sum is now re-clamped to MAX_DEBUFF_COUNT (9), not just each
+// addend before it.
+test('two member ids of the same bucket summing above the cap are clamped after summing', () => {
+	const parsed = validateAndParseUmaJson({
+		...BASE_UMA,
+		incomingDebuffs: { '200771': 9, '200781': 9 },
+	});
+	expect(parsed).not.toBeNull();
+	const restored = ImmMap(parsed!.incomingDebuffs);
+	expect(restored.get('200771')).toBe(9);
+});

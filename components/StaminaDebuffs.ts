@@ -28,6 +28,13 @@ export interface DebuffBucket {
 	drain: number; // fraction of maxHp, positive (0.01 === 1%)
 	window: 'early' | 'mid' | 'late';
 	distanceType: number | null; // null === any course
+	// Peer-review fix (HP-7 Important 1): the victim's own running style this bucket is gated on,
+	// parsed out of a `running_style_count_{nige,senko,sashi,oikomi}_otherself` clause the same way
+	// `distanceType` is parsed out of a `distance_type` clause -- null === any running style. See
+	// STRATEGY_TERM_MAP/parseStrategy below and RaceSolverBuilder.ts's ANCHOR
+	// victim-safe-condition-allowlist for why this term is now victim-safe and kept rather than
+	// stripped.
+	strategy: 'Nige' | 'Senkou' | 'Sasi' | 'Oikomi' | null;
 	memberIds: string[];
 }
 
@@ -79,6 +86,65 @@ function parseDistanceType(stripped: string): number | null {
 	return null;
 }
 
+// Peer-review fix (HP-7 Important 1): term name -> the app's own strategy-string spelling
+// (components/HorseDefTypes.ts: 'Nige' | 'Senkou' | 'Sasi' | 'Oikomi' | 'Oonige'), matching
+// ActivationConditions.ts's own term names (note "senko"/"sashi", not "senkou"/"sasi", in the
+// term itself).
+const STRATEGY_TERM_MAP: Readonly<Record<string, DebuffBucket['strategy']>> = {
+	running_style_count_nige_otherself: 'Nige',
+	running_style_count_senko_otherself: 'Senkou',
+	running_style_count_sashi_otherself: 'Sasi',
+	running_style_count_oikomi_otherself: 'Oikomi',
+};
+
+function parseStrategy(stripped: string): DebuffBucket['strategy'] {
+	const clauses = stripped.split(/[&@]/);
+	for (const clause of clauses) {
+		const term = clause.replace(/[<>=!].*/, '');
+		if (term in STRATEGY_TERM_MAP) {
+			return STRATEGY_TERM_MAP[term];
+		}
+	}
+	return null;
+}
+
+// Peer-review fix (HP-7 Important 1): mirrors uma-skill-tools' StrategyHelpers.strategyMatches
+// (HorseTypes.ts), verified directly -- an Oonige victim's `running_style_count_nige_otherself`
+// clause evaluates true too (`strategyMatches(Strategy.Oonige, Strategy.Nige)` is true in both
+// directions there), so a Nige-gated bucket must read as possible for an Oonige uma, not just a
+// Nige one. Re-implemented locally against the app's own strategy string spelling rather than
+// importing the engine's `const enum Strategy` across the esbuild module boundary (no existing
+// precedent for that import in this codebase, and `const enum` re-export across separately
+// transpiled files is a known esbuild/isolatedModules trap).
+export function strategyMatchesBucket(
+	victimStrategy: string | null | undefined,
+	bucketStrategy: DebuffBucket['strategy'],
+): boolean {
+	if (bucketStrategy == null || victimStrategy == null) return true;
+	if (victimStrategy === bucketStrategy) return true;
+	return bucketStrategy === 'Nige' && victimStrategy === 'Oonige';
+}
+
+// Peer-review fix (HP-7 Important 1): true iff `bucket` can both exist on `distanceType` (as
+// bucketsForCourse already checked) AND fire for a victim running `strategy` -- the second gating
+// axis the allowlist fix re-opened (restoring running_style_count_*_otherself to
+// VictimSafeConditions style-gates the Subdued/Flustered family by the victim's own running
+// style, which buildSkillData/bucketsForCourse's course gate alone doesn't account for). Either
+// argument being null/undefined means "unknown, don't gate on this axis" -- same convention
+// distanceType already uses.
+export function isBucketPossible(
+	bucket: DebuffBucket,
+	distanceType: number | null | undefined,
+	strategy: string | null | undefined,
+): boolean {
+	const courseOk =
+		distanceType == null ||
+		bucket.distanceType == null ||
+		bucket.distanceType === distanceType;
+	const styleOk = strategyMatchesBucket(strategy, bucket.strategy);
+	return courseOk && styleOk;
+}
+
 function deriveBuckets(): DebuffBucket[] {
 	// key: `${drain}|${strippedCondition}`
 	const grouped = new Map<
@@ -124,6 +190,7 @@ function deriveBuckets(): DebuffBucket[] {
 			drain,
 			window,
 			distanceType: parseDistanceType(stripped),
+			strategy: parseStrategy(stripped),
 			memberIds: ids,
 		});
 	}
@@ -147,9 +214,25 @@ const representativeIdByMemberId: ReadonlyMap<string, string> = new Map(
 	),
 );
 
-export function bucketsForCourse(distanceType: number): DebuffBucket[] {
-	return STAMINA_DEBUFF_BUCKETS.filter(
-		(b) => b.distanceType === null || b.distanceType === distanceType,
+// Every member id -> its bucket, for totalDrain()/excludedDebuffCount() below -- keyed by every
+// member id, not just the representative, mirroring drainById's own comment above (production
+// `incoming` maps are always keyed by representative id after normalizeDebuffId(), but this
+// matches drainById's existing lookup universe rather than narrowing it).
+const bucketByMemberId: ReadonlyMap<string, DebuffBucket> = new Map(
+	STAMINA_DEBUFF_BUCKETS.flatMap((b) =>
+		b.memberIds.map((id) => [id, b] as const),
+	),
+);
+
+// Peer-review fix (HP-7 Important 1): `strategy`, when given, additionally excludes a bucket
+// gated to a running style the victim doesn't have (see isBucketPossible above) -- omitted (or
+// null/undefined), no style gating is applied, matching pre-fix behavior for existing callers.
+export function bucketsForCourse(
+	distanceType: number,
+	strategy?: string | null,
+): DebuffBucket[] {
+	return STAMINA_DEBUFF_BUCKETS.filter((b) =>
+		isBucketPossible(b, distanceType, strategy),
 	);
 }
 
@@ -161,41 +244,58 @@ export function bucketsForCourse(distanceType: number): DebuffBucket[] {
 // up in the "−N% max HP" total, contradicting a same-screen simulation that drains exactly 0 for
 // it. Configured counts themselves are left untouched in `incoming` -- only the displayed total
 // narrows -- so switching the course back restores them.
+//
+// Peer-review fix (HP-7 Important 1): `strategy` narrows the same way for the victim's own
+// running style -- the second gating axis restoring running_style_count_*_otherself to the
+// engine's allowlist re-opened (see isBucketPossible above and StaminaDebuffDialog.tsx's own
+// comment for the full story). Omitted, no style gating is applied.
 export function totalDrain(
 	incoming: ImmMap<string, number>,
 	distanceType?: number | null,
+	strategy?: string | null,
 ): number {
-	const possibleIds =
-		distanceType != null
-			? new Set(bucketsForCourse(distanceType).map((b) => b.id))
-			: null;
 	let total = 0;
 	incoming.forEach((count, id) => {
-		if (possibleIds != null && !possibleIds.has(id)) return;
-		const drain = drainById.get(id);
-		if (drain != null) {
-			total += drain * count;
-		}
+		const bucket = bucketByMemberId.get(id);
+		if (bucket == null) return;
+		if (!isBucketPossible(bucket, distanceType, strategy)) return;
+		total += bucket.drain * count;
 	});
 	return total;
 }
 
 // Companion to totalDrain() above: how many configured debuffs (by count, not by distinct bucket)
-// are being excluded from the displayed total because the current course can't produce them --
-// the UI-facing half of the same course-gating so it can say so rather than silently drop them.
+// are being excluded from the displayed total, broken down by WHY -- the current course can't
+// produce them, or the victim's own running style doesn't match their gate. The two are reported
+// separately (rather than one combined count) so the dialog/card can word each reason correctly;
+// no shipped bucket is gated on both axes at once (verified against the current data), but a
+// bucket that somehow were would count under both rather than being silently miscounted.
+export interface ExcludedDebuffCounts {
+	wrongCourse: number;
+	wrongStyle: number;
+}
+
 export function excludedDebuffCount(
 	incoming: ImmMap<string, number>,
 	distanceType: number | null | undefined,
-): number {
-	if (distanceType == null) return 0;
-	const possibleIds = new Set(bucketsForCourse(distanceType).map((b) => b.id));
-	let excluded = 0;
+	strategy?: string | null,
+): ExcludedDebuffCounts {
+	const result: ExcludedDebuffCounts = { wrongCourse: 0, wrongStyle: 0 };
 	incoming.forEach((count, id) => {
-		if (!possibleIds.has(id) && drainById.has(id)) {
-			excluded += count;
+		const bucket = bucketByMemberId.get(id);
+		if (bucket == null) return;
+		if (
+			distanceType != null &&
+			bucket.distanceType != null &&
+			bucket.distanceType !== distanceType
+		) {
+			result.wrongCourse += count;
+		}
+		if (!strategyMatchesBucket(strategy, bucket.strategy)) {
+			result.wrongStyle += count;
 		}
 	});
-	return excluded;
+	return result;
 }
 
 // All skill ids that appear as a member of any bucket above -- i.e. every shipped skill that is
@@ -211,23 +311,14 @@ export function isOpponentStaminaDebuff(skillId: string): boolean {
 	return opponentStaminaDebuffIds.has(skillId);
 }
 
-// M8 fix (HP-7 fix-round-2): is `id` a KNOWN debuff skill id in this build's derived catalog at
-// all -- i.e. any `memberIds` entry of any bucket, not just its representative (`drainById`, per
-// its own comment above, is keyed by every member id). Bucket ids are dataset-derived and differ
-// between JP and Global for the same conceptual debuff (e.g. Murmur's JP-only unique `105901111`
-// vs. Global's `201441`), so a share link or exported uma JSON produced against one dataset can
-// carry an id this build's catalog has never heard of -- rehydration call sites
-// (umalator/storage.ts, umalator/app.tsx's share-link decode) filter through this rather than
-// passing the id straight to `buildSkillData`/`addOpponentDebuff`, which throws `bad skill ID
-// <id>` on anything not in `skill_data.json` at all.
-//
-// Peer-review fix (HP-7 Important 3): this was previously documented as checking a bucket's
-// *representative* id specifically, which the implementation never actually did (`drainById.has`
-// is true for any member id) -- a real doc/impl mismatch, now corrected to describe what the code
-// has always done. Both rehydration call sites now call `normalizeDebuffId()` below instead of
-// this function directly, so a non-representative member id is normalised to its bucket's
-// representative rather than passing this check and then reaching `HorseState.incomingDebuffs`
-// unnormalised -- see that function's own comment for why that mattered.
+// Minor fix (HP-7 review-2): no current callers -- kept as the predicate half of
+// normalizeDebuffId() below (which both rehydration call sites, umalator/storage.ts and
+// umalator/app.tsx's share-link decode, call directly instead: it does this same "is `id` a KNOWN
+// debuff skill id in this build's derived catalog at all" check AND normalises to the bucket's
+// representative id in one step, so the two-step "check then normalise" this function's callers
+// used to require doesn't exist anymore). `drainById` is keyed by every `memberIds` entry, not
+// just its representative -- exported in case a future caller wants the check without the
+// normalisation.
 export function isKnownDebuffBucketId(id: string): boolean {
 	return drainById.has(id);
 }
@@ -285,8 +376,13 @@ export function formatPercent(fraction: number): string {
 // for a count that isn't a usable number at all (the caller drops the entry, same as an unknown
 // skill id); a value that clamps to 0 is returned as 0, not null, so callers can choose whether
 // "explicitly zero" is worth keeping or dropping.
+// Minor fix (HP-7 review-2): the single source of truth for the [0, 9] cap, previously the
+// literal `9` duplicated across this function, StaminaDebuffDialog.tsx's stepper, and
+// umalator/compare.ts's defense-in-depth clamp.
+export const MAX_DEBUFF_COUNT = 9;
+
 export function clampDebuffCount(raw: unknown): number | null {
 	const num = typeof raw === 'number' ? raw : parseFloat(raw as string);
 	if (!Number.isFinite(num)) return null;
-	return Math.max(0, Math.min(9, Math.floor(num)));
+	return Math.max(0, Math.min(MAX_DEBUFF_COUNT, Math.floor(num)));
 }

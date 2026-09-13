@@ -1,14 +1,45 @@
 import { Map as ImmMap } from 'immutable';
 import { describe, expect, test } from 'vitest';
+import globalSkillData from '../uma-skill-tools/data/global/skill_data.json';
+import { victimSafeCondition } from '../uma-skill-tools/RaceSolverBuilder';
 import {
 	bucketsForCourse,
 	clampDebuffCount,
+	excludedDebuffCount,
 	formatPercent,
+	isBucketPossible,
 	isOpponentStaminaDebuff,
 	normalizeDebuffId,
 	STAMINA_DEBUFF_BUCKETS,
+	strategyMatchesBucket,
 	totalDrain,
 } from './StaminaDebuffs';
+
+// Minor fix (HP-7 review-2): counts the buckets deriveBuckets() (StaminaDebuffs.ts) would produce
+// against Global's shipped data, without needing to import that non-exported function -- it
+// re-implements the exact same grouping key (drain fraction + victimSafeCondition-stripped
+// condition, over the exact same effect-type/modifier-sign/target-set filter deriveBuckets uses)
+// against data/global/skill_data.json directly. That file is checked into this repo already (only
+// the *import redirect* that sends the built Global app at it is build-time -- see this file's
+// own top-of-describe comment above), so this is a real regression check, not a restatement of a
+// number in prose.
+function deriveGlobalBucketKeys(): Set<string> {
+	const OTHER_TARGETS = new Set([2, 4, 9, 11, 18, 19, 20, 21, 22, 23]);
+	const keys = new Set<string>();
+	for (const skillId of Object.keys(globalSkillData)) {
+		const skill = (globalSkillData as any)[skillId];
+		for (const alt of skill.alternatives) {
+			for (const ef of alt.effects) {
+				if (ef.type === 9 && ef.modifier < 0 && OTHER_TARGETS.has(ef.target)) {
+					const drain = Math.abs(ef.modifier) / 10000;
+					const stripped = victimSafeCondition(alt.condition);
+					keys.add(`${drain}|${stripped}`);
+				}
+			}
+		}
+	}
+	return keys;
+}
 
 describe('stamina debuff catalog', () => {
 	// HP-7 peer-review fix: VictimSafeConditions used to wrongly strip
@@ -21,6 +52,13 @@ describe('stamina debuff catalog', () => {
 	// allowlist: 14 -> 20 -- isn't exercised here; recorded for anyone diffing Global's behavior.
 	test('derives 21 buckets from the shipped JP data', () => {
 		expect(STAMINA_DEBUFF_BUCKETS.length).toBe(21);
+	});
+
+	// Minor fix (HP-7 review-2): the Global half of the 21 -> 20 claim above, made regression-proof
+	// (not just prose) by re-deriving the grouping directly against data/global/skill_data.json --
+	// see deriveGlobalBucketKeys above.
+	test('derives 20 buckets from the shipped Global data', () => {
+		expect(deriveGlobalBucketKeys().size).toBe(20);
 	});
 
 	test('each bucket is named after its lowest-id member and has a positive drain', () => {
@@ -58,6 +96,64 @@ describe('stamina debuff catalog', () => {
 	test('totalDrain sums count x drain', () => {
 		const m = ImmMap<string, number>({ '201162': 2, '201441': 1 });
 		expect(totalDrain(m)).toBeCloseTo(0.05, 6);
+	});
+
+	// Peer-review fix (HP-7 review-2, Important 1): restoring running_style_count_*_otherself to
+	// the engine's allowlist re-splits "Subdued Front Runners" (200831) into a bucket gated on the
+	// VICTIM's own running style -- these pin that the app's own bucketsForCourse/totalDrain/
+	// excludedDebuffCount agree with the engine on when it can actually fire, closing the gap the
+	// task brief's own repro (Nige fires, Senkou doesn't, on the same course) describes.
+	describe('strategy gating', () => {
+		test('Subdued Front Runners (200831) is gated on the victim being Nige, not any course', () => {
+			const subdued = STAMINA_DEBUFF_BUCKETS.find((b) =>
+				b.memberIds.includes('200831'),
+			)!;
+			expect(subdued.strategy).toBe('Nige');
+			expect(subdued.distanceType).toBeNull();
+		});
+
+		test('strategyMatchesBucket: Oonige matches a Nige-gated bucket in both directions, mirroring StrategyHelpers.strategyMatches', () => {
+			expect(strategyMatchesBucket('Nige', 'Nige')).toBe(true);
+			expect(strategyMatchesBucket('Oonige', 'Nige')).toBe(true);
+			expect(strategyMatchesBucket('Senkou', 'Nige')).toBe(false);
+			// Un-gated buckets and unknown victim strategy both read as "possible" -- same
+			// null-means-unknown convention distanceType already uses.
+			expect(strategyMatchesBucket('Senkou', null)).toBe(true);
+			expect(strategyMatchesBucket(null, 'Nige')).toBe(true);
+			expect(strategyMatchesBucket(undefined, 'Nige')).toBe(true);
+		});
+
+		test('bucketsForCourse excludes a style-gated bucket for a non-matching victim strategy, but keeps it for the matching one (and for Oonige)', () => {
+			const senkou = bucketsForCourse(1, 'Senkou');
+			expect(senkou.some((b) => b.memberIds.includes('200831'))).toBe(false);
+			const nige = bucketsForCourse(1, 'Nige');
+			expect(nige.some((b) => b.memberIds.includes('200831'))).toBe(true);
+			const oonige = bucketsForCourse(1, 'Oonige');
+			expect(oonige.some((b) => b.memberIds.includes('200831'))).toBe(true);
+		});
+
+		test('totalDrain excludes a style-gated bucket for a non-matching victim strategy', () => {
+			const m = ImmMap<string, number>({ '200831': 3 });
+			expect(totalDrain(m, null, 'Senkou')).toBe(0);
+			expect(totalDrain(m, null, 'Nige')).toBeGreaterThan(0);
+			// Omitted strategy (existing callers, unchanged): no style gating applied.
+			expect(totalDrain(m)).toBeGreaterThan(0);
+		});
+
+		test('excludedDebuffCount reports a style exclusion separately from a course exclusion', () => {
+			const m = ImmMap<string, number>({ '200831': 2, '201162': 1 }); // Subdued (style-gated), Murmur (Mid-only)
+			const excluded = excludedDebuffCount(m, 2 /* Mile */, 'Senkou');
+			expect(excluded.wrongStyle).toBe(2); // Subdued: Senkou doesn't match its Nige gate
+			expect(excluded.wrongCourse).toBe(1); // Murmur: Mid-only, course is Mile
+		});
+
+		test('isBucketPossible agrees with the engine: a Senkou victim never fires a Nige-gated bucket', () => {
+			const subdued = STAMINA_DEBUFF_BUCKETS.find((b) =>
+				b.memberIds.includes('200831'),
+			)!;
+			expect(isBucketPossible(subdued, null, 'Senkou')).toBe(false);
+			expect(isBucketPossible(subdued, null, 'Nige')).toBe(true);
+		});
 	});
 
 	test('isOpponentStaminaDebuff identifies known debuff ids and rejects an ordinary skill', () => {

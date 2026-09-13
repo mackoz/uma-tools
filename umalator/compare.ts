@@ -1,5 +1,8 @@
 import type { HorseState } from '../components/HorseDefTypes';
-import { isOpponentStaminaDebuff } from '../components/StaminaDebuffs';
+import {
+	isOpponentStaminaDebuff,
+	MAX_DEBUFF_COUNT,
+} from '../components/StaminaDebuffs';
 import skillmeta from '../skill_meta.json';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -30,7 +33,7 @@ function addIncomingDebuffs(builder: RaceSolverBuilder, uma: HorseState) {
 			// reaches HorseState, but a loop bound that CAN be Infinity/NaN shouldn't rely solely on
 			// every caller having validated it -- so clamp again here rather than trust it blindly.
 			const n = Number.isFinite(count)
-				? Math.max(0, Math.min(9, Math.floor(count)))
+				? Math.max(0, Math.min(MAX_DEBUFF_COUNT, Math.floor(count)))
 				: 0;
 			for (let i = 0; i < n; ++i) builder.addOpponentDebuff(id);
 		});

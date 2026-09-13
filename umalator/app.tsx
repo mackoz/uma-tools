@@ -60,6 +60,7 @@ import {
 	drainForSkill,
 	formatPercent,
 	isOpponentStaminaDebuff,
+	MAX_DEBUFF_COUNT,
 	normalizeDebuffId,
 } from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
@@ -1934,6 +1935,13 @@ async function serialize(
 // (any bucket member, not just a representative) AND normalises it to its bucket's representative
 // id, so a non-representative member id from a share link doesn't silently become
 // invisible/uneditable in StaminaDebuffDialog.tsx -- see that function's own comment.
+//
+// Peer-review fix (HP-7 review-2, Important 3): a multi-member bucket (e.g. {200771, 200781}) can
+// receive a separately-clamped count under EACH member id -- `{"200771": 9, "200781": 9}` both
+// normalise to representative 200771, and summing two already-clamped-to-9 counts produced 18,
+// blowing past the [0, 9] invariant HorseDefTypes.ts documents (compare.ts re-clamps its loop
+// bound, so this didn't hang, but the card/dialog displayed 18x drain while the engine applied
+// only 9x). Clamping again after the sum, not just each addend before it, closes that gap.
 function filterKnownIncomingDebuffs(
 	raw: { [key: string]: number } | undefined | null,
 ): { [key: string]: number } {
@@ -1944,7 +1952,8 @@ function filterKnownIncomingDebuffs(
 		if (representativeId == null) continue;
 		const clamped = clampDebuffCount(count);
 		if (clamped != null && clamped > 0) {
-			filtered[representativeId] = (filtered[representativeId] ?? 0) + clamped;
+			const summed = (filtered[representativeId] ?? 0) + clamped;
+			filtered[representativeId] = Math.min(summed, MAX_DEBUFF_COUNT);
 		}
 	}
 	return filtered;

@@ -627,14 +627,26 @@ export function HorseDef(props) {
 	// total, matching what the engine actually drains (its regions come out empty, so it never
 	// activates). Configured counts stay in state.incomingDebuffs untouched, so switching the
 	// course back restores them in both the total and excludedCount below.
+	// Peer-review fix (HP-7 Important 1): also style-aware, the same way, for the second gating
+	// axis restoring running_style_count_*_otherself to the engine's victim-safe allowlist
+	// re-opened -- see components/StaminaDebuffs.ts's isBucketPossible for the full story.
 	const totalDebuffDrain = useMemo(
-		() => totalDrain(state.incomingDebuffs, props.course?.distanceType),
-		[state.incomingDebuffs, props.course?.distanceType],
+		() =>
+			totalDrain(
+				state.incomingDebuffs,
+				props.course?.distanceType,
+				state.strategy,
+			),
+		[state.incomingDebuffs, props.course?.distanceType, state.strategy],
 	);
 	const excludedCount = useMemo(
 		() =>
-			excludedDebuffCount(state.incomingDebuffs, props.course?.distanceType),
-		[state.incomingDebuffs, props.course?.distanceType],
+			excludedDebuffCount(
+				state.incomingDebuffs,
+				props.course?.distanceType,
+				state.strategy,
+			),
+		[state.incomingDebuffs, props.course?.distanceType, state.strategy],
 	);
 	const maxHp = scalingContext?.remainingHp;
 
@@ -796,8 +808,12 @@ export function HorseDef(props) {
 								}`
 							: 'none'}
 						{/* I2 fix (HP-7 fix-round-2): say so rather than silently dropping a
-						    course-incompatible configured debuff from the total above. */}
-						{excludedCount > 0 && ` (${excludedCount} excluded, wrong course)`}
+						    course-incompatible configured debuff from the total above.
+						    Peer-review fix (HP-7 Important 1): same for a style-incompatible one. */}
+						{excludedCount.wrongCourse > 0 &&
+							` (${excludedCount.wrongCourse} excluded, wrong course)`}
+						{excludedCount.wrongStyle > 0 &&
+							` (${excludedCount.wrongStyle} excluded, wrong style)`}
 					</span>
 					<button
 						type="button"
@@ -843,6 +859,7 @@ export function HorseDef(props) {
 					incoming={state.incomingDebuffs}
 					onChange={setter('incomingDebuffs')}
 					distanceType={props.course?.distanceType}
+					strategy={state.strategy}
 				/>
 			)}
 		</div>

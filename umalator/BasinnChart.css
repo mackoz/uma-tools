@@ -300,6 +300,48 @@
 	outline-offset: 1px;
 }
 
+/* Peer-review fix (HP-7 review-2, Important 4): caveat marker on the Gain cell for a debuff
+   candidate row -- see BasinnChart.tsx's GainDebuffCaveatMarker for what it's warning about.
+   Deliberately lighter than Best value/Conditional above (no background fill, no border) since it
+   sits inline after a number in a numeric cell rather than beside a skill name -- a full pill
+   badge here would be wider than the Gain figure it annotates in most rows. Reuses --warning
+   (a caveat, like Conditional, not a commendation like Best value) for just the glyph color. */
+.basinnChartGainCaveatMarker {
+	color: var(--warning);
+	cursor: help;
+	font-weight: bold;
+	margin-left: 4px;
+	position: relative;
+}
+
+.basinnChartGainCaveatMarker:hover::after,
+.basinnChartGainCaveatMarker:focus-visible::after {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-md);
+	color: var(--fg);
+	content: attr(data-tip);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	line-height: 1.4;
+	margin-top: 6px;
+	max-width: 340px;
+	padding: 6px 10px;
+	/* Same fixed-positioning escape as .basinnChartBestValueBadge above -- see that rule's
+	   comment for why this must stay `position: fixed` with every inset left auto. */
+	position: fixed;
+	text-align: left;
+	white-space: normal;
+	width: max-content;
+	z-index: 10;
+}
+
+.basinnChartGainCaveatMarker:focus-visible {
+	outline: 2px solid var(--warning);
+	outline-offset: 1px;
+}
+
 @media (max-width: 768px) {
 	.basinnChartWrapperWrapper {
 		overflow-x: auto;

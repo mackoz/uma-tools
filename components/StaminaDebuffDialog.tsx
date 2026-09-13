@@ -14,10 +14,11 @@ import { useEffect, useRef } from 'preact/hooks';
 
 import { getSkillName } from './SkillPicker';
 import {
-	bucketsForCourse,
 	type DebuffBucket,
 	excludedDebuffCount,
 	formatPercent,
+	isBucketPossible,
+	MAX_DEBUFF_COUNT,
 	STAMINA_DEBUFF_BUCKETS,
 	totalDrain,
 } from './StaminaDebuffs';
@@ -67,7 +68,7 @@ function Stepper({ value, disabled, onChange }: StepperProps) {
 			<button
 				type="button"
 				class="stamDebuffStepperBtn"
-				disabled={disabled || value >= 9}
+				disabled={disabled || value >= MAX_DEBUFF_COUNT}
 				onClick={() => onChange(value + 1)}
 				aria-label="Increase count"
 			>
@@ -86,6 +87,17 @@ export interface StaminaDebuffDialogProps {
 	// `course.distanceType`, or null/undefined when no course is available -- every bucket then
 	// renders as course-unknown rather than falsely enabled or falsely greyed.
 	distanceType: number | null | undefined;
+	// Peer-review fix (HP-7 Important 1): this uma's own running style (HorseState.strategy, e.g.
+	// 'Nige' | 'Senkou' | 'Sasi' | 'Oikomi' | 'Oonige'), or null/undefined when unknown -- a bucket
+	// gated on running_style_count_*_otherself (the Subdued/Flustered family) only fires for a
+	// victim whose strategy matches, exactly the second gating axis restoring that term to the
+	// engine's victim-safe allowlist re-opened (see components/StaminaDebuffs.ts's
+	// isBucketPossible/strategyMatchesBucket and uma-skill-tools' ActivationConditions.ts). Without
+	// this, e.g. a Senkou uma configuring "Restrained Runners x3" would show a nonzero drain here
+	// while the simulation (which does gate on strategy, correctly, since HP-7's Critical 1 fix)
+	// applies exactly 0 -- the same course-gating bug this dialog already fixed once, reopened
+	// along a second axis by the fix that restored the style gate to the engine.
+	strategy: string | null | undefined;
 }
 
 export function StaminaDebuffDialog({
@@ -94,6 +106,7 @@ export function StaminaDebuffDialog({
 	incoming,
 	onChange,
 	distanceType,
+	strategy,
 }: StaminaDebuffDialogProps) {
 	const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -112,11 +125,6 @@ export function StaminaDebuffDialog({
 
 	if (!isOpen) return null;
 
-	const possibleIds =
-		distanceType != null
-			? new Set(bucketsForCourse(distanceType).map((b) => b.id))
-			: null;
-
 	function setCount(bucketId: string, count: number) {
 		onChange(
 			count > 0 ? incoming.set(bucketId, count) : incoming.delete(bucketId),
@@ -125,9 +133,11 @@ export function StaminaDebuffDialog({
 
 	// I2 fix (HP-7 fix-round-2): course-aware, matching the greyed-out rows above -- a bucket the
 	// current course can't produce is dropped from the total, not just visually disabled while
-	// still counting. `excluded` says so in the footer instead of silently dropping the figure.
-	const total = totalDrain(incoming, distanceType);
-	const excluded = excludedDebuffCount(incoming, distanceType);
+	// still counting.
+	// Peer-review fix (HP-7 Important 1): also style-aware the same way -- see isBucketPossible.
+	// `excluded` says so in the footer (both reasons) instead of silently dropping the figure.
+	const total = totalDrain(incoming, distanceType, strategy);
+	const excluded = excludedDebuffCount(incoming, distanceType, strategy);
 
 	const modal = (
 		<div class="stamDebuffOverlay" onClick={onClose}>
@@ -164,12 +174,26 @@ export function StaminaDebuffDialog({
 							<div class="stamDebuffGroup" key={window}>
 								<div class="stamDebuffGroupLabel">{WINDOW_LABELS[window]}</div>
 								{buckets.map((bucket) => {
-									const possible =
-										possibleIds == null || possibleIds.has(bucket.id);
-									const reason =
-										bucket.distanceType != null
-											? `${DISTANCE_LABELS[bucket.distanceType] ?? bucket.distanceType} only`
-											: null;
+									const possible = isBucketPossible(
+										bucket,
+										distanceType,
+										strategy,
+									);
+									// Peer-review fix (HP-7 Important 1): report whichever gate(s) this
+									// bucket actually carries -- course, style, or (defensively) both --
+									// rather than only ever course, which used to be the only axis a
+									// bucket could be gated on before running_style_count_*_otherself was
+									// restored to the engine's allowlist.
+									const reasons: string[] = [];
+									if (bucket.distanceType != null) {
+										reasons.push(
+											`${DISTANCE_LABELS[bucket.distanceType] ?? bucket.distanceType} only`,
+										);
+									}
+									if (bucket.strategy != null) {
+										reasons.push(`${bucket.strategy} only`);
+									}
+									const reason = reasons.length > 0 ? reasons.join(', ') : null;
 									return (
 										<div
 											class={`stamDebuffRow${possible ? '' : ' stamDebuffRow--disabled'}`}
@@ -204,7 +228,10 @@ export function StaminaDebuffDialog({
 						class={`stamDebuffFooterValue${total > 0 ? '' : ' stamDebuffFooterValue--none'}`}
 					>
 						{total > 0 ? `−${formatPercent(total)} max HP` : 'none'}
-						{excluded > 0 && ` (${excluded} excluded, wrong course)`}
+						{excluded.wrongCourse > 0 &&
+							` (${excluded.wrongCourse} excluded, wrong course)`}
+						{excluded.wrongStyle > 0 &&
+							` (${excluded.wrongStyle} excluded, wrong style)`}
 					</span>
 				</div>
 			</div>

@@ -278,6 +278,31 @@ function ConditionalBadge() {
 	);
 }
 
+// Peer-review fix (HP-7 review-2, Important 4): a small caveat marker on the Gain cell for a
+// candidate whose own skill is an opponent stamina debuff (isOpponentStaminaDebuff) -- see the
+// Gain column's own comment above for why that number is 100% the baseline's mirror-induced loss,
+// not any real benefit the candidate earned. Same shape as BestValueBadge/ConditionalBadge above
+// (focusable, keyboard/screen-reader accessible span), but visually lighter (no background fill)
+// since it sits inline in a numeric cell rather than next to a skill name -- a full badge here
+// would be wider than the number it annotates in most rows.
+function GainDebuffCaveatMarker() {
+	const tooltip =
+		'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+		'benefit from its own effect (Perspective.Self filters non-Self targets to a no-op). This ' +
+		"row's Gain is entirely the baseline's mirror-induced stamina loss, not anything the " +
+		'candidate earned; treat it as noise, not a ranking signal.';
+	return (
+		<span
+			class="basinnChartGainCaveatMarker"
+			data-tip={tooltip}
+			tabIndex={0}
+			aria-label={tooltip}
+		>
+			†
+		</span>
+	);
+}
+
 function SkillNameCell(props) {
 	const {
 		id,
@@ -422,25 +447,28 @@ export function BasinnChart(props) {
 					'Expected length gain vs. the baseline uma, with a confidence interval on that mean',
 				),
 				id: 'mean',
-				// Peer-review fix (HP-7 Important 6), assessed and left as-is: for a debuff
-				// candidate, Gain reads the same mirrored-and-drained baseline the Survives column
-				// suppresses above (compare.ts's runComparisonBlock adds the candidate's own skill
-				// to the BASELINE builder too, as Perspective.Other -- see the Survives column's own
-				// comment) -- so it is genuinely the same artifact, not a separate bug: the baseline
-				// is handicapped by a debuff that gives the candidate no benefit of its own, and the
-				// candidate reads as having "gained" ground the baseline actually lost. Measured
-				// directly (stamina-limited build, 2000-sample block, Murmur/201162 vs an ordinary
-				// accel skill/210042): Murmur's Gain came out to 0.064 lengths against a baseline
-				// whose survival rate the mirror pushed from a natural 1783/2000 down to 1215/2000,
-				// vs. 0.402 lengths for the ordinary skill under the same setup with no such
-				// baseline handicapping -- consistent with the Round-2 reviewer's own prior spot
-				// measurement (0.02 vs 0.30). The artifact is real but, unlike Survives (a knife-edge
-				// boolean that read as +99.0pp), it inflates Gain by a fraction of an ordinary
-				// skill's own value rather than fabricating the number outright -- judged not worth
-				// suppressing a real, if imperfect, chart cell over. Left live rather than suppressed
-				// like Survives; revisit if a future skill's own drain magnitude (this bucket's own
-				// 4-value range tops out at 3%) or a stamina-limited default build makes the
-				// inflation larger in practice.
+				// Peer-review fix (HP-7 Important 6), assessed and left as-is, then corrected
+				// (HP-7 review-2, Important 4): for a debuff candidate, Gain reads the same
+				// mirrored-and-drained baseline the Survives column suppresses above (compare.ts's
+				// runComparisonBlock adds the candidate's own skill to the BASELINE builder too, as
+				// Perspective.Other -- see the Survives column's own comment). But unlike that
+				// comment's original framing, this isn't "inflating" a real number by a fraction of
+				// an ordinary skill's own value -- the candidate side receives the debuff as
+				// Perspective.Self, whose non-Self targets are filtered to SkillType.Noop
+				// (buildSkillEffects's isTarget check), so the candidate gets exactly ZERO benefit
+				// from its own skill. 100% of the displayed Gain is the baseline's mirror-induced
+				// loss, not any real advantage the candidate earned; the honest value under this
+				// chart's own semantics is 0.000, not the displayed number. Measured directly
+				// (stamina-limited build, 2000-sample block, Murmur/201162 vs an ordinary accel
+				// skill/210042): Murmur's Gain came out to 0.064 lengths against a baseline whose
+				// survival rate the mirror pushed from a natural 1783/2000 down to 1215/2000 -- the
+				// 0.402-lengths comparison point for the ordinary skill is also a strong skill; the
+				// rows this actually distorts are marginal ones in the 0.0x band, where a worthless
+				// debuff candidate can outrank a real (if small) improvement. Not suppressed (Gain is
+				// this chart's primary sort and the row's only ranking signal) -- instead marked, via
+				// the same isOpponentStaminaDebuff predicate the Survives column already imports, so
+				// a viewer sees the caveat rather than reading a fabricated number as earned. See
+				// GainDebuffCaveatMarker below for the marker itself.
 				//
 				// Muted rows (screened/inert/pending -- see isMutedRow) sort as if their gain were
 				// MUTED_SORT_PENALTY lower, so the default Gain-descending view shows every surviving
@@ -452,7 +480,14 @@ export function BasinnChart(props) {
 					if (mean === Number.NEGATIVE_INFINITY) return mean;
 					return isMutedRow(row) ? mean - MUTED_SORT_PENALTY : mean;
 				},
-				cell: (info) => formatInterval(info.row.original),
+				cell: (info) => (
+					<Fragment>
+						{formatInterval(info.row.original)}
+						{isOpponentStaminaDebuff(info.row.original.id) && (
+							<GainDebuffCaveatMarker />
+						)}
+					</Fragment>
+				),
 				sortDescFirst: true,
 			},
 			{
