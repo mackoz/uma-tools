@@ -201,6 +201,10 @@ export interface BlockLike {
 	times: Float32Array;
 	procCounts: Uint16Array;
 	procPositions: Float32Array;
+	// HP-7: see ComparisonBlockOutput (compare.ts) -- plain per-block aggregates, not per-sample
+	// arrays.
+	survivesCount: number;
+	baseSurvivesCount: number;
 }
 
 // Accumulates one candidate skill's results across however many rounds it survives. Mean and
@@ -230,6 +234,8 @@ export class SkillAccumulator {
 	private _sumSq = 0;
 	private _procTotal = 0;
 	private _allZero = true;
+	private _survivesCount = 0;
+	private _baseSurvivesCount = 0;
 
 	constructor(id: string) {
 		this.id = id;
@@ -251,6 +257,8 @@ export class SkillAccumulator {
 		}
 		for (let i = 0; i < procCounts.length; ++i)
 			this._procTotal += procCounts[i];
+		this._survivesCount += block.survivesCount;
+		this._baseSurvivesCount += block.baseSurvivesCount;
 		this.lengthChunks.push(block.lengths);
 		this.timeChunks.push(block.times);
 		this.procCountChunks.push(block.procCounts);
@@ -289,6 +297,14 @@ export class SkillAccumulator {
 
 	get allZero(): boolean {
 		return this._allZero;
+	}
+
+	get survivesCount(): number {
+		return this._survivesCount;
+	}
+
+	get baseSurvivesCount(): number {
+		return this._baseSurvivesCount;
 	}
 
 	// O(1): mean and Bessel-corrected sample variance from the running sum/sumSq. Slightly less
@@ -508,4 +524,9 @@ export interface ChartRow {
 	statistics: SkillStatistics | null;
 	status: SkillStatus | 'pending';
 	eliminationReason: EliminationReason;
+	// HP-7: accumulated across every block this row has been evaluated on so far (n samples worth),
+	// same running-total convention as `n` itself -- see SkillAccumulator.survivesCount/
+	// baseSurvivesCount.
+	survivesCount: number;
+	baseSurvivesCount: number;
 }

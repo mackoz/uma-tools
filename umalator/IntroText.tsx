@@ -66,6 +66,61 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-13</summary>
+						<ul>
+							<li>
+								Fixed: when <strong>564 Escapades</strong> (Summer Goldship's
+								unique, or its inherited form) force-activated up to two random
+								pending Gold/Evolution skills, and either uma equipped an
+								ordinary copy of a skill that also appeared elsewhere in that
+								uma's pending list -- the normal case when comparing two
+								near-identical builds, since skills common to both umas are
+								added twice -- the wrong copy could be removed: one copy would
+								activate an extra time, and another would silently not activate
+								at all. Race results involving a duplicated skill may differ
+								slightly from previous builds.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
+						<summary>2026-09-12</summary>
+						<ul>
+							<li>
+								New <strong>Stam Debuff → Configure</strong> control on the uma
+								card: set how many of each stamina-draining debuff opponents
+								land on this uma over a race -- <strong>Murmur</strong>,{' '}
+								<strong>Mystifying Murmur</strong>,{' '}
+								<strong>All-Seeing Eyes</strong>, <strong>Trick</strong>,{' '}
+								<strong>Stamina Siphon</strong>, and the Subdued/Flustered
+								family, among others. Each debuff fires at its real in-game
+								timing (All-Seeing Eyes late race, Murmur mid-race, Subdued
+								early) and only on courses where the game could actually land it
+								-- Murmur is Mid-distance only, for example -- and now counts
+								against Stamina Survival Rate, Full Spurt Rate, and HP-death on
+								the Compare tab the same as any other source of drain. The Skill
+								Chart tab gets a new sortable <strong>Survives</strong> column
+								showing each candidate's own stamina survival rate and its delta
+								from the baseline, so a skill that shores up a stamina deficit
+								can be ranked on that, not only on raw length gain. The Compare
+								tab now also shows <em>where</em> those debuffs actually landed:
+								each result card gets a new <strong>Incoming Debuffs</strong>{' '}
+								section listing every proc's position and drain (separate from
+								the <strong>Skills</strong> section, so a debuff never inflates
+								that count), and the course map marks each one as a small tick +
+								label, tinted per uma, visible regardless of the{' '}
+								<strong>Show HP</strong> toggle. The map's default displayed run
+								also changed from Mean to Median, matching the card (they could
+								previously default to different runs before a run was explicitly
+								selected). The Subdued/Flustered family also only lands on an
+								uma running the matching style -- e.g. "Subdued Front Runners"
+								only fires against a Nige (or Oonige) victim -- and the dialog
+								now greys out and explains a row that can't fire for either
+								reason, course or style, across its full 21 (JP) / 20 (Global)
+								rows.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-11</summary>
 						<ul>
 							<li>

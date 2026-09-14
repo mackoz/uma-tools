@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import { Text } from 'preact-i18n';
 import type { HorseState } from '../components/HorseDef';
 import { getSkillIconSrc } from '../components/SkillIcons';
+import { isOpponentStaminaDebuff } from '../components/StaminaDebuffs';
 import { getParser } from '../uma-skill-tools/ConditionParser';
 import type { CourseData } from '../uma-skill-tools/CourseData';
 import type { RaceParameters } from '../uma-skill-tools/RaceParameters';
@@ -167,9 +168,36 @@ function formatRange(row: ChartRow): string {
 	return `${p10.toFixed(1)} – ${p90.toFixed(1)}`;
 }
 
-function formatPercent(v: number | undefined): string {
+// Peer-review fix (HP-7 Important 4): renamed from formatPercent to formatRatePercent to avoid
+// confusion with components/StaminaDebuffs.ts's exported formatPercent, which this file also
+// imports (isOpponentStaminaDebuff, above). The two are deliberately different, not a duplicate to
+// unify: this one formats a statistical Survives/Gain RATE (0-1, undefined-safe, always whole
+// percent -- these are sampled proportions across hundreds/thousands of runs, where sub-percent
+// precision would be false confidence) while StaminaDebuffs.ts's formats an exact DRAIN fraction
+// (trimmed to 2 decimal places so e.g. a real 0.25% bucket doesn't misround to "0.3%" -- see that
+// function's own comment for the bug this guards against). Same shape, different domain and
+// different rounding rule; keep them separate but distinctly named so a future edit to one doesn't
+// get mistakenly applied to both.
+function formatRatePercent(v: number | undefined): string {
 	if (v == null) return '—';
 	return `${(v * 100).toFixed(0)}%`;
+}
+
+// HP-7: the candidate's own stamina-survival rate for this row, plus its delta (in percentage
+// points) from `baselineRate` -- a single value shared by every row (BasinnChart's caller
+// computes it as a weighted average across the whole accumulated table, not per-row), because the
+// baseline build isn't provably identical row to row (runComparisonBlock adds the candidate skill
+// to the baseline builder too, as Perspective.Other -- see compare.ts's addIncomingDebuffs/
+// runComparisonBlock file-level note) and a per-row-varying "baseline" would misrepresent what is
+// meant to read as one constant reference point.
+function formatSurvives(row: ChartRow, baselineRate: number | null): string {
+	if (row.n === 0) return '—';
+	const rate = row.survivesCount / row.n;
+	const pct = formatRatePercent(rate);
+	if (baselineRate == null) return pct;
+	const deltaPp = (rate - baselineRate) * 100;
+	const sign = deltaPp > 0 ? '+' : '';
+	return `${pct} (${sign}${deltaPp.toFixed(1)}pp)`;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -249,6 +277,56 @@ function ConditionalBadge() {
 		</span>
 	);
 }
+
+// Peer-review fix (HP-7 review-2, Important 4), generalized (HP-7 review-3, Important 5): a
+// small caveat marker for a cell whose number, for a candidate whose own skill is an opponent
+// stamina debuff (isOpponentStaminaDebuff), is entirely an artifact of compare.ts's
+// runComparisonBlock mirroring that debuff onto the baseline builder too -- see the Gain column's
+// own comment above for the full mechanism. Gain was the first cell caveated this way; helpRate
+// (below) and the Helps/Ties/Hurts line in app.tsx's expanded-row detail share the exact same
+// bias (the candidate gets zero benefit from its own effect, so a "help"/"tie"/"hurt" reading is
+// really just where the mirrored baseline's drain happened to land) and previously carried no
+// marker at all. Same shape as BestValueBadge/ConditionalBadge above (focusable,
+// keyboard/screen-reader accessible span), but visually lighter (no background fill) since it
+// sits inline after a number rather than beside a skill name -- a full badge here would be wider
+// than the figure it annotates in most rows.
+export function DebuffCaveatMarker(props: { tooltip: string }) {
+	return (
+		<span
+			class="basinnChartDebuffCaveatMarker"
+			data-tip={props.tooltip}
+			tabIndex={0}
+			aria-label={props.tooltip}
+		>
+			†
+		</span>
+	);
+}
+
+const GAIN_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	'benefit from its own effect (Perspective.Self filters non-Self targets to a no-op). This ' +
+	"row's Gain is entirely the baseline's mirror-induced stamina loss, not anything the " +
+	'candidate earned; treat it as noise, not a ranking signal.';
+
+// HP-7 review-3, Important 5: same underlying bias as Gain above, applied to the Helps rate --
+// a debuff candidate's own effect gives it nothing (Perspective.Self filters non-Self targets to
+// a no-op), so any race this row counts as a "help" is really the mirrored baseline's
+// debuff-induced loss reading as a relative gain, not the candidate accomplishing anything.
+export const HELP_RATE_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	'benefit from its own effect. A "help" here just means the mirrored baseline (which DOES take ' +
+	"the debuff, per compare.ts's runComparisonBlock) happened to lose more ground than the " +
+	'candidate; treat this rate as noise, not a real help share.';
+
+// HP-7 review-3, Important 5: the expanded-row Helps/Ties/Hurts breakdown (app.tsx) shares the
+// same bias across all three rates, not just Helps -- every one of them is really "how the
+// mirrored baseline's debuff-induced loss happened to compare to the candidate's own (zero) gain".
+export const DETAIL_RATE_DEBUFF_CAVEAT_TOOLTIP =
+	'This skill is an opponent stamina debuff, not a real self-buff -- the candidate gets zero ' +
+	"benefit from its own effect. These Helps/Ties/Hurts rates reflect the mirrored baseline's " +
+	"debuff-induced loss (compare.ts's runComparisonBlock adds the same debuff to the baseline), " +
+	'not anything the candidate did; treat them as noise, not a real breakdown.';
 
 function SkillNameCell(props) {
 	const {
@@ -394,6 +472,29 @@ export function BasinnChart(props) {
 					'Expected length gain vs. the baseline uma, with a confidence interval on that mean',
 				),
 				id: 'mean',
+				// Peer-review fix (HP-7 Important 6), assessed and left as-is, then corrected
+				// (HP-7 review-2, Important 4): for a debuff candidate, Gain reads the same
+				// mirrored-and-drained baseline the Survives column suppresses above (compare.ts's
+				// runComparisonBlock adds the candidate's own skill to the BASELINE builder too, as
+				// Perspective.Other -- see the Survives column's own comment). But unlike that
+				// comment's original framing, this isn't "inflating" a real number by a fraction of
+				// an ordinary skill's own value -- the candidate side receives the debuff as
+				// Perspective.Self, whose non-Self targets are filtered to SkillType.Noop
+				// (buildSkillEffects's isTarget check), so the candidate gets exactly ZERO benefit
+				// from its own skill. 100% of the displayed Gain is the baseline's mirror-induced
+				// loss, not any real advantage the candidate earned; the honest value under this
+				// chart's own semantics is 0.000, not the displayed number. Measured directly
+				// (stamina-limited build, 2000-sample block, Murmur/201162 vs an ordinary accel
+				// skill/210042): Murmur's Gain came out to 0.064 lengths against a baseline whose
+				// survival rate the mirror pushed from a natural 1783/2000 down to 1215/2000 -- the
+				// 0.402-lengths comparison point for the ordinary skill is also a strong skill; the
+				// rows this actually distorts are marginal ones in the 0.0x band, where a worthless
+				// debuff candidate can outrank a real (if small) improvement. Not suppressed (Gain is
+				// this chart's primary sort and the row's only ranking signal) -- instead marked, via
+				// the same isOpponentStaminaDebuff predicate the Survives column already imports, so
+				// a viewer sees the caveat rather than reading a fabricated number as earned. See
+				// DebuffCaveatMarker below for the marker itself.
+				//
 				// Muted rows (screened/inert/pending -- see isMutedRow) sort as if their gain were
 				// MUTED_SORT_PENALTY lower, so the default Gain-descending view shows every surviving
 				// row first and the eliminated noise (0.00 L, n=64) sinks below it instead of
@@ -404,7 +505,14 @@ export function BasinnChart(props) {
 					if (mean === Number.NEGATIVE_INFINITY) return mean;
 					return isMutedRow(row) ? mean - MUTED_SORT_PENALTY : mean;
 				},
-				cell: (info) => formatInterval(info.row.original),
+				cell: (info) => (
+					<Fragment>
+						{formatInterval(info.row.original)}
+						{isOpponentStaminaDebuff(info.row.original.id) && (
+							<DebuffCaveatMarker tooltip={GAIN_DEBUFF_CAVEAT_TOOLTIP} />
+						)}
+					</Fragment>
+				),
 				sortDescFirst: true,
 			},
 			{
@@ -425,7 +533,16 @@ export function BasinnChart(props) {
 				),
 				id: 'helpRate',
 				accessorFn: (row: ChartRow) => row.statistics?.helpRate,
-				cell: (info) => formatPercent(info.getValue()),
+				// HP-7 review-3, Important 5: same caveat as the Gain cell above -- see
+				// HELP_RATE_DEBUFF_CAVEAT_TOOLTIP.
+				cell: (info) => (
+					<Fragment>
+						{formatRatePercent(info.getValue())}
+						{isOpponentStaminaDebuff(info.row.original.id) && (
+							<DebuffCaveatMarker tooltip={HELP_RATE_DEBUFF_CAVEAT_TOOLTIP} />
+						)}
+					</Fragment>
+				),
 				sortDescFirst: true,
 			},
 			{
@@ -435,7 +552,7 @@ export function BasinnChart(props) {
 				),
 				id: 'procRate',
 				accessorFn: (row: ChartRow) => row.statistics?.procRate,
-				cell: (info) => formatPercent(info.getValue()),
+				cell: (info) => formatRatePercent(info.getValue()),
 				sortDescFirst: true,
 			},
 			{
@@ -448,6 +565,54 @@ export function BasinnChart(props) {
 				cell: (info) => info.getValue(),
 				sortDescFirst: true,
 			},
+			// HP-7: only shown when incoming stamina debuffs are actually configured, or when the
+			// baseline itself isn't surviving to the finish ~100% of the time from natural drain
+			// alone -- see app.tsx's showSurvivesColumn. A dead 100%/100% column on every ordinary
+			// chart run would be noise.
+			...(props.showSurvivesColumn
+				? [
+						{
+							header: headerLabel(
+								'Survives',
+								`Share of races this candidate finished without running out of stamina, vs. the baseline's own rate (currently ${formatRatePercent(props.baselineSurvivalRate ?? undefined)})`,
+							),
+							id: 'survives',
+							// HP-7 fix-round-2 (C1): a candidate row whose own skill IS an opponent
+							// stamina debuff gets no Survives number at all, not a real one. compare.ts's
+							// runComparisonBlock mirrors every candidate skill onto the BASELINE builder
+							// too (Perspective.Other, for the Gain column's benefit) -- for an ordinary
+							// skill that mirror is inert-ish, but for a debuff skill it makes the
+							// baseline itself the debuff's victim (isTarget passes, SkillType.Recovery
+							// drains it), while the candidate side gets SkillType.Noop and no benefit at
+							// all. The result is baseSurvivesCount collapsing toward 0 for exactly these
+							// rows, which read as the CANDIDATE surviving almost every race relative to a
+							// gutted baseline -- e.g. Murmur (201162) measured at 100% survives
+							// (+99.0pp) with zero real effect on the candidate. Suppressing the cell
+							// (not fixing the mirror) is deliberate -- see the task brief -- rather than
+							// adding a third simulation just for this column.
+							//
+							// Round 9 (C-R3): apply the same MUTED_SORT_PENALTY the Gain column's
+							// accessorFn applies (above) -- without it, a screened/eliminated row
+							// (isMutedRow) that happened to sample a high survival ratio could
+							// outrank a live, fully-sampled candidate on this column even though
+							// Gain already sorts it to the bottom.
+							accessorFn: (row: ChartRow) => {
+								if (row.n === 0 || isOpponentStaminaDebuff(row.id))
+									return Number.NEGATIVE_INFINITY;
+								const rate = row.survivesCount / row.n;
+								return isMutedRow(row) ? rate - MUTED_SORT_PENALTY : rate;
+							},
+							cell: (info) =>
+								isOpponentStaminaDebuff(info.row.original.id)
+									? '—'
+									: formatSurvives(
+											info.row.original,
+											props.baselineSurvivalRate ?? null,
+										),
+							sortDescFirst: true,
+						},
+					]
+				: []),
 		],
 		[
 			props.showUmaIcons,
@@ -456,6 +621,8 @@ export function BasinnChart(props) {
 			props.bestValueId,
 			props.bestValueTooltip,
 			props.showConditionalBadge,
+			props.showSurvivesColumn,
+			props.baselineSurvivalRate,
 		],
 	);
 

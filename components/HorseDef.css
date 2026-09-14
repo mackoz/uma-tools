@@ -478,6 +478,57 @@
 	border-color: var(--accent, hsl(215 70% 55%));
 }
 
+/* ── Stam debuff row (HP-7 Task 9) ────────────────────────────── */
+
+.horseStamDebuffRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 16px;
+	border-bottom: 1px solid var(--border, hsl(210 10% 85%));
+}
+
+.horseStamDebuffLabel {
+	font-size: 9px;
+	font-weight: 600;
+	color: var(--muted, #6b7280);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	white-space: nowrap;
+}
+
+.horseStamDebuffValue {
+	flex: 1;
+	min-width: 0;
+	font-size: 11px;
+	color: var(--fg, #111827);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.horseStamDebuffBtn {
+	flex-shrink: 0;
+	padding: 3px 10px;
+	border-radius: 5px;
+	border: 1px solid var(--border, hsl(210 10% 80%));
+	background: none;
+	color: var(--muted, #6b7280);
+	font-family: inherit;
+	font-size: 11px;
+	cursor: pointer;
+	transition:
+		border-color 0.15s,
+		color 0.15s,
+		background 0.15s;
+}
+
+.horseStamDebuffBtn:hover {
+	border-color: var(--accent, hsl(215 50% 55%));
+	color: var(--accent, hsl(215 60% 40%));
+	background: var(--accent-active-bg, hsl(215 70% 98%));
+}
+
 /* ── Section label ───────────────────────────────────────────── */
 
 .horseSectionLabel {

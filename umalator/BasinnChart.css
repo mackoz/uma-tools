@@ -300,6 +300,50 @@
 	outline-offset: 1px;
 }
 
+/* Peer-review fix (HP-7 review-2, Important 4), generalized (HP-7 review-3, Important 5): caveat
+   marker for a cell whose number is an artifact of the baseline-mirroring bias -- see
+   BasinnChart.tsx's DebuffCaveatMarker for what it's warning about. Shared by the Gain cell, the
+   Helps cell, and app.tsx's expanded-row Helps/Ties/Hurts line. Deliberately lighter than Best
+   value/Conditional above (no background fill, no border) since it sits inline after a number
+   rather than beside a skill name -- a full pill badge here would be wider than the figure it
+   annotates in most rows. Reuses --warning (a caveat, like Conditional, not a commendation like
+   Best value) for just the glyph color. */
+.basinnChartDebuffCaveatMarker {
+	color: var(--warning);
+	cursor: help;
+	font-weight: bold;
+	margin-left: 4px;
+	position: relative;
+}
+
+.basinnChartDebuffCaveatMarker:hover::after,
+.basinnChartDebuffCaveatMarker:focus-visible::after {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-md);
+	color: var(--fg);
+	content: attr(data-tip);
+	font-size: var(--font-xs);
+	font-weight: 400;
+	line-height: 1.4;
+	margin-top: 6px;
+	max-width: 340px;
+	padding: 6px 10px;
+	/* Same fixed-positioning escape as .basinnChartBestValueBadge above -- see that rule's
+	   comment for why this must stay `position: fixed` with every inset left auto. */
+	position: fixed;
+	text-align: left;
+	white-space: normal;
+	width: max-content;
+	z-index: 10;
+}
+
+.basinnChartDebuffCaveatMarker:focus-visible {
+	outline: 2px solid var(--warning);
+	outline-offset: 1px;
+}
+
 @media (max-width: 768px) {
 	.basinnChartWrapperWrapper {
 		overflow-x: auto;

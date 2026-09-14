@@ -28,6 +28,31 @@ export enum RegionDisplayType {
 	Marker,
 }
 
+// Post-review fix (round 2, issue 4): caps how many vertical rows the Marker branch's
+// per-uma-side row-stacking (see RaceTrack()'s Marker branch below) will ever open. Without a
+// cap, a saturated cluster (the Stam Debuff dialog allows up to 9 stacks of one bucket, and 9
+// random draws inside one phase window commonly cluster tightly) marched arbitrarily far from
+// its anchor edge -- confirmed live: by row 5 uma1's labels reached 59% and uma2's reached 42%,
+// deep inside the skill-activation rungs' territory (Textbox rungs span the full 0-100% when
+// busy -- `y = 90 - 10*i` for i up to 9, see the Textbox branch below) and crossing each other
+// mid-track. Past this cap, a new proc that can't fit any existing row merges into the nearest
+// same-label cluster instead of opening a further row -- see MarkerCluster below.
+const MARKER_ROW_CAP = 4;
+
+interface MarkerCluster {
+	x: number;
+	half: number;
+	text: string;
+	// Peer-review fix (HP-7 Important 5): the id the row-cap merge below matches clusters on.
+	// Undefined for a marker with no id of its own (none currently exist -- debuff markers are the
+	// only Marker producer and always carry one -- but matching falls back to `text` in that case
+	// rather than silently merging every id-less marker together regardless of label).
+	skillId?: string;
+	count: number;
+	titles: string[];
+	color: string;
+}
+
 const STRINGS_ja = Object.freeze({
 	racetrack: Object.freeze({
 		thresholds: '補正ステータス：',
@@ -737,9 +762,9 @@ export function RaceTrack(props) {
 		);
 	}, [props.courseid]);
 
-	const regions = useMemo(() => {
+	const { regions, debuffMarkerLayer } = useMemo(() => {
 		console.log('Regions being processed:', props.regions);
-		return props.regions.reduce(
+		const state = props.regions.reduce(
 			(state, desc) => {
 				if (
 					desc.type == RegionDisplayType.Immediate &&
@@ -882,6 +907,180 @@ export function RaceTrack(props) {
 						);
 					});
 					state.elem.push(<Fragment>{rects}</Fragment>);
+				} else if (desc.type == RegionDisplayType.Marker) {
+					// HP-7 pt.2 (post-review Finding 1 fix): incoming stamina-debuff procs -- a
+					// vertical tick + short label, modeled on DistanceMarker above, but drawn
+					// across the whole region-band height so it stays visible regardless of the
+					// Show HP toggle (which doesn't touch this `regions` layer at all) and never
+					// reads as a skill-activation box (the Textbox branch above).
+					//
+					// This branch only builds cluster DATA (state.markerRows) -- it does not
+					// render JSX. Rendering happens in one pass after the whole reduce finishes
+					// (see below the reduce call), because rows/clusters accumulate across every
+					// Marker desc processed by this reduce (one per debuff-bucket activation from
+					// app.tsx), not just this desc's own regions; a cluster this desc's activation
+					// merges into (see MARKER_ROW_CAP below) may have been created by an earlier
+					// desc, or grow again from a later one.
+					//
+					// desc.umaIndex picks which edge the label anchors near (uma1 top, uma2
+					// bottom). Within one edge, state.markerRows[umaIndex] is a list of vertical
+					// "rows" (capped at MARKER_ROW_CAP), each row a list of already-placed
+					// MarkerCluster entries; a new proc goes in the first row none of whose
+					// clusters it would overlap (by half-width, in the same % units as x). Past
+					// the cap, instead of opening a further row (post-review fix, round 2, issue
+					// 4 -- see MARKER_ROW_CAP's own comment for what that looked like
+					// uncapped), it merges into the nearest same-label cluster across the capped
+					// rows, incrementing that cluster's count and folding its position into the
+					// cluster's `<title>` list rather than drawing a new tick. The card's Incoming
+					// Debuffs section already lists every proc individually, so the map need not
+					// be exhaustive once space runs out.
+					//
+					// This replaces an earlier x-only jitter that nudged the tick LINE but left
+					// the (much wider) text overlapping -- review caught two same-named procs
+					// rendering as one run-together "Mystifying Mystifying Murmur -3%" string.
+					// app.tsx now also sends a short drain-only `text` (full name moved to
+					// `title`, shown as a hover tooltip) so a cluster of same-bucket procs has
+					// much less width to stack in the first place.
+					//
+					// HP-7 review-3, Minor 10: this row-packing deliberately does NOT share
+					// state.rungs (the Textbox branch above, ~30 lines up) despite both stacking
+					// same-kind items into vertical rows to avoid overlap. Textbox packs
+					// SKILL-ACTIVATION BOXES with real [start, end) extents known up front (a
+					// skill's own duration), checks true interval overlap against 10 fixed rungs,
+					// and on overflow wraps back to rung 0 via `i % 10` -- silent visual overlap
+					// past 10 simultaneous boxes is acceptable there because skill activations
+					// this dense are rare and the boxes are wide targets anyway. Marker packs
+					// DEBUFF-PROC LABELS, which are point ticks with no natural extent -- "width"
+					// is a rendered-text estimate (labelHalf, and it must be recomputed when a
+					// merge widens a cluster's label -- see fix 4 above), and it doesn't wrap on
+					// overflow because wrapping would silently overlap two DIFFERENT skills'
+					// labels (unreadable, and worse, undiagnosable without the tooltip); merging
+					// same-bucket procs into one counted cluster instead is safe here because the
+					// Incoming Debuffs card section already lists every proc individually, so nothing
+					// is lost. Sharing one packing implementation was not attempted: Textbox's
+					// interval-overlap check and Marker's half-width-distance check answer genuinely
+					// different questions (do two ranges overlap vs. are two points too close to
+					// read), and reconciling the overflow behavior (wrap vs. merge) would change
+					// Textbox's long-standing accepted-overlap behavior for a benefit only Marker
+					// needs.
+					if (state.markerRows[desc.umaIndex] == null) {
+						state.markerRows[desc.umaIndex] = [];
+					}
+					const rows: Array<MarkerCluster[]> = state.markerRows[desc.umaIndex];
+					// Rough label half-width in % units -- 9px font, narrow charset
+					// (letters/digits/%/-), ~3.6px/char plus a little padding so near-misses
+					// still get separated rather than just barely touching. Shared by both the
+					// single-proc case below and the overflow-merge path (HP-7 review-3 fix 4),
+					// which must recompute this from the WIDER `${count}× ${label}` text a merged
+					// cluster ends up rendering -- a half-width computed once from the single-proc
+					// label at creation and never updated left a later placement's overlap check
+					// trusting a too-narrow reservation once that cluster's rendered text grew.
+					const labelHalf = (text: string) =>
+						((text.length * 3.6 + 6) / props.width) * 100;
+					desc.regions.forEach((r) => {
+						const x = (r.start / course.distance) * 100;
+						const half = labelHalf(desc.text);
+						// HP-7 fix-round-4 (C-I2): carry this proc's own position into its title --
+						// without it, every entry a merge folds into one cluster's `titles` list is the
+						// identical string (they only ever merge on matching skillId), so a cluster of
+						// N procs rendered "Murmur -1%, Murmur -1%, Murmur -1%" with no way to tell them
+						// apart. Round to whole meters; the merge path's tooltip is the only place this
+						// number is read back out, not anything precision-sensitive.
+						const title = `${desc.title || desc.text} @ ${Math.round(r.start)}m`;
+						let rowIdx = rows.findIndex((row) =>
+							row.every(
+								(placed) => Math.abs(placed.x - x) >= placed.half + half,
+							),
+						);
+						if (rowIdx === -1 && rows.length < MARKER_ROW_CAP) {
+							rowIdx = rows.length;
+							rows.push([]);
+						}
+						if (rowIdx !== -1) {
+							rows[rowIdx].push({
+								x,
+								half,
+								text: desc.text,
+								skillId: desc.skillId,
+								count: 1,
+								titles: [title],
+								color: desc.color.stroke,
+							});
+							return;
+						}
+						// Row cap reached and this proc doesn't cleanly fit any existing row:
+						// merge into the nearest cluster that shares this proc's skill/bucket id
+						// (falling back to the rendered label when a marker has no id of its own)
+						// rather than draw an overlapping tick.
+						//
+						// Peer-review fix (HP-7 Important 5): matching on `text` alone used to merge
+						// clusters that only share a rendered drain-% label -- only 4 distinct drain
+						// magnitudes exist across 21 (JP) / 20 (Global) debuff buckets, so e.g. two entirely
+						// different skills both labelled "−1%" (one of which alone covers ~16
+						// shipped skills) could merge into one cluster whose tooltip then
+						// misattributes which skill fired and where. Matching on `skillId` fixes
+						// this; the `?? desc.text` fallback only matters for a marker with no id
+						// (none currently ship one). Round 9 (C-R2): `skillId` here is a
+						// normalized bucket id (app.tsx's debuffMarkers routes it through
+						// normalizeDebuffId() for exactly this merge key), not the raw activated
+						// skill id -- two procs of the same multi-member bucket recorded under
+						// different member ids now share this key and merge correctly.
+						const matchKey = desc.skillId ?? desc.text;
+						let best: MarkerCluster | null = null;
+						let bestDist = Infinity;
+						rows.forEach((row) => {
+							row.forEach((c) => {
+								if ((c.skillId ?? c.text) !== matchKey) return;
+								const d = Math.abs(c.x - x);
+								if (d < bestDist) {
+									bestDist = d;
+									best = c;
+								}
+							});
+						});
+						if (best == null) {
+							// Rare: every capped row is saturated with OTHER skills/buckets (several
+							// distinct debuffs all clustering at once) so there is no matching
+							// cluster to fold into. Attach to the last row anyway -- an occasional
+							// visual overlap here is preferable to silently dropping a proc the card
+							// does list.
+							//
+							// Peer-review fix (HP-7 Important 5), reassessed: switching the merge
+							// above from label-text to skill-id makes this branch reachable in
+							// strictly more cases than before (two different ids that used to share
+							// one label -- e.g. two of the ~16 skills all rendering "−1%" -- no
+							// longer merge into each other, so each independently competes for the
+							// same MARKER_ROW_CAP row slots). This is still expected to be rare in
+							// practice: it requires several *distinct* debuff buckets landing within
+							// the same tight x-window in the same race, and the dialog's realistic
+							// usage is 1-3 configured buckets, not the full 21-bucket (JP) / 20-bucket
+							// (Global) catalog at once. No overlap check is added here -- an occasional visual overlap in
+							// this already-rare, already-documented fallback is preferable to the
+							// complexity of a second stacking pass, and each cluster's own
+							// (now-correct) skillId/titles still make its tooltip attribute
+							// correctly even when two ticks visually overlap.
+							best = {
+								x,
+								half,
+								text: desc.text,
+								skillId: desc.skillId,
+								count: 0,
+								titles: [],
+								color: desc.color.stroke,
+							};
+							rows[MARKER_ROW_CAP - 1].push(best);
+						}
+						best.count += 1;
+						best.titles.push(title);
+						// The rendered label becomes `${count}× ${text}` once count > 1 (see the
+						// debuffMarkerLayer render pass below) -- wider than the single-proc label
+						// `half` was reserved for at creation, so recompute it from that same
+						// widened text or a later placement's overlap check trusts a stale,
+						// too-narrow reservation.
+						best.half = labelHalf(
+							best.count > 1 ? `${best.count}× ${best.text}` : best.text,
+						);
+					});
 				} else {
 					state.elem.push(
 						<Fragment>
@@ -902,13 +1101,71 @@ export function RaceTrack(props) {
 			},
 			{
 				seen: new Set(),
+				markerRows: {} as Record<number, Array<MarkerCluster[]>>,
 				rungs: Array(10)
 					.fill(0)
 					.map((_) => []),
 				elem: [],
 			},
-		).elem;
-	}, [props.regions, course.distance, props.uma1, props.uma2, props.pacer]);
+		);
+		// Render the accumulated marker clusters (state.markerRows) in one pass, now that every
+		// Marker desc has been processed and every merge (MARKER_ROW_CAP) has already happened --
+		// see the Marker branch above for why this can't render incrementally per-desc.
+		const debuffMarkerLayer: any[] = [];
+		Object.keys(state.markerRows).forEach((umaIndexKey) => {
+			const umaIndex = +umaIndexKey;
+			const up = umaIndex === 0;
+			state.markerRows[umaIndex].forEach((row, rowIdx) => {
+				const y = up ? 4 + rowIdx * 11 : 97 - rowIdx * 11;
+				row.forEach((cluster, ci) => {
+					const label =
+						cluster.count > 1
+							? `${cluster.count}× ${cluster.text}`
+							: cluster.text;
+					const title = cluster.titles.join(', ');
+					debuffMarkerLayer.push(
+						<Fragment key={`${umaIndex}-${rowIdx}-${ci}`}>
+							{/* HP-7 review-4 (M6): no `.debuffMarkerLine` CSS rule exists -- this tick's
+							    styling is entirely the inline attributes below (stroke is per-uma
+							    colour, set from cluster.color). Dropped the dead class rather than
+							    adding a rule for it, since a later CSS rule targeting this class would
+							    silently override that per-uma colour. */}
+							<line
+								x1={`${cluster.x}%`}
+								y1="0"
+								x2={`${cluster.x}%`}
+								y2="100%"
+								stroke={cluster.color}
+								stroke-width="1.5"
+								stroke-dasharray="4 3"
+								pointer-events="none"
+							/>
+							<text
+								class="debuffMarkerText"
+								x={`${cluster.x}%`}
+								y={`${y}%`}
+								font-size="9px"
+								text-anchor="middle"
+								dominant-baseline={up ? 'hanging' : 'auto'}
+								fill={cluster.color}
+							>
+								<title>{title}</title>
+								{label}
+							</text>
+						</Fragment>,
+					);
+				});
+			});
+		});
+		return { regions: state.elem, debuffMarkerLayer };
+	}, [
+		props.regions,
+		course.distance,
+		props.uma1,
+		props.uma2,
+		props.pacer,
+		props.width,
+	]);
 
 	const statStrings = useText({
 		1: 'ui.stats.1',
@@ -998,6 +1255,30 @@ export function RaceTrack(props) {
 							></text>
 						</svg>
 						{props.children}
+						{/* HP-7 pt.2 (post-review fix): debuff markers get their own top layer,
+						    same x/y/width/height as the inner svg above so `%`-based coordinates
+						    still line up, but placed AFTER {props.children} (the velocity/HP
+						    curves) so a label is never painted over by a curve crossing the same
+						    point -- see the useMemo above (debuffMarkerLayer). The tick <line>
+						    itself is pointer-events:none (set per-element in the Marker branch
+						    above) so it can never intercept a drag meant for a skill box beneath
+						    it. The <text> is deliberately left interactive (not pointer-events:
+						    none) so its <title> hover tooltip still works -- honest trade-off,
+						    not a free lunch: its glyph box is a real, if small (~17px at the
+						    default 9px font), dead zone over whatever skill-box rung happens to
+						    sit underneath a given label, where a click/drag is swallowed by the
+						    label instead of reaching the box. Accepted because the tooltip (and,
+						    post-issue-4, a merged cluster's full title list) carries information
+						    the card doesn't show at this granularity, and the dead zone is a
+						    handful of small text glyphs, not a large area. */}
+						<svg
+							x={props.xOffset}
+							y={props.yOffset}
+							width={props.width}
+							height={props.height}
+						>
+							{debuffMarkerLayer}
+						</svg>
 					</svg>
 					{/* ANCHOR: stat-thresholds-length-check */}
 					{course.courseSetStatus.length > 0 && (

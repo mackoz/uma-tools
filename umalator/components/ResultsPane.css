@@ -271,15 +271,17 @@
 	opacity: 0.75;
 }
 
-/* ── Race mechanics + skills + misc ─────────────────────────────────────── */
+/* ── Race mechanics + skills + debuffs + misc ───────────────────────────── */
 .mechanics-section,
 .skills-section,
+.debuffs-section,
 .misc-section {
 	padding-top: var(--space-xs);
 	border-top: 1px solid var(--rp-border);
 }
 .mechanics-section h4,
 .skills-section h4,
+.debuffs-section h4,
 .misc-section h4 {
 	font-size: var(--font-sm);
 	font-weight: 600;
@@ -312,6 +314,17 @@
 .skill-activation .skill-pos {
 	font-family: "JetBrains Mono", monospace;
 	color: var(--rp-text-secondary);
+}
+
+/* Own visual style (distinct border tint) so a debuff proc never reads as an equipped skill
+   activation, even though it shares the .skill-activation row layout above. */
+.debuff-activation {
+	border: 1px solid color-mix(in srgb, #ff6b6b 45%, transparent);
+}
+.debuff-activation .debuff-drain {
+	font-family: "JetBrains Mono", monospace;
+	color: #ff6b6b;
+	font-weight: 600;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
