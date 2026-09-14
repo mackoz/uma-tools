@@ -593,8 +593,11 @@ On the Skill Chart / Uniques Chart tables (`BasinnChart.tsx`), every `ChartRow` 
 of the *baseline*'s (uma1-with-the-candidate-added, run once per block via
 `runComparisonBlock`'s Perspective.Other addition) survived to the finish without running out of
 stamina. A **Survives** column renders these as `<candidate rate>% (<delta>pp)` against the
-baseline, and is sortable like any other column (`accessorFn` returns
-`row.survivesCount / row.n`, or `-Infinity` for a not-yet-sampled row so it sorts last).
+baseline, and is sortable like any other column via a three-way `accessorFn`: `-Infinity` for a
+not-yet-sampled row or a debuff-source row (`row.n === 0` or `isOpponentStaminaDebuff`) so it
+sorts last; `row.survivesCount / row.n` minus `MUTED_SORT_PENALTY` for a muted (screened/
+eliminated) row, matching the Gain column's own penalty so a muted row's high survival ratio can't
+outrank a live, fully-sampled candidate; and the plain `row.survivesCount / row.n` rate otherwise.
 
 The column only appears (`app.tsx`'s `showSurvivesColumn`) once either incoming debuffs are
 actually configured on the charted uma, or the baseline itself isn't already finishing near-100%

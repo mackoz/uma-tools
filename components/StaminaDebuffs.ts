@@ -58,6 +58,12 @@ export const OTHER_TARGETS: ReadonlySet<number> = new Set([
 	2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23,
 ]);
 
+// The three parsers below (parseWindow, parseDistanceType, parseStrategy) all split on /[&@]/ and
+// take the FIRST matching clause -- correct only because victimSafeCondition's engine-side guard
+// (uma-skill-tools/RaceSolverBuilder.ts) preserves '@' (OR) structure but no shipped debuff
+// condition actually strips to one, pinned by uma-skill-tools/test/victim-safe-condition.test.ts's
+// "no shipped debuff condition strips to an OR" assertion. If that assertion ever fails, these
+// parsers need real disjunction handling, not just a first-match shortcut.
 function parseWindow(stripped: string): 'early' | 'mid' | 'late' | null {
 	const clauses = stripped.split(/[&@]/);
 	for (const clause of clauses) {
