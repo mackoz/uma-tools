@@ -1018,9 +1018,13 @@ export function RaceTrack(props) {
 						// magnitudes exist across 21 (JP) / 20 (Global) debuff buckets, so e.g. two entirely
 						// different skills both labelled "−1%" (one of which alone covers ~16
 						// shipped skills) could merge into one cluster whose tooltip then
-						// misattributes which skill fired and where. Matching on `skillId` (the
-						// bucket id, set by app.tsx's debuffMarkers) fixes this; the `?? desc.text`
-						// fallback only matters for a marker with no id (none currently ship one).
+						// misattributes which skill fired and where. Matching on `skillId` fixes
+						// this; the `?? desc.text` fallback only matters for a marker with no id
+						// (none currently ship one). Round 9 (C-R2): `skillId` here is a
+						// normalized bucket id (app.tsx's debuffMarkers routes it through
+						// normalizeDebuffId() for exactly this merge key), not the raw activated
+						// skill id -- two procs of the same multi-member bucket recorded under
+						// different member ids now share this key and merge correctly.
 						const matchKey = desc.skillId ?? desc.text;
 						let best: MarkerCluster | null = null;
 						let bestDist = Infinity;

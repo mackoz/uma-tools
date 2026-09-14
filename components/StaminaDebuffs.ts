@@ -54,7 +54,7 @@ const DEBUFF_EFFECT_TYPE = 9;
 // terms to VictimSafeConditions -- see RaceSolverBuilder.ts -- re-split what used to be 15 buckets
 // over 8 conditions. Global's shipped data yields 20 buckets, not exercised by this repo's Vitest
 // suite since it only loads JP -- see StaminaDebuffs.test.ts).
-const OTHER_TARGETS: ReadonlySet<number> = new Set([
+export const OTHER_TARGETS: ReadonlySet<number> = new Set([
 	2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23,
 ]);
 

@@ -590,10 +590,18 @@ export function BasinnChart(props) {
 							// (+99.0pp) with zero real effect on the candidate. Suppressing the cell
 							// (not fixing the mirror) is deliberate -- see the task brief -- rather than
 							// adding a third simulation just for this column.
-							accessorFn: (row: ChartRow) =>
-								row.n > 0 && !isOpponentStaminaDebuff(row.id)
-									? row.survivesCount / row.n
-									: Number.NEGATIVE_INFINITY,
+							//
+							// Round 9 (C-R3): apply the same MUTED_SORT_PENALTY the Gain column's
+							// accessorFn applies (above) -- without it, a screened/eliminated row
+							// (isMutedRow) that happened to sample a high survival ratio could
+							// outrank a live, fully-sampled candidate on this column even though
+							// Gain already sorts it to the bottom.
+							accessorFn: (row: ChartRow) => {
+								if (row.n === 0 || isOpponentStaminaDebuff(row.id))
+									return Number.NEGATIVE_INFINITY;
+								const rate = row.survivesCount / row.n;
+								return isMutedRow(row) ? rate - MUTED_SORT_PENALTY : rate;
+							},
 							cell: (info) =>
 								isOpponentStaminaDebuff(info.row.original.id)
 									? '—'

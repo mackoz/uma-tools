@@ -69,17 +69,16 @@ export function IntroText(props) {
 						<summary>2026-09-13</summary>
 						<ul>
 							<li>
-								Fixed: a gold-skill effect that force-activates a random pending
-								skill (Summer Goldship's unique,{' '}
-								<strong>Adventure of 564</strong>, and its inherited form) could
-								occasionally cause a <strong>Stam Debuff → Configure</strong>{' '}
-								entry to be silently dropped instead of firing, if the opponent
-								also happened to equip an ordinary copy of that same debuff
-								skill -- one configured debuff activation would vanish, and the
-								opponent's ordinary copy would double-fire later to compensate.
-								Both no longer happen: a gold-skill force-activation now always
-								removes the specific pending activation that actually fired,
-								never a different one that merely shares the same skill.
+								Fixed: when <strong>564 Escapades</strong> (Summer Goldship's
+								unique, or its inherited form) force-activated up to two random
+								pending Gold/Evolution skills, and either uma equipped an
+								ordinary copy of a skill that also appeared elsewhere in that
+								uma's pending list -- the normal case when comparing two
+								near-identical builds, since skills common to both umas are
+								added twice -- the wrong copy could be removed: one copy would
+								activate an extra time, and another would silently not activate
+								at all. Race results involving a duplicated skill may differ
+								slightly from previous builds.
 							</li>
 						</ul>
 					</details>

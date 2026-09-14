@@ -14,6 +14,7 @@ import {
 	isBucketPossible,
 	isOpponentStaminaDebuff,
 	normalizeDebuffId,
+	OTHER_TARGETS,
 	STAMINA_DEBUFF_BUCKETS,
 	strategyMatchesBucket,
 	totalDrain,
@@ -35,7 +36,6 @@ import {
 // distance_type before it silently vanishes from the catalog (still draining HP, still invisible
 // to isOpponentStaminaDebuff, so it would ALSO lose the Gain caveat and Survives suppression).
 function deriveBucketKeys(data: object): Set<string> {
-	const OTHER_TARGETS = new Set([2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23]);
 	const keys = new Set<string>();
 	for (const skillId of Object.keys(data)) {
 		const skill = (data as any)[skillId];
@@ -85,18 +85,27 @@ describe('stamina debuff catalog', () => {
 		);
 	});
 
-	// HP-7 review-4 (C-I3): OTHER_TARGETS (StaminaDebuffs.ts, mirrored above in this file's
-	// deriveBucketKeys) is documented as "the non-`Self` values of SkillTarget" but used to omit
-	// AheadOfPosition (7) and BehindSelf (10) -- the same silent-miss failure mode this feature's
-	// ADR-0014 allowlist argument exists to avoid, since a future debuff on either target would get
-	// no bucket at all, with no signal. This pins the mirrored set against "every SkillTarget value
-	// except Self", derived straight from the engine's own enum, so the two can't drift apart again.
-	test('the mirrored OTHER_TARGETS matches every non-Self SkillTarget value', () => {
+	// HP-7 review-4 (C-I3): OTHER_TARGETS (StaminaDebuffs.ts) is documented as "the non-`Self`
+	// values of SkillTarget" but used to omit AheadOfPosition (7) and BehindSelf (10) -- the same
+	// silent-miss failure mode this feature's ADR-0014 allowlist argument exists to avoid, since a
+	// future debuff on either target would get no bucket at all, with no signal. This pins the
+	// real production constant (imported above, not a copy) against "every SkillTarget value
+	// except Self", derived straight from the engine's own enum.
+	//
+	// HP-7 review-9 (C-I3 / M1): this used to compare the enum against a test-local literal that
+	// never touched the production constant, so re-deleting a member from OTHER_TARGETS left this
+	// test green. Asserting against the imported OTHER_TARGETS closes that gap. Note what this
+	// still can and can't catch: a member ADDED to SkillTarget must still be added to the
+	// `nonSelfTargets` list below by hand (property access, not enumeration) -- an added member is
+	// silently absent from both sides and this test stays green. A member REMOVED from SkillTarget
+	// is caught by `npm run typecheck` (the property access no longer compiles), not by this test --
+	// vitest transpiles through esbuild and never typechecks.
+	test('OTHER_TARGETS matches every non-Self SkillTarget value', () => {
 		// Referenced via property access (not Object.values(SkillTarget)) because SkillTarget is a
 		// `const enum` -- tsc rejects anything but a property/index access or import/export/type
 		// query on one. Each member is still read from the enum itself, not restated as a literal,
 		// so a member added to or removed from SkillTarget in RaceSolverBuilder.ts still moves this
-		// set and can disagree with the mirror below.
+		// set and can disagree with the production constant.
 		const nonSelfTargets = new Set<number>([
 			SkillTarget.All,
 			SkillTarget.InFov,
@@ -111,10 +120,7 @@ describe('stamina debuff catalog', () => {
 			SkillTarget.UmaId,
 			SkillTarget.UsedRecovery,
 		]);
-		const otherTargetsMirror = new Set([
-			2, 4, 7, 9, 10, 11, 18, 19, 20, 21, 22, 23,
-		]);
-		expect(nonSelfTargets).toEqual(otherTargetsMirror);
+		expect(nonSelfTargets).toEqual(new Set(OTHER_TARGETS));
 	});
 
 	// HP-7 review-4 (C-I3): the same silent-miss axis, checked directly against the shipped data

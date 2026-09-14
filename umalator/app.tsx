@@ -59,6 +59,7 @@ import {
 	drainForSkill,
 	formatPercent,
 	isOpponentStaminaDebuff,
+	normalizeDebuffId,
 	sanitizeIncomingDebuffs,
 } from '../components/StaminaDebuffs';
 import rawPresets from '../presets.ts';
@@ -314,6 +315,13 @@ function pruningLabel(pruning: number): string {
 
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
+
+// Round 9 (C-R4): the single default among 'meanrun'/'medianrun'/'minrun'/'maxrun' that
+// `displaying`, `displayRun`, and the course map's chartData all fall back to when nothing has
+// been explicitly selected yet. Was a duplicated string literal at four call sites -- see the
+// HP-7 review-4 (M4)/review-3 (Finding 3) comments at each remaining use below for why they all
+// have to agree.
+const DEFAULT_DISPLAYING_RUN = 'medianrun';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -2253,8 +2261,8 @@ function updateResultsState(
 			// showed a DIFFERENT run's (Mean's) proc positions for the same debuff -- confirmed live
 			// (median run's card read 665m/1450m while the map's default-shown run put its ticks at
 			// ~848m/~1303m).
-			chartData: o.runData[state.displaying || 'medianrun'],
-			displaying: state.displaying || 'medianrun',
+			chartData: o.runData[state.displaying || DEFAULT_DISPLAYING_RUN],
+			displaying: state.displaying || DEFAULT_DISPLAYING_RUN,
 			spurtInfo: o.spurtInfo || null,
 			staminaStats: o.staminaStats || null,
 			firstUmaStats: o.firstUmaStats || null,
@@ -3528,7 +3536,7 @@ function App(props) {
 	// handleDisplayRunChange/the Skill Chart's own selector), so slicing off the trailing 'run' is
 	// an exact, lossless inverse of the `${run}run` template used to build `displaying` -- not a
 	// heuristic.
-	const displayRun = (displaying || 'medianrun').slice(0, -3) as
+	const displayRun = (displaying || DEFAULT_DISPLAYING_RUN).slice(0, -3) as
 		| 'mean'
 		| 'median'
 		| 'min'
@@ -5340,12 +5348,22 @@ function App(props) {
 									color: debuffColors[i],
 									text: label,
 									title,
-									// Peer-review fix (HP-7 Important 5): the bucket id, so
-									// RaceTrack.tsx's row-cap cluster merge can match on which
-									// debuff actually fired instead of on the rendered label text
-									// (the drain % alone -- only 4 distinct magnitudes exist across
-									// 15-21 buckets, so several distinct debuffs share one label).
-									skillId: id,
+									// Peer-review fix (HP-7 Important 5): a normalized bucket id
+									// for the merge key, so RaceTrack.tsx's row-cap cluster merge
+									// matches on which debuff bucket actually fired instead of on
+									// the rendered label text (the drain % alone -- only 4
+									// distinct magnitudes exist across 15-21 buckets, so several
+									// distinct debuffs share one label). `id` here is the raw
+									// activated skill id, which can be any member of a multi-member
+									// bucket (e.g. the opponent's actually-equipped variant, not
+									// the dialog-configured representative) -- round-9 fix (C-R1):
+									// route it through normalizeDebuffId() for the merge key only,
+									// so two procs of the same bucket recorded under different
+									// member ids still merge. `name`/`title` above stay derived
+									// from the raw `id` so each proc's tooltip still names the
+									// specific skill that fired (RaceTrack.tsx preserves per-proc
+									// titles across a merge).
+									skillId: normalizeDebuffId(id) ?? id,
 									umaIndex: i,
 									regions: [{ start: ar[0], end: ar[0] }],
 								}));
@@ -5623,7 +5641,7 @@ function App(props) {
 			// Kept in sync with `displayRun`'s own fallback above ('medianrun', not 'meanrun') --
 			// same single default across the whole app now that `displayRun` is derived from
 			// `displaying` instead of tracked separately.
-			const currentDisplaying = displaying || 'medianrun';
+			const currentDisplaying = displaying || DEFAULT_DISPLAYING_RUN;
 			const baseCost = (skillmeta as any)[skillId]?.baseCost;
 
 			return (
