@@ -273,12 +273,12 @@ This is read-only — no mutating git/gh calls. Check these in its output:
   `uma-tools-plans` always, `uma-skill-tools` too when `--engine-pr` is given): `OK` means
   `land_one`'s own `require_clean` will pass; `PROBLEM` names the uncommitted changes it would
   refuse on, before merging anything. Commit or stash whatever it names.
-- **PR state check / local branch check** (PIPE-75) — appear next to the `uma-tools#M:
-  state=...` line (when `--engine-pr` is given) and the `uma-tools-plans#K: state=...` line
-  (when `--complete-id` is given): these are the two PRs `checkout_pr_head` will actually check
-  out (for `sync_gitlink`'s gitlink-bump commit and for `--complete-id`'s completion commit,
-  respectively). `PR state check: ... OK -- open` is the good case; `... is not open
-  (state=...)` means `checkout_pr_head` refuses outright on that merged or closed PR. A `local
+- **PR state check / local branch check** (PIPE-75) — a `PR state check` line for every PR the
+  run will merge: the code and plans PRs always, the engine PR when `--engine-pr` is given.
+  `... OK -- open` is the good case; `... is not open (state=...)` means `land_one` can't merge
+  that PR, which for the plans PR would fail *after* the code PR has already merged. For the
+  two PRs `checkout_pr_head` also checks out (the code PR under `--engine-pr`, the plans PR
+  under `--complete-id`) the line adds that that step refuses on a non-open PR too. A `local
   branch check` line only appears when that PR's branch exists as a plain local branch in the
   main checkout itself (not a worktree — the existing `worktree check` line already covers
   that case, so this doesn't repeat it); `... is up to date with origin -- OK` is fine, any
@@ -298,10 +298,8 @@ This is read-only — no mutating git/gh calls. Check these in its output:
   text, and both read the ticket the same way: via the plans
   PR's own branch (`origin/<head>`, `_read_file_at_ref`), not your local `uma-tools-plans`
   working tree (PIPE-74) — so an `OK` here no longer depends on what branch your local
-  checkout happens to be on. It is not an absolute guarantee: `set_status`'s missing-Status-
-  line check (PIPE-77) lives outside `completion_problem()` too. The tree-cleanliness/PR-state/
-  local-branch gaps this caveat used to name (PIPE-75) are now predicted by the checks above —
-  what's still genuinely unpredicted is the plans-repo index-structure cluster
+  checkout happens to be on. It is not an absolute guarantee, though what escapes it is now
+  narrow: the plans-repo index-structure cluster
   (`readme_remove_row`/`readme_insert_row`/`mkdocs_move`/`mkdocs_ensure_group` — a different,
   not-yet-reproduced mechanism, split out of PIPE-75's scope by design) and anything that
   depends on GitHub's state at merge time (a PR that stops being mergeable, or fails to report
