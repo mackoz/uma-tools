@@ -219,7 +219,10 @@ findings, like this session's PIPE-3 land did).
 
 **2.2 — The ticket's `## Outcome` section must already exist, with a real narrative, before
 you run anything with `--complete-id`.** This is enforced by the script (`land --dry-run`
-and the real run both refuse without it), but *writing it during the run isn't possible* —
+and the real run both refuse without it — genuinely both, since PIPE-71: they used to ask
+the question differently, and the preview's laxer test green-lit a land the real run then
+rejected mid-sequence, see Step 3's `complete-id check` bullet), but *writing it during the
+run isn't possible* —
 you have to add it yourself first. PIPE-8's landing hit this the hard way: the first `land`
 attempt correctly stopped short of the plans PR because the Outcome section wasn't there
 yet, after engine and code had already merged. Write a real narrative — what was
@@ -277,7 +280,14 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   `ui-25`) — stop and resolve it (bump the gitlink, or add `--engine-pr`) before proceeding.
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
-  hand) — go fix it, don't try to work around the refusal.
+  hand) — go fix it, don't try to work around the refusal. **This line is trustworthy only
+  since PIPE-71 (2026-09-15)**: before that the preview used a substring test while the real
+  run required the heading line to be exactly `## Outcome`, so a descriptive heading like
+  `## Outcome (2026-09-14): confirmed` passed here and then failed the real run — after the
+  engine and code PRs had merged, in a command that is not resumable. That is how SPD-7's
+  landing stranded a partial multi-repo merge. Both sides now call one shared predicate, and
+  a descriptive heading is accepted by both; if you are landing from a checkout that predates
+  PIPE-71, check the heading by hand against `^## Outcome$` before trusting this `OK`.
 - **Pages deploy check** (since PIPE-30) — a line starting `Pages deploy check:` predicting
   whether the merge will trigger a Pages deploy, from `uma-tools`' own `deploy.yml` trigger
   config against the code PR's changed files. `none expected` is normal and correct for a
