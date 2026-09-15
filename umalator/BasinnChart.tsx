@@ -725,20 +725,23 @@ export function BasinnChart(props) {
 													? (e) => {
 															// UI-39: optional, no-op by default --
 															// wraps (doesn't replace) the original
-															// handler below. Reports the order this
-															// click is about to produce, not the
-															// current state. getNextSortingOrder is
-															// tri-state ('asc' | 'desc' | false --
-															// see the title tooltip above), so this
-															// passes the order through rather than a
-															// desc boolean, which would make a
-															// clear-sort click indistinguishable
-															// from an ascending one.
-															props.onSort?.(
-																header.column.id,
-																header.column.getNextSortingOrder() || 'clear',
-															);
+															// handler. Order is read BEFORE sorting
+															// (it's the order this click produces,
+															// and the handler moves it on), but
+															// reported AFTER, so a throw in the
+															// telemetry callback can't stop the sort
+															// this onClick exists to perform.
+															// getNextSortingOrder is tri-state
+															// ('asc' | 'desc' | false -- see the
+															// title tooltip above), so the order is
+															// passed through rather than a desc
+															// boolean, which would make a clear-sort
+															// click indistinguishable from an
+															// ascending one.
+															const order =
+																header.column.getNextSortingOrder() || 'clear';
 															header.column.getToggleSortingHandler()?.(e);
+															props.onSort?.(header.column.id, order);
 														}
 													: undefined
 											}

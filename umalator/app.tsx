@@ -4687,10 +4687,14 @@ function App(props) {
 				window.location.host +
 				window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
-			// UI-39: `mode` reuses #modeTabs' own derivation (currentModeTabKey) rather than
-			// doBasinnChart's chartModeKey, since this fires for every mode, not just chart modes.
+			// UI-39: chartModeKey's vocabulary, extended with the 'compare' case it has no reason
+			// to carry (it labels chart tabs only), so this event correlates directly against
+			// doBasinnChart/chartSorted/chartDetailRequested. Deliberately NOT currentModeTabKey,
+			// which labels Mode.Chart 'chart' rather than 'skill': that string drives the #modeTabs
+			// selection and switchMode's own `from`, so it can't be realigned without breaking the
+			// tab UI and forking switchMode's existing data.
 			postEvent('shareLinkCopied', {
-				mode: currentModeTabKey,
+				mode: mode === Mode.Compare ? 'compare' : chartModeKey(mode),
 				courseId,
 				hasDebuffs:
 					uma1.incomingDebuffs.size > 0 || uma2.incomingDebuffs.size > 0,
@@ -5076,8 +5080,14 @@ function App(props) {
 		postEvent('doBasinnChart', {
 			mode: chartModeKey(mode),
 			courseId,
-			// UI-39: uma1 only -- the chart always runs a single uma, regardless of mode.
-			debuffCount: totalIncomingDebuffCount(uma1),
+			// UI-39: reported for the two chart families that actually run uma1, and deliberately
+			// absent for CourseChart, whose subject is courseChartTemplate()'s neutral template --
+			// a fresh HorseState that never carries incomingDebuffs (the same fact finishRound's
+			// survivesColumnLatched comment relies on). Reporting uma1's count there would imply
+			// debuffs affected a run they structurally cannot.
+			...(mode === Mode.CourseChart
+				? {}
+				: { debuffCount: totalIncomingDebuffCount(uma1) }),
 			...(mode === Mode.CourseChart
 				? {
 						style: courseChartStyle,
