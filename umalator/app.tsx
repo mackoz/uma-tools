@@ -6066,11 +6066,11 @@ function App(props) {
 							onSelectionChange={basinnChartSelection}
 							onDblClickRow={addSkillFromTable}
 							onInfoClick={showPopover}
-							onSort={(columnId: string, desc: boolean) =>
+							onSort={(columnId: string, order: string) =>
 								postEvent('chartSorted', {
 									mode: chartModeKey(mode),
 									columnId,
-									desc,
+									order,
 								})
 							}
 							showUmaIcons={mode == Mode.UniquesChart}
@@ -6129,11 +6129,11 @@ function App(props) {
 								onSelectionChange={basinnChartSelection}
 								onDblClickRow={addSkillFromTable}
 								onInfoClick={showPopover}
-								onSort={(columnId: string, desc: boolean) =>
+								onSort={(columnId: string, order: string) =>
 									postEvent('chartSorted', {
 										mode: chartModeKey(mode),
 										columnId,
-										desc,
+										order,
 									})
 								}
 								showUmaIcons={true}

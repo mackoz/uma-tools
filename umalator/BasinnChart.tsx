@@ -725,13 +725,18 @@ export function BasinnChart(props) {
 													? (e) => {
 															// UI-39: optional, no-op by default --
 															// wraps (doesn't replace) the original
-															// handler below. `desc` is the order
-															// this click is about to produce
-															// (getNextSortingOrder), not the
-															// current state.
+															// handler below. Reports the order this
+															// click is about to produce, not the
+															// current state. getNextSortingOrder is
+															// tri-state ('asc' | 'desc' | false --
+															// see the title tooltip above), so this
+															// passes the order through rather than a
+															// desc boolean, which would make a
+															// clear-sort click indistinguishable
+															// from an ascending one.
 															props.onSort?.(
 																header.column.id,
-																header.column.getNextSortingOrder() === 'desc',
+																header.column.getNextSortingOrder() || 'clear',
 															);
 															header.column.getToggleSortingHandler()?.(e);
 														}
