@@ -42,10 +42,12 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   do the file, README, or nav edits by hand. `wq.py file` itself commits directly on whatever
   branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — session-
   agnostic: it's whatever's checked out at the moment, regardless of which session (or a manual
-  `git checkout`) left it there. That's `main` in the common case, but a branch backing an open
-  PR is just as plausible, and filing there bundles the new ticket into that PR instead of
-  standing alone — check first if it matters, `git checkout main` if you want a standalone
-  filing. `claim`/`status`/`complete` are the ones that always go through a ticket's own
+  `git checkout`) left it there. **Filing on whatever branch is checked out is fine, including a
+  branch backing an open PR** — the ticket rides along in that PR, which is normal and expected,
+  and a side-finding filed onto the ticket's own PR is a feature rather than contamination. There
+  is no rule that tickets must land on `main`; don't switch branches as a matter of course before
+  filing. Only bother when the current branch is one you specifically don't want the ticket
+  travelling with. `claim`/`status`/`complete` are the ones that always go through a ticket's own
   branch+PR; don't hand-commit yourself outside `file`'s own convention above. See
   `plans/work-queue/README.md` for the ID scheme and the Category/Type split.
 - **`/wq` drives the mechanics of the above** (`.claude/skills/wq/`) — the exact `file`/
