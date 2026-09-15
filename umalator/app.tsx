@@ -3466,6 +3466,33 @@ function App(props) {
 		toggleRushedKakari(null);
 	}
 
+	// UI-39: same shape as handleSyncRngToggle above -- the three graph toggles below were the
+	// only settings-style controls left outside settingChanged's `setting` union.
+	function handleShowHpToggle() {
+		postEvent('settingChanged', { setting: 'showHp', value: !showHp });
+		toggleShowHp(null);
+	}
+
+	function handleShowPoskeepGapToggle() {
+		postEvent('settingChanged', {
+			setting: 'showPoskeepGap',
+			value: !showPoskeepGap,
+		});
+		toggleShowPoskeepGap(null);
+	}
+
+	function handleShowLabelsToggle() {
+		postEvent('settingChanged', { setting: 'showLabels', value: !showLabels });
+		toggleShowLabels(null);
+	}
+
+	// UI-39: fires on the dueling-rates dialog's close, covering both close paths (overlay click
+	// and the Close button) from one place rather than duplicating the payload construction.
+	function closeDuelingConfig() {
+		postEvent('duelingRatesConfigured', { ...duelingRates });
+		setDuelingConfigOpen(false);
+	}
+
 	function autoSaveSettings() {
 		saveToLocalStorage(
 			courseId,
@@ -4296,6 +4323,13 @@ function App(props) {
 	function requestChartDetail(skillId: string) {
 		const run = chartRunRef.current;
 		const cached = detailCacheRef.current.get(skillId);
+		// UI-39: fired here, not after the `!run` early-out below, so a cache hit still reports --
+		// `mode` is the live top-level state (not run.mode) since `run` may be null at this point.
+		postEvent('chartDetailRequested', {
+			skillId,
+			mode: chartModeKey(mode),
+			cached: !!cached,
+		});
 		if (cached) {
 			applyDetailToSelection(skillId, cached);
 		}
@@ -4424,74 +4458,86 @@ function App(props) {
 
 	function loadState() {
 		if (window.location.hash) {
-			deserialize(window.location.hash.slice(1)).then((o) => {
-				setCourseId(o.courseId);
-				setSamples(o.nsamples);
-				setSeed(o.seed);
-				setPosKeepModeRaw(o.posKeepMode);
-				setRaceDef(o.racedef);
-				setUma1(o.uma1);
-				setUma2(o.uma2);
-				setPacer(o.pacer);
-				setPacemakerCount(o.pacemakerCount);
-				setSelectedPacemakerIndices(
-					o.selectedPacemakers
-						? o.selectedPacemakers
-								.map((selected, index) => (selected ? index : -1))
-								.filter((index) => index !== -1)
-						: [],
-				);
+			deserialize(window.location.hash.slice(1))
+				.then((o) => {
+					setCourseId(o.courseId);
+					setSamples(o.nsamples);
+					setSeed(o.seed);
+					setPosKeepModeRaw(o.posKeepMode);
+					setRaceDef(o.racedef);
+					setUma1(o.uma1);
+					setUma2(o.uma2);
+					setPacer(o.pacer);
+					setPacemakerCount(o.pacemakerCount);
+					setSelectedPacemakerIndices(
+						o.selectedPacemakers
+							? o.selectedPacemakers
+									.map((selected, index) => (selected ? index : -1))
+									.filter((index) => index !== -1)
+							: [],
+					);
 
-				if (
-					o.showVirtualPacemakerOnGraph !== undefined &&
-					o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph
-				) {
-					toggleShowVirtualPacemakerOnGraph(null);
-				}
+					if (
+						o.showVirtualPacemakerOnGraph !== undefined &&
+						o.showVirtualPacemakerOnGraph !== showVirtualPacemakerOnGraph
+					) {
+						toggleShowVirtualPacemakerOnGraph(null);
+					}
 
-				if (o.showLanes !== undefined && o.showLanes !== showLanes) {
-					toggleShowLanes(null);
-				}
+					if (o.showLanes !== undefined && o.showLanes !== showLanes) {
+						toggleShowLanes(null);
+					}
 
-				if (o.witVarianceSettings) {
-					const settings = o.witVarianceSettings;
-					if (settings.syncRng !== undefined && settings.syncRng !== syncRng)
-						toggleSyncRng(null);
-					if (
-						settings.skillWisdomCheck !== undefined &&
-						settings.skillWisdomCheck !== skillWisdomCheck
-					)
-						toggleSkillWisdomCheck(null);
-					if (
-						settings.rushedKakari !== undefined &&
-						settings.rushedKakari !== rushedKakari
-					)
-						toggleRushedKakari(null);
-				}
+					if (o.witVarianceSettings) {
+						const settings = o.witVarianceSettings;
+						if (settings.syncRng !== undefined && settings.syncRng !== syncRng)
+							toggleSyncRng(null);
+						if (
+							settings.skillWisdomCheck !== undefined &&
+							settings.skillWisdomCheck !== skillWisdomCheck
+						)
+							toggleSkillWisdomCheck(null);
+						if (
+							settings.rushedKakari !== undefined &&
+							settings.rushedKakari !== rushedKakari
+						)
+							toggleRushedKakari(null);
+					}
 
-				if (o.competeFight !== undefined) {
-					setCompeteFight(o.competeFight);
-				}
-				if (o.leadCompetition !== undefined) {
-					setLeadCompetition(o.leadCompetition);
-				}
-				if (o.duelingRates) {
-					setDuelingRates(o.duelingRates);
-				}
-				if (o.graphToggles) {
-					if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
-					if (
-						o.graphToggles.showPoskeepGap !== undefined &&
-						o.graphToggles.showPoskeepGap !== showPoskeepGap
-					)
-						toggleShowPoskeepGap(null);
-					if (
-						o.graphToggles.showLabels !== undefined &&
-						o.graphToggles.showLabels !== showLabels
-					)
-						toggleShowLabels(null);
-				}
-			});
+					if (o.competeFight !== undefined) {
+						setCompeteFight(o.competeFight);
+					}
+					if (o.leadCompetition !== undefined) {
+						setLeadCompetition(o.leadCompetition);
+					}
+					if (o.duelingRates) {
+						setDuelingRates(o.duelingRates);
+					}
+					if (o.graphToggles) {
+						if (o.graphToggles.showHp !== showHp) toggleShowHp(null);
+						if (
+							o.graphToggles.showPoskeepGap !== undefined &&
+							o.graphToggles.showPoskeepGap !== showPoskeepGap
+						)
+							toggleShowPoskeepGap(null);
+						if (
+							o.graphToggles.showLabels !== undefined &&
+							o.graphToggles.showLabels !== showLabels
+						)
+							toggleShowLabels(null);
+					}
+					// UI-39: fires only for an actual share-link hash load, not the localStorage
+					// branch below (which isn't "opening a link" at all).
+					postEvent('shareLinkOpened', { ok: true });
+				})
+				.catch((err) => {
+					// UI-39: this chain previously had no `.catch` at all, so a deserialize failure
+					// surfaced as an unhandled promise rejection (visible in devtools) rather than
+					// being silently swallowed. Re-throw after reporting so that stays true -- this
+					// catch exists to emit telemetry, not to change error visibility.
+					postEvent('shareLinkOpened', { ok: false });
+					throw err;
+				});
 		} else {
 			loadFromLocalStorage().then((o) => {
 				if (o) {
@@ -4641,6 +4687,18 @@ function App(props) {
 				window.location.host +
 				window.location.pathname;
 			window.navigator.clipboard.writeText(url + '#' + hash);
+			// UI-39: chartModeKey's vocabulary, extended with the 'compare' case it has no reason
+			// to carry (it labels chart tabs only), so this event correlates directly against
+			// doBasinnChart/chartSorted/chartDetailRequested. Deliberately NOT currentModeTabKey,
+			// which labels Mode.Chart 'chart' rather than 'skill': that string drives the #modeTabs
+			// selection and switchMode's own `from`, so it can't be realigned without breaking the
+			// tab UI and forking switchMode's existing data.
+			postEvent('shareLinkCopied', {
+				mode: mode === Mode.Compare ? 'compare' : chartModeKey(mode),
+				courseId,
+				hasDebuffs:
+					uma1.incomingDebuffs.size > 0 || uma2.incomingDebuffs.size > 0,
+			});
 		});
 	}
 
@@ -4663,6 +4721,13 @@ function App(props) {
 	// UI-35: app.tsx-side handlers for HorseDef's onUmaSelected/onSkillEvent optional props (see
 	// components/HorseDef.tsx) -- kept here, not inside the shared component, per CLAUDE.md's rule
 	// that telemetry.ts is never imported outside umalator/.
+	// UI-39: total configured incoming-debuff count for a HorseState, for doComparison/doRunOnce/
+	// doBasinnChart's telemetry payloads. incomingDebuffs is a Map<bucketId, count>, so this is a
+	// sum of values, not `.size` (which would count distinct buckets, not total debuffs).
+	function totalIncomingDebuffCount(uma: HorseState): number {
+		return uma.incomingDebuffs.reduce((sum, count) => sum + count, 0);
+	}
+
 	function handleUmaSelected(
 		slot: 'uma1' | 'uma2' | 'pacer',
 		outfitId: string,
@@ -4672,6 +4737,29 @@ function App(props) {
 			slot,
 			unreleased: unreleasedOutfitIds.has(outfitId),
 		});
+	}
+
+	// UI-39: same slot-wrapping pattern as handleUmaSelected above -- HorseDef's own optional
+	// props carry no slot, app.tsx's call sites supply it (see the onDebuffConfigOpened/
+	// onDebuffConfigUpdated/onProcDataOpened wiring on the uma1/uma2 HorseDef elements below).
+	function handleDebuffConfigOpened(slot: 'uma1' | 'uma2') {
+		postEvent('debuffConfigOpened', { slot });
+	}
+
+	function handleDebuffConfigUpdated(
+		slot: 'uma1' | 'uma2',
+		payload: {
+			bucketIds: string[];
+			totalCount: number;
+			excludedWrongCourse: number;
+			excludedWrongStyle: number;
+		},
+	) {
+		postEvent('debuffConfigUpdated', { slot, ...payload });
+	}
+
+	function handleProcDataOpened(slot: 'uma1' | 'uma2', skillId: string) {
+		postEvent('procDataOpened', { skillId, slot });
 	}
 	function handleSkillEvent(
 		skillId: string,
@@ -4715,6 +4803,10 @@ function App(props) {
 			syncRng,
 			skillCount1: uma1.skills.size,
 			skillCount2: uma2.skills.size,
+			// UI-39: total configured incoming-debuff count -- incomingDebuffs is a
+			// Map<bucketId, count>, so this is a sum of values, not `.size`.
+			debuffCount1: totalIncomingDebuffCount(uma1),
+			debuffCount2: totalIncomingDebuffCount(uma2),
 		});
 		setSimulationError('');
 		setIsSimulationRunning(true);
@@ -4755,6 +4847,8 @@ function App(props) {
 			syncRng,
 			skillCount1: uma1.skills.size,
 			skillCount2: uma2.skills.size,
+			debuffCount1: totalIncomingDebuffCount(uma1),
+			debuffCount2: totalIncomingDebuffCount(uma2),
 		});
 		setSimulationError('');
 		setIsSimulationRunning(true);
@@ -4986,6 +5080,14 @@ function App(props) {
 		postEvent('doBasinnChart', {
 			mode: chartModeKey(mode),
 			courseId,
+			// UI-39: reported for the two chart families that actually run uma1, and deliberately
+			// absent for CourseChart, whose subject is courseChartTemplate()'s neutral template --
+			// a fresh HorseState that never carries incomingDebuffs (the same fact finishRound's
+			// survivesColumnLatched comment relies on). Reporting uma1's count there would imply
+			// debuffs affected a run they structurally cannot.
+			...(mode === Mode.CourseChart
+				? {}
+				: { debuffCount: totalIncomingDebuffCount(uma1) }),
 			...(mode === Mode.CourseChart
 				? {
 						style: courseChartStyle,
@@ -5974,6 +6076,13 @@ function App(props) {
 							onSelectionChange={basinnChartSelection}
 							onDblClickRow={addSkillFromTable}
 							onInfoClick={showPopover}
+							onSort={(columnId: string, order: string) =>
+								postEvent('chartSorted', {
+									mode: chartModeKey(mode),
+									columnId,
+									order,
+								})
+							}
 							showUmaIcons={mode == Mode.UniquesChart}
 							courseDistance={course.distance}
 							expandedContent={createExpandedContent}
@@ -6030,6 +6139,13 @@ function App(props) {
 								onSelectionChange={basinnChartSelection}
 								onDblClickRow={addSkillFromTable}
 								onInfoClick={showPopover}
+								onSort={(columnId: string, order: string) =>
+									postEvent('chartSorted', {
+										mode: chartModeKey(mode),
+										columnId,
+										order,
+									})
+								}
 								showUmaIcons={true}
 								showOutfitEpithet={true}
 								showUmaName={true}
@@ -6083,6 +6199,13 @@ function App(props) {
 					onResetAll={resetAllUmas}
 					onUmaSelected={(id: string) => handleUmaSelected('uma1', id)}
 					onSkillEvent={handleSkillEvent}
+					onDebuffConfigOpened={() => handleDebuffConfigOpened('uma1')}
+					onDebuffConfigUpdated={(payload) =>
+						handleDebuffConfigUpdated('uma1', payload)
+					}
+					onProcDataOpened={(skillId: string) =>
+						handleProcDataOpened('uma1', skillId)
+					}
 					runData={mode == Mode.Compare ? runData : null}
 					umaIndex={mode == Mode.Compare ? 0 : null}
 					hiddenOutfitIds={showUnreleasedUmas ? undefined : unreleasedOutfitIds}
@@ -6128,6 +6251,13 @@ function App(props) {
 						onResetAll={resetAllUmas}
 						onUmaSelected={(id: string) => handleUmaSelected('uma2', id)}
 						onSkillEvent={handleSkillEvent}
+						onDebuffConfigOpened={() => handleDebuffConfigOpened('uma2')}
+						onDebuffConfigUpdated={(payload) =>
+							handleDebuffConfigUpdated('uma2', payload)
+						}
+						onProcDataOpened={(skillId: string) =>
+							handleProcDataOpened('uma2', skillId)
+						}
 						runData={runData}
 						umaIndex={1}
 						hiddenOutfitIds={
@@ -6705,7 +6835,7 @@ function App(props) {
 														<input
 															type="checkbox"
 															checked={showHp}
-															onClick={toggleShowHp}
+															onClick={handleShowHpToggle}
 														/>{' '}
 														Show HP
 													</label>
@@ -6714,7 +6844,7 @@ function App(props) {
 													<input
 														type="checkbox"
 														checked={showPoskeepGap}
-														onClick={toggleShowPoskeepGap}
+														onClick={handleShowPoskeepGapToggle}
 													/>{' '}
 													Show Poskeep Gap
 												</label>
@@ -6722,7 +6852,7 @@ function App(props) {
 													<input
 														type="checkbox"
 														checked={showLabels}
-														onClick={toggleShowLabels}
+														onClick={handleShowLabelsToggle}
 													/>{' '}
 													Show Labels
 												</label>
@@ -7197,7 +7327,7 @@ function App(props) {
 							<div
 								class="duelingOverlay"
 								onClick={(e) => {
-									if (e.target === e.currentTarget) setDuelingConfigOpen(false);
+									if (e.target === e.currentTarget) closeDuelingConfig();
 								}}
 							>
 								<div class="duelingModal">
@@ -7287,9 +7417,7 @@ function App(props) {
 										</div>
 									</div>
 									<div class="duelingActions">
-										<button onClick={() => setDuelingConfigOpen(false)}>
-											Close
-										</button>
+										<button onClick={closeDuelingConfig}>Close</button>
 									</div>
 								</div>
 							</div>
