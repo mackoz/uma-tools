@@ -279,8 +279,8 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   isn't actually done yet (missing `## Outcome`, a stray `Fixed` bullet you added by hand, or
   a missing frontmatter `- **Status**:` line) — go fix it, don't try to work around the
   refusal. This line and the real run's own gate both call `completion_problem()` (PIPE-71,
-  renamed from `outcome_problem` by PIPE-77), which holds every refusal the completion path
-  can raise against the ticket's text, and both read the ticket the same way: via the plans
+  PIPE-77), which holds every refusal the completion path can raise against the ticket's
+  text, and both read the ticket the same way: via the plans
   PR's own branch (`origin/<head>`, `_read_file_at_ref`), not your local `uma-tools-plans`
   working tree (PIPE-74) — so an `OK` here no longer depends on what branch your local
   checkout happens to be on. It is not an absolute guarantee: the tree-state conditions this
