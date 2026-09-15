@@ -45,7 +45,14 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   other doc in the plans repo that pointed at the ticket's old path is repointed at its new
   one, folded into the same commit — inline `[...](...)` links and inline code spans only;
   reference-style links and indented-code-block contents are known gaps, tracked as PIPE-72. A doc with uncommitted changes is skipped rather than
-  rewritten, and the skip is printed — that one line is the only case needing a hand fix. `wq.py file` itself commits directly on whatever
+  rewritten, and the skip is printed — that one line is the only case needing a hand fix.
+  Complementing that, since PIPE-25 the plans repo's pre-commit hook refuses a commit that
+  adds a *new* relative markdown link into a movable ticket file from any doc in that repo
+  (`scripts/check-wq-links.py --staged`) — write "see PIPE-22", not
+  `[PIPE-22](../tooling/pipe-22.md)`. It resolves each link's real target rather than
+  matching path text, so depth doesn't matter; inline code spans, links that already existed
+  before the commit, and `work-queue/README.md`'s generated rows are all deliberately
+  exempt, which is why PIPE-24's retargeting commits still pass. `wq.py file` itself commits directly on whatever
   branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — session-
   agnostic: it's whatever's checked out at the moment, regardless of which session (or a manual
   `git checkout`) left it there. **Filing on whatever branch is checked out is fine, including a
