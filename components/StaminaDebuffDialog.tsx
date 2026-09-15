@@ -98,6 +98,15 @@ export interface StaminaDebuffDialogProps {
 	// applies exactly 0 -- the same course-gating bug this dialog already fixed once, reopened
 	// along a second axis by the fix that restored the style gate to the engine.
 	strategy: string | null | undefined;
+	// UI-39: optional, no-op by default -- fired once on dialog close (any of the three close
+	// paths below), not per stepper click, so a user clicking `+` five times emits one event, not
+	// five. Mirrors app.tsx's shopPoolUpdated (aggregate counts on picker close).
+	onClosed?: (payload: {
+		bucketIds: string[];
+		totalCount: number;
+		excludedWrongCourse: number;
+		excludedWrongStyle: number;
+	}) => void;
 }
 
 export function StaminaDebuffDialog({
@@ -107,13 +116,38 @@ export function StaminaDebuffDialog({
 	onChange,
 	distanceType,
 	strategy,
+	onClosed,
 }: StaminaDebuffDialogProps) {
 	const dialogRef = useRef<HTMLDivElement>(null);
+
+	// UI-39: the single close path all three UI triggers (overlay click, X button, Escape) route
+	// through below, so the onClosed payload is built once, not duplicated three times.
+	function handleClose() {
+		if (onClosed) {
+			const bucketIds = incoming
+				.filter((count) => count > 0)
+				.keySeq()
+				.toArray()
+				// Numeric sort, matching StaminaDebuffs.ts's deriveBuckets() convention -- these
+				// are all numeric skill ids, and a default string sort would misorder e.g. a
+				// 9-digit pink unique against a 6-digit id.
+				.sort((a, b) => +a - +b);
+			const totalCount = incoming.reduce((sum, count) => sum + count, 0);
+			const excluded = excludedDebuffCount(incoming, distanceType, strategy);
+			onClosed({
+				bucketIds,
+				totalCount,
+				excludedWrongCourse: excluded.wrongCourse,
+				excludedWrongStyle: excluded.wrongStyle,
+			});
+		}
+		onClose();
+	}
 
 	useEffect(() => {
 		if (!isOpen) return;
 		function handleKeydown(e: KeyboardEvent) {
-			if (e.key === 'Escape') onClose();
+			if (e.key === 'Escape') handleClose();
 		}
 		document.addEventListener('keydown', handleKeydown);
 		const t = window.requestAnimationFrame(() => dialogRef.current?.focus());
@@ -121,7 +155,7 @@ export function StaminaDebuffDialog({
 			document.removeEventListener('keydown', handleKeydown);
 			window.cancelAnimationFrame(t);
 		};
-	}, [isOpen, onClose]);
+	}, [isOpen, onClose, onClosed, incoming, distanceType, strategy]);
 
 	if (!isOpen) return null;
 
@@ -140,7 +174,7 @@ export function StaminaDebuffDialog({
 	const excluded = excludedDebuffCount(incoming, distanceType, strategy);
 
 	const modal = (
-		<div class="stamDebuffOverlay" onClick={onClose}>
+		<div class="stamDebuffOverlay" onClick={handleClose}>
 			<div
 				class="stamDebuffModal"
 				ref={dialogRef}
@@ -158,7 +192,7 @@ export function StaminaDebuffDialog({
 					<button
 						type="button"
 						class="stamDebuffClose"
-						onClick={onClose}
+						onClick={handleClose}
 						aria-label="Close"
 					>
 						<X size={16} />

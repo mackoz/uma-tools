@@ -669,7 +669,17 @@ export function HorseDef(props) {
 							}
 							runData={hasRunData ? props.runData : null}
 							umaIndex={hasRunData ? props.umaIndex : null}
-							onViewProcData={hasRunData ? () => setProcDataSkillId(id) : null}
+							onViewProcData={
+								hasRunData
+									? () => {
+											setProcDataSkillId(id);
+											// UI-39: separate prop from onSkillEvent -- see that
+											// callback's action union, branched on directly in
+											// app.tsx, which this deliberately doesn't widen.
+											props.onProcDataOpened?.(id);
+										}
+									: null
+							}
 						/>
 					</li>
 				) : (
@@ -818,7 +828,12 @@ export function HorseDef(props) {
 					<button
 						type="button"
 						class="horseStamDebuffBtn"
-						onClick={() => setStamDebuffDialogOpen(true)}
+						onClick={() => {
+							setStamDebuffDialogOpen(true);
+							// UI-39: optional, no-op by default -- same pattern as onUmaSelected/
+							// onSkillEvent above.
+							props.onDebuffConfigOpened?.();
+						}}
 						tabindex={tabnext()}
 					>
 						Configure
@@ -860,6 +875,9 @@ export function HorseDef(props) {
 					onChange={setter('incomingDebuffs')}
 					distanceType={props.course?.distanceType}
 					strategy={state.strategy}
+					// UI-39: optional, no-op by default -- forwards the dialog's own aggregate
+					// close-time payload up to app.tsx unchanged (app.tsx adds `slot`).
+					onClosed={props.onDebuffConfigUpdated}
 				/>
 			)}
 		</div>

@@ -722,7 +722,19 @@ export function BasinnChart(props) {
 											}
 											onClick={
 												header.column.getCanSort()
-													? header.column.getToggleSortingHandler()
+													? (e) => {
+															// UI-39: optional, no-op by default --
+															// wraps (doesn't replace) the original
+															// handler below. `desc` is the order
+															// this click is about to produce
+															// (getNextSortingOrder), not the
+															// current state.
+															props.onSort?.(
+																header.column.id,
+																header.column.getNextSortingOrder() === 'desc',
+															);
+															header.column.getToggleSortingHandler()?.(e);
+														}
 													: undefined
 											}
 										>
