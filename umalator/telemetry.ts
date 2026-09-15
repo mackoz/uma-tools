@@ -5,7 +5,13 @@ export function initTelemetry() {
 		posthog.init('phc_sbf9k9rt6YxQg23nHWUSv2Y7NFkS32F86JmA83fC9wTL', {
 			api_host: 'https://t.mackoz.net',
 			ui_host: 'https://us.posthog.com',
-			person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
+			// 'always' rather than the 'identified_only' default: this app has no
+			// login, so identify() is never called and 'identified_only' produced
+			// no person profiles at all -- no unique-user counts, retention, or
+			// cohorts. The cost is that every event is billed as identified, which
+			// PostHog prices at up to 4x an anonymous one above the 1M/month free
+			// tier. Revisit if volume ever approaches that.
+			person_profiles: 'always',
 			loaded: (posthog) => {
 				window.posthog = posthog;
 			},
