@@ -43,7 +43,8 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   --complete-id` also retarget links across the lifecycle move: the moved ticket's own
   relative links and inline-code-span citations are re-resolved at any depth, and every
   other doc in the plans repo that pointed at the ticket's old path is repointed at its new
-  one, folded into the same commit. A doc with uncommitted changes is skipped rather than
+  one, folded into the same commit — inline `[...](...)` links and inline code spans only;
+  reference-style links and indented-code-block contents are known gaps, tracked as PIPE-72. A doc with uncommitted changes is skipped rather than
   rewritten, and the skip is printed — that one line is the only case needing a hand fix. `wq.py file` itself commits directly on whatever
   branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — session-
   agnostic: it's whatever's checked out at the moment, regardless of which session (or a manual

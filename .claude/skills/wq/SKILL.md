@@ -121,7 +121,12 @@ markdown links — `mkdocs build --strict` structurally can't see a code span, w
 citations went stale unnoticed — but only path-shaped ones containing a `/`; a bare `` `pipe-22.md` ``
 in prose is a ticket *mention*, not a reference, and is never touched. Both commands print a
 one-line `link retarget:` summary, listing any code-span rewrite individually so it can be
-eyeballed in the diff. **The one line worth reading is a `warning: N file(s) skipped (uncommitted
+eyeballed in the diff. **Scope caveat (PIPE-72)**: "every other doc" means inline `[...](...)`
+links and inline code spans. Reference-style links (`[text][ref]` + `[ref]: target.md`) and
+autolinks (`<target.md>`) are not scanned, and a link inside a CommonMark *indented* (4-space)
+code block is not masked and so would be rewritten. Neither shape occurs anywhere in the repo
+today — both are tracked as latent gaps, not live breakage — but don't read the guarantee as
+absolute. **The one line worth reading is a `warning: N file(s) skipped (uncommitted
 changes)`** — a doc that was dirty at the time is left alone deliberately (never a `die()`, since
 `finish_completion` runs inside `land --complete-id` *after* the engine and code PRs have merged,
 and `land` is non-resumable), so its link to the old path is still broken and is yours to fix.
