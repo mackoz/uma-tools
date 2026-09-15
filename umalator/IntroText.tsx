@@ -66,6 +66,22 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-15</summary>
+						<ul>
+							<li>
+								The simulator has a new home:{' '}
+								<strong>
+									<a href="https://umalator.mackoz.net/">umalator.mackoz.net</a>
+								</strong>
+								. Existing <code>mackoz.github.io/uma-tools/...</code> links
+								keep working -- they redirect to the new address and keep their
+								path, so a bookmark deeper than the front page still lands where
+								you expect. Shared simulator links carry their full state across
+								the redirect too; nothing needs re-sharing.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-14</summary>
 						<ul>
 							<li>

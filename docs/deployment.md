@@ -33,38 +33,83 @@ Those `mackoz.github.io` URLs now 301 to the custom domain — see "Custom domai
 
 ## Custom domain
 
-The site is also reachable at `https://umalator.mackoz.net/` (the bare hostname redirects to `/umalator-global/`), in addition to the `mackoz.github.io/uma-tools/` URL above. **Once the custom domain is set, GitHub redirects the `github.io` URL to it** — previously shared `mackoz.github.io/uma-tools/...` links now land on the new domain instead of serving from `github.io` directly. See `docs/adr/0022-custom-domain-edge-rewrite.md` for why this domain was worth adding rather than leaving the `github.io` URL as the only address.
+The site is served at **`https://umalator.mackoz.net/`** (the bare hostname redirects to `/umalator-global/`). `mackoz.github.io/uma-tools/` still works, but only as a redirect — GitHub 301s the default domain to the custom one once a custom domain is set, so previously shared links land on the new domain rather than serving from `github.io` directly. Deep links keep their sub-path: `mackoz.github.io/uma-tools/umalator-global/` → `umalator.mackoz.net/umalator-global/`. See `docs/adr/0022-custom-domain-edge-rewrite.md` for why this was worth doing rather than leaving `github.io` as the only address.
 
-**Set up the DNS record before the `CNAME` file reaches `master`.** The order matters and is not reversible in a hurry: the deploy workflow ships `CNAME` in the Pages artifact, Pages applies it as the custom domain, and from that moment `mackoz.github.io/uma-tools/` *redirects* to `umalator.mackoz.net`. If that hostname doesn't resolve yet, the site is unreachable at both addresses until DNS propagates — landing the file first takes production down rather than leaving it where it was.
+Pages serves a custom domain at the **domain root**, which strips the `/uma-tools/` segment every icon and font URL is hardcoded against. A Cloudflare URL-rewrite rule puts it back by stripping the prefix on the way to the origin. That rule is what makes the site work at all on this domain.
 
-Setup, in this order:
+**The `CNAME` file is not the mechanism, and this repo does not have one.** GitHub's own docs are explicit: "If you are publishing from a custom GitHub Actions workflow, no `CNAME` file is created, and any existing `CNAME` file is ignored and is not required." This repo's Pages source is `workflow` (see "Automated builds" below), so a committed `CNAME` does nothing at all — it was tried, shipped in the artifact, and left `gh api repos/mackoz/uma-tools/pages` reporting `"cname": null`. The custom domain lives **only** in Settings → Pages (or `gh api -X PUT repos/mackoz/uma-tools/pages -f cname=...`). Don't re-add the file expecting it to do something.
 
-1. **DNS first**: a `CNAME umalator → mackoz.github.io` record, **grey-clouded (DNS only) initially** — GitHub cannot complete its Let's Encrypt HTTP challenge through the Cloudflare proxy while it's orange-clouded.
-2. **Then the repo-root `CNAME` file** containing `umalator.mackoz.net` (merged to `master`, so CI ships it), plus the same value entered in Settings → Pages → Custom domain. Wait for the Pages settings page to report the certificate provisioned, then tick **Enforce HTTPS**.
-3. **Cloudflare Transform Rule** (Rules → Transform Rules → Rewrite URL) — this is what makes the hardcoded `/uma-tools/` prefix resolve once Pages serves at the domain root instead of under `/uma-tools/`:
-   - When `http.request.uri.path starts_with "/uma-tools/"`
-   - Rewrite path (dynamic) to `regex_replace(http.request.uri.path, "^/uma-tools", "")`
-4. **Redirect rule** (Rules → Redirects) so the bare hostname lands on the app it is named after:
-   - When `http.request.uri.path eq "/"` — an **exact** match, not `starts_with "/"`. Every path starts with `/`, so a prefix match here redirects every request on the site, icons included, into a loop.
-   - Static redirect to `/umalator-global/`.
-   - Use a **302** until the setup is confirmed working. A 301 is cached hard by browsers and is painful to walk back if the target changes.
-5. **Last**, switch the DNS record to orange-clouded (proxied) and set the zone's SSL/TLS mode to **Full (strict)**. Assets 404 until this step — the rewrite in step 3 only fires on proxied traffic — so expect an unstyled page during the certificate window between steps 2 and 5.
+### Setup, in this order
 
-**Steps 3 and 4 do not run in the order they are listed here.** Cloudflare evaluates redirects (`http_request_dynamic_redirect`) before URL rewrites (`http_request_transform`), whatever order the rules appear in the dashboard — see [Cloudflare's phases list](https://developers.cloudflare.com/ruleset-engine/reference/phases-list/). The redirect in step 4 therefore sees the *original* path, before the prefix is stripped. That produces two deliberate entry points:
+1. **DNS first**: a `CNAME umalator → mackoz.github.io` record, **grey-clouded (DNS only)**. GitHub cannot complete its Let's Encrypt HTTP challenge through the Cloudflare proxy, so the record must stay unproxied until the certificate is issued.
+2. **Both Cloudflare rules next**, while nothing is proxied and they are therefore inert. Cloudflare warns that the rules may not match traffic because the record is not proxied — that warning is expected here; choose "Ignore and deploy rule anyway", **not** "Create a new proxied DNS record" (which would add a competing proxied record and block certificate issuance).
+3. **Then Settings → Pages → Custom domain** = `umalator.mackoz.net`. **This is the cutover**: from this moment `github.io` redirects here. Wait for the certificate (minutes to about an hour), then tick **Enforce HTTPS** — without it GitHub emits `http://` in its redirect and plain HTTP 404s, breaking every legacy link.
+4. **Last**, orange-cloud the DNS record and set SSL/TLS to **Full (strict)**. Both rules start firing at this point.
 
-| Request | Redirect (step 4) | Rewrite (step 3) | Pages serves |
+The site is degraded between steps 3 and 4 — reachable but unstyled, since Cloudflare is not yet in the path — so run them back to back rather than pausing in between.
+
+**SSL/TLS must be Full (strict), and this is not optional.** Enforce HTTPS makes the origin redirect HTTP to HTTPS. On **Flexible**, Cloudflare connects to the origin over HTTP, receives that redirect, returns it to the browser, and connects over HTTP again on the retry — an infinite loop presenting as `ERR_TOO_MANY_REDIRECTS` across the whole site. Avoid "Automatic SSL/TLS" too: it probes the origin and can sit on a weaker mode while deciding. Note this is a **zone-wide** setting — it applies to every *proxied* hostname under `mackoz.net`, so check what else is orange-clouded before changing it. (`t.mackoz.net`, the PostHog telemetry proxy in `umalator/telemetry.ts`, is DNS-only and therefore unaffected.)
+
+### The two rules
+
+Both use the dashboard's **Wildcard pattern** mode. Do not use `regex_replace()` — it is gated to Business/Enterprise plans and WAF Advanced, and saving a rule containing it on Free or Pro fails with an entitlement error ("not available to this plan"). Wildcard mode uses no expression functions and has no such gate.
+
+**Rewrite rule** (Rules → URL rewrite rule) — strips the prefix so the hardcoded asset URLs resolve:
+
+| Field | Value |
+|---|---|
+| Request URL | `https://umalator.mackoz.net/uma-tools/*` |
+| Path → Target path | `/uma-tools/*` |
+| Path → Rewrite to | `/${1}` |
+| Query | leave both blank |
+
+`Request URL` **matches but does not capture** — per Cloudflare's docs it "will not be used for capturing URL patterns for rewrites". `${1}` refers to the `*` in **Target path**, not the one in Request URL. Naming the host in Request URL is deliberate: rules are zone-wide, so a bare path pattern would also rewrite `/uma-tools/*` on every other hostname under `mackoz.net`.
+
+**Redirect rule** (Rules → Redirects) — points the bare hostname at the app it is named after:
+
+| Field | Value |
+|---|---|
+| Request URL | `https://umalator.mackoz.net/` |
+| Target URL | `https://umalator.mackoz.net/umalator-global/` |
+| Status code | 302 |
+| Preserve query string | on |
+
+The absence of a `*` is load-bearing: a wildcard pattern must match the whole URL, so this matches only the root. Adding `*` would match every path on the site and redirect all of it, icons included, into a loop. 302 rather than 301 because browsers cache a 301 aggressively and it is painful to walk back.
+
+Shared simulator links survive the redirect: umalator serializes state into `location.hash` (`umalator/app.tsx:4426`), fragments are never sent to the server, and the browser reattaches the original fragment to the redirect target since the target carries none of its own.
+
+### Resulting behavior
+
+Cloudflare evaluates redirects (`http_request_dynamic_redirect`) before URL rewrites (`http_request_transform`), whatever order they appear in the dashboard — see [Cloudflare's phases list](https://developers.cloudflare.com/ruleset-engine/reference/phases-list/). The redirect therefore sees the *original* path, before the prefix is stripped, which produces two deliberate entry points:
+
+| Request | Redirect | Rewrite | Result |
 |---|---|---|---|
 | `/` | fires → `/umalator-global/` | no match | the Global simulator |
 | `/uma-tools/` | no match (path isn't `/`) | strips to `/` | the multi-app landing page |
 | `/uma-tools/icons/10011.png` | no match | strips to `/icons/10011.png` | the icon |
 
-The second row is what legacy `mackoz.github.io/uma-tools/...` links land on, and it preserves their old behavior: that URL always served the landing page, not the simulator.
+The second row is what legacy `github.io/uma-tools/` links reach, preserving their old behavior — that URL always served the landing page, not the simulator.
 
-**This rewrite rule exists only in the Cloudflare dashboard — nothing in this repo references it.** If it is deleted, or the DNS record is set back to DNS-only (which bypasses Cloudflare and therefore the rewrite), the symptom is a completely unstyled page with no icons and no Japanese font — and there is no in-repo explanation for why, since the fix lives entirely outside version control. This is the single most important thing to know about this section.
+One cosmetic wart: GitHub emits `http://` in its redirect even with Enforce HTTPS on, so a legacy link takes two hops (`github.io` → `http://` → `https://`) instead of one. It resolves correctly; it is not worth chasing.
 
-Once step 5 is done, verify all four: `https://umalator.mackoz.net/` reaches the simulator; `https://umalator.mackoz.net/uma-tools/` reaches the landing page; skill and character icons render; and both Inter weights plus NotoSansJP load (a missing font shows as fallback serif/sans, not a visible error).
+**Both rules exist only in the Cloudflare dashboard — nothing in this repo references them.** If either is deleted, or the DNS record is set back to DNS-only (which bypasses Cloudflare entirely), the symptom is a completely unstyled page with no icons and no Japanese font, with no in-repo explanation for why. This is the single most important thing to know about this section.
 
-Spot-check `fonts/Inter-VariableFont_opsz,wght.ttf` through the proxied domain once set up — its filename has a literal comma (see "Serving notes" below), and some CDNs mangle commas in URLs even when the origin (GitHub Pages) handles it fine.
+### Verifying
+
+Confirmed working 2026-09-15, in both directions:
+
+```sh
+curl -sI https://umalator.mackoz.net/                            # 302 -> /umalator-global/
+curl -so /dev/null -w '%{http_code}\n' \
+  https://umalator.mackoz.net/uma-tools/icons/10011.png          # 200 image/png
+curl -so /dev/null -w '%{http_code}\n' \
+  "https://umalator.mackoz.net/uma-tools/fonts/Inter-VariableFont_opsz,wght.ttf"   # 200
+curl -sIL https://mackoz.github.io/uma-tools/umalator-global/    # ends 200 on the custom domain
+```
+
+The comma in `Inter-VariableFont_opsz,wght.ttf` is the likeliest thing to break through a proxy (see "Serving notes" below) — it survives this one, but re-check it after any edge-config change. A missing font shows as fallback serif/sans rather than a visible error, so it is easy to miss by eye.
+
+If DNS looks wrong while testing, query a public resolver rather than trusting the local cache (`dig +short @1.1.1.1 umalator.mackoz.net`). A proxied record returns Cloudflare anycast IPs (`104.x`/`172.67.x`) and hides the CNAME target; a grey-clouded one reveals the target and GitHub's `185.199.x` addresses.
 
 ## Automated builds via GitHub Actions
 
