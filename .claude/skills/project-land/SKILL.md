@@ -272,7 +272,12 @@ This is read-only — no mutating git/gh calls. Check these in its output:
 - **Tree cleanliness check** (PIPE-75) — one line per repo the run will touch (`uma-tools` and
   `uma-tools-plans` always, `uma-skill-tools` too when `--engine-pr` is given): `OK` means
   `land_one`'s own `require_clean` will pass; `PROBLEM` names the uncommitted changes it would
-  refuse on, before merging anything. Commit or stash whatever it names.
+  refuse on. Commit or stash whatever it names. **The line also says *when* that refusal
+  arrives, and for `uma-tools-plans` that depends on your flags**: `cmd_land`'s up-front
+  `require_clean(PLANS)` only runs under `--complete-id`, so without it a dirty plans checkout
+  is first caught inside `land_one(PLANS, …)` — the last merge, after the code PR has already
+  landed, stranding a partial landing. Don't start a land on a dirty plans checkout on the
+  strength of an early refusal that won't come.
 - **PR state check / local branch check** (PIPE-75) — a `PR state check` line for every PR the
   run will merge: the code and plans PRs always, the engine PR when `--engine-pr` is given.
   `... OK -- open` is the good case; `... is not open (state=...)` means `land_one` can't merge
@@ -299,7 +304,7 @@ This is read-only — no mutating git/gh calls. Check these in its output:
   PR's own branch (`origin/<head>`, `_read_file_at_ref`), not your local `uma-tools-plans`
   working tree (PIPE-74) — so an `OK` here no longer depends on what branch your local
   checkout happens to be on. It is not an absolute guarantee, though what escapes it is now
-  narrow: the plans-repo index-structure cluster
+  narrow: the plans-repo index-structure cluster (PIPE-78)
   (`readme_remove_row`/`readme_insert_row`/`mkdocs_move`/`mkdocs_ensure_group` — a different,
   not-yet-reproduced mechanism, split out of PIPE-75's scope by design) and anything that
   depends on GitHub's state at merge time (a PR that stops being mergeable, or fails to report
