@@ -58,12 +58,18 @@ Writes the skeleton from `TEMPLATE.md`, plus the README backlog row, mkdocs nav 
 dispatch-list row, all in one commit on whatever branch the plans repo currently has checked
 out — `cmd_file` never switches branches itself, unlike `claim`/`land`. This is session-agnostic:
 it's whatever's checked out at the moment you run it, regardless of which session (this one, an
-earlier one, or a manual `git checkout`) left it there. Check `git status`/`git branch
---show-current` in the plans repo before filing if it matters where the ticket lands — `main` is
-the common case, but a branch backing an open PR is just as plausible, and filing there bundles
-the new ticket into that PR instead of standing alone. If you want a standalone filing on `main`
-specifically, `git checkout main` first. `--dry-run` stages the diff and prints exactly how to
-discard it, without committing.
+earlier one, or a manual `git checkout`) left it there.
+
+**Filing on whatever branch is currently checked out is fine — including a branch backing an open
+PR.** A ticket filed there rides along in that PR, which is normal and expected; a side-finding
+discovered mid-ticket landing in that ticket's own PR is a feature, not contamination. Do **not**
+switch to `main` first as a matter of course, and do not treat `main` as the required destination
+— there is no such rule. Just file where you are.
+
+The only time the branch is worth a thought is when the current branch is one you specifically
+don't want the ticket travelling with (say it is about to be abandoned, or belongs to another
+session's unrelated work). If that applies, `git checkout main` first; otherwise don't bother
+looking. `--dry-run` stages the diff and prints exactly how to discard it, without committing.
 
 If a real (non-`--dry-run`) call refuses with "file(s) already staged that look like a leftover
 --dry-run preview" — that's residue from an earlier aborted or `--dry-run` call, not this one.
