@@ -278,10 +278,14 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
   hand) — go fix it, don't try to work around the refusal. This line and the real run's own
-  gate call the same predicate (`has_outcome_heading`, PIPE-71), so an `OK` here means the
-  real run will accept the ticket. The heading may carry trailing text — `## Outcome
-  (2026-09-14): confirmed` is accepted — as long as the line starts with `##`, whitespace,
-  then `Outcome`; `### Outcome` and `## Outcomes` are not.
+  gate both call `outcome_problem()` (PIPE-71), which is the single place every refusal
+  lives, so an `OK` here means the real run will accept the ticket. It refuses when: there
+  is no `## Outcome` heading outside code blocks; there is more than one; the heading is the
+  file's last line with nothing after it; or a `- **Fixed**:` bullet was already written by
+  hand. The heading may carry trailing text — `## Outcome (2026-09-14): confirmed` — as long
+  as the line starts with `##`, whitespace, then `Outcome`; `### Outcome` and `## Outcomes`
+  are not. Headings quoted inside fenced code blocks are ignored, so a ticket can show the
+  format as an example.
 - **Pages deploy check** (since PIPE-30) — a line starting `Pages deploy check:` predicting
   whether the merge will trigger a Pages deploy, from `uma-tools`' own `deploy.yml` trigger
   config against the code PR's changed files. `none expected` is normal and correct for a
