@@ -278,14 +278,14 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
   hand) — go fix it, don't try to work around the refusal. This line and the real run's own
-  gate both call `outcome_problem()` (PIPE-71), which is the single place every refusal
-  lives, and both read the ticket the same way: via the plans PR's own branch
+  gate both call `outcome_problem()` (PIPE-71), which holds the ticket's Outcome-section
+  refusals, and both read the ticket the same way: via the plans PR's own branch
   (`origin/<head>`, `_read_file_at_ref`), not your local `uma-tools-plans` working tree
-  (PIPE-74) — so an `OK` here no longer depends on what branch your local checkout happens
-  to be on. It is not an absolute guarantee, though: a refusal living *outside*
-  `outcome_problem()` can still stop the real run after the engine and code PRs have merged
-  — `set_status`'s missing-Status-line check (PIPE-77), and the tree-state conditions this
-  preview stays silent on (PIPE-75). It refuses when: there
+  (PIPE-74) — so an `OK` here no longer depends on what branch your local checkout happens to
+  be on. It is not an absolute guarantee: refusals living *outside* `outcome_problem()` can
+  still stop the real run after the engine and code PRs have merged — `set_status`'s
+  missing-Status-line check (PIPE-77), and the tree-state conditions this preview stays
+  silent on (PIPE-75). It refuses when: there
   is no `## Outcome` heading outside code blocks; there is more than one; the heading is the
   file's last line with nothing after it; or a `- **Fixed**:` bullet was already written by
   hand. The heading may carry trailing text — `## Outcome (2026-09-14): confirmed` — as long
