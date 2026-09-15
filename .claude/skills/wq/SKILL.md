@@ -109,7 +109,22 @@ uv run scripts/wq.py claim <id> [--branch NAME]
 
 Branches (reusing `--branch NAME` if it already exists — useful for a side-finding claimed onto
 the branch you're already on), moves the ticket file to `in-progress/`, updates README/mkdocs,
-and opens a **draft** PR.
+retargets links across the move (PIPE-24, below), and opens a **draft** PR.
+
+**Link retargeting (PIPE-24, 2026-09-14) happens on `claim` and `complete` alike**, so the old
+manual `sed -i '' 's|](../../../|](../../|g'` step is gone — don't run it, and don't hand-fix a
+link after a move. Two directions, both folded into the command's own commit: the moved ticket's
+own relative links and inline-code-span citations are re-resolved at any depth (the old hack only
+handled three-level ones, so a two-level link broke on SPD-7), and every other doc in the repo
+that linked or cited the ticket's old path is repointed. Code spans are rewritten as well as real
+markdown links — `mkdocs build --strict` structurally can't see a code span, which is how two
+citations went stale unnoticed — but only path-shaped ones containing a `/`; a bare `` `pipe-22.md` ``
+in prose is a ticket *mention*, not a reference, and is never touched. Both commands print a
+one-line `link retarget:` summary, listing any code-span rewrite individually so it can be
+eyeballed in the diff. **The one line worth reading is a `warning: N file(s) skipped (uncommitted
+changes)`** — a doc that was dirty at the time is left alone deliberately (never a `die()`, since
+`finish_completion` runs inside `land --complete-id` *after* the engine and code PRs have merged,
+and `land` is non-resumable), so its link to the old path is still broken and is yours to fix.
 
 **`--branch` is how you get one PR for several tickets.** Without it the branch defaults to
 `<id>-work`, so claiming three tickets for one fix set silently opens three branches and three
