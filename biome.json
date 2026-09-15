@@ -32,7 +32,11 @@
 			"a11y": "off",
 			"suspicious": {
 				"noExplicitAny": "off",
-				"noDoubleEquals": "off"
+				"noDoubleEquals": "off",
+				"noFocusedTests": "error",
+				"noSkippedTests": "error",
+				"noDuplicateTestHooks": "error",
+				"noExportsInTest": "error"
 			},
 			"style": {
 				"noNonNullAssertion": "off",
