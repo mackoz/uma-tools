@@ -1,7 +1,7 @@
 # ADR-0022: Custom domain via a Cloudflare edge rewrite, prefix stays hardcoded
 
 **Status:** Accepted
-**Date:** 2026-09-15
+**Date:** 2026-09-15 (PIPE-79)
 
 ## Context
 
@@ -25,5 +25,6 @@ Serve the Pages site from `umalator.mackoz.net`, keep the hardcoded `/uma-tools/
 
 - The load-bearing piece of this setup — the Transform Rule — lives outside version control entirely. Nothing in this repo, its history, or its docs enforces or even reveals its existence beyond the prose in `docs/deployment.md`; a dashboard change with no corresponding commit can silently break the whole site.
 - The `github.io` URL now redirects to the custom domain once GitHub registers it (this is GitHub's own behavior, not something either side configures per request) — links to `mackoz.github.io/uma-tools/...` shared before this change now resolve somewhere else than when they were shared.
+- The two rules depend on Cloudflare's phase ordering, which neither of them states: redirects are evaluated before URL rewrites, so the bare-hostname redirect sees the path with the `/uma-tools/` prefix still on it. `/` and `/uma-tools/` consequently land on different pages (the simulator and the landing page respectively) — deliberate, and faithful to what the old `github.io` URL served, but it is a behavior of the phase order rather than of either rule in isolation. `docs/deployment.md` tabulates it.
 - The rewrite only fires on traffic that actually passes through Cloudflare's proxy. The DNS record must be grey-clouded (unproxied) for the initial Let's Encrypt certificate issuance, so there is a window, and any future re-issuance or manual grey-cloud, where the record is technically live but the rewrite is not — every asset 404s until the record is orange-clouded again.
 - ADR-0002's constraint — "the site only works when served under a path that literally is `/uma-tools/`" — now holds only from the browser's side. The bundles still emit `/uma-tools/...` URLs and those URLs still work, but the origin behind them no longer has that path at all: Cloudflare removes the segment in flight. The constraint is satisfied by infrastructure sitting in front of GitHub Pages, not by the origin genuinely matching the hardcoded prefix.

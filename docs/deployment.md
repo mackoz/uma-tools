@@ -27,18 +27,15 @@ Hosts that serve at the domain root (Cloudflare Pages, Netlify, Vercel, a plain 
    - `https://mackoz.github.io/uma-tools/build-planner/`, `.../courseimages/`, `.../umadle/`, `.../rougelike/`
    - `https://mackoz.github.io/uma-tools/` — the root landing page (`index.html`), linking to all of the above.
 
+Those `mackoz.github.io` URLs now 301 to the custom domain — see "Custom domain" below.
+
 **If you rename the repository**, the base path breaks — every `/uma-tools/...` asset reference stays hardcoded regardless of the new repo name, since GitHub Pages project sites are served at `/<repo-name>/`.
 
 ## Custom domain
 
 The site is also reachable at `https://umalator.mackoz.net/` (the bare hostname redirects to `/umalator-global/`), in addition to the `mackoz.github.io/uma-tools/` URL above. **Once the custom domain is set, GitHub redirects the `github.io` URL to it** — previously shared `mackoz.github.io/uma-tools/...` links now land on the new domain instead of serving from `github.io` directly. See `docs/adr/0022-custom-domain-edge-rewrite.md` for why this domain was worth adding rather than leaving the `github.io` URL as the only address.
 
-**Set up the DNS record before the `CNAME` file reaches `master`.** The order matters and is not
-reversible in a hurry: the deploy workflow ships `CNAME` in the Pages artifact, Pages applies it as
-the custom domain, and from that moment `mackoz.github.io/uma-tools/` *redirects* to
-`umalator.mackoz.net`. If that hostname doesn't resolve yet, the site is unreachable at both
-addresses until DNS propagates — landing the file first takes production down rather than leaving it
-where it was.
+**Set up the DNS record before the `CNAME` file reaches `master`.** The order matters and is not reversible in a hurry: the deploy workflow ships `CNAME` in the Pages artifact, Pages applies it as the custom domain, and from that moment `mackoz.github.io/uma-tools/` *redirects* to `umalator.mackoz.net`. If that hostname doesn't resolve yet, the site is unreachable at both addresses until DNS propagates — landing the file first takes production down rather than leaving it where it was.
 
 Setup, in this order:
 
@@ -47,10 +44,25 @@ Setup, in this order:
 3. **Cloudflare Transform Rule** (Rules → Transform Rules → Rewrite URL) — this is what makes the hardcoded `/uma-tools/` prefix resolve once Pages serves at the domain root instead of under `/uma-tools/`:
    - When `http.request.uri.path starts_with "/uma-tools/"`
    - Rewrite path (dynamic) to `regex_replace(http.request.uri.path, "^/uma-tools", "")`
-4. **Redirect rule**: `/` → `/umalator-global/`.
+4. **Redirect rule** (Rules → Redirects) so the bare hostname lands on the app it is named after:
+   - When `http.request.uri.path eq "/"` — an **exact** match, not `starts_with "/"`. Every path starts with `/`, so a prefix match here redirects every request on the site, icons included, into a loop.
+   - Static redirect to `/umalator-global/`.
+   - Use a **302** until the setup is confirmed working. A 301 is cached hard by browsers and is painful to walk back if the target changes.
 5. **Last**, switch the DNS record to orange-clouded (proxied) and set the zone's SSL/TLS mode to **Full (strict)**. Assets 404 until this step — the rewrite in step 3 only fires on proxied traffic — so expect an unstyled page during the certificate window between steps 2 and 5.
 
+**Steps 3 and 4 do not run in the order they are listed here.** Cloudflare evaluates redirects (`http_request_dynamic_redirect`) before URL rewrites (`http_request_transform`), whatever order the rules appear in the dashboard — see [Cloudflare's phases list](https://developers.cloudflare.com/ruleset-engine/reference/phases-list/). The redirect in step 4 therefore sees the *original* path, before the prefix is stripped. That produces two deliberate entry points:
+
+| Request | Redirect (step 4) | Rewrite (step 3) | Pages serves |
+|---|---|---|---|
+| `/` | fires → `/umalator-global/` | no match | the Global simulator |
+| `/uma-tools/` | no match (path isn't `/`) | strips to `/` | the multi-app landing page |
+| `/uma-tools/icons/10011.png` | no match | strips to `/icons/10011.png` | the icon |
+
+The second row is what legacy `mackoz.github.io/uma-tools/...` links land on, and it preserves their old behavior: that URL always served the landing page, not the simulator.
+
 **This rewrite rule exists only in the Cloudflare dashboard — nothing in this repo references it.** If it is deleted, or the DNS record is set back to DNS-only (which bypasses Cloudflare and therefore the rewrite), the symptom is a completely unstyled page with no icons and no Japanese font — and there is no in-repo explanation for why, since the fix lives entirely outside version control. This is the single most important thing to know about this section.
+
+Once step 5 is done, verify all four: `https://umalator.mackoz.net/` reaches the simulator; `https://umalator.mackoz.net/uma-tools/` reaches the landing page; skill and character icons render; and both Inter weights plus NotoSansJP load (a missing font shows as fallback serif/sans, not a visible error).
 
 Spot-check `fonts/Inter-VariableFont_opsz,wght.ttf` through the proxied domain once set up — its filename has a literal comma (see "Serving notes" below), and some CDNs mangle commas in URLs even when the origin (GitHub Pages) handles it fine.
 
