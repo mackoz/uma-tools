@@ -279,7 +279,12 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
   hand) — go fix it, don't try to work around the refusal. This line and the real run's own
   gate both call `outcome_problem()` (PIPE-71), which is the single place every refusal
-  lives, so an `OK` here means the real run will accept the ticket. It refuses when: there
+  lives — **but they read the ticket from different places**: the preview reads your local
+  `uma-tools-plans` working tree, while the real run checks out the plans PR's branch first.
+  So an `OK` here means the real run will accept the ticket *provided your local checkout is
+  already on that branch and up to date with it* (PIPE-74). If it isn't — you're on `main`,
+  or the branch has commits you haven't pulled — check the Outcome section on the PR itself
+  before trusting this line. It refuses when: there
   is no `## Outcome` heading outside code blocks; there is more than one; the heading is the
   file's last line with nothing after it; or a `- **Fixed**:` bullet was already written by
   hand. The heading may carry trailing text — `## Outcome (2026-09-14): confirmed` — as long
