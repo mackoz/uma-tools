@@ -266,9 +266,29 @@ skill checks instead of trusting.
 uv run plans/scripts/wq.py land --engine-pr N --code-pr M --plans-pr K [--complete-id ID] --dry-run
 ```
 
-This is read-only — no mutating git/gh calls. Check four things in its output:
+This is read-only — no mutating git/gh calls. Check these in its output:
 
 - **Merge order** — sanity-check it matches what you expect (engine → code → plans).
+- **Tree cleanliness check** (PIPE-75) — one line per repo the run will touch (`uma-tools` and
+  `uma-tools-plans` always, `uma-skill-tools` too when `--engine-pr` is given): `OK` means
+  `land_one`'s own `require_clean` will pass; `PROBLEM` names the uncommitted changes it would
+  refuse on. Commit or stash whatever it names. **The line also says *when* that refusal
+  arrives, and for `uma-tools-plans` that depends on your flags**: `cmd_land`'s up-front
+  `require_clean(PLANS)` only runs under `--complete-id`, so without it a dirty plans checkout
+  is first caught inside `land_one(PLANS, …)` — the last merge, after the code PR has already
+  landed, stranding a partial landing. Don't start a land on a dirty plans checkout on the
+  strength of an early refusal that won't come.
+- **PR state check / local branch check** (PIPE-75) — a `PR state check` line for every PR the
+  run will merge: the code and plans PRs always, the engine PR when `--engine-pr` is given.
+  `... OK -- open` is the good case; `... is not open (state=...)` means `land_one` can't merge
+  that PR, which for the plans PR would fail *after* the code PR has already merged. For the
+  two PRs `checkout_pr_head` also checks out (the code PR under `--engine-pr`, the plans PR
+  under `--complete-id`) the line adds that that step refuses on a non-open PR too. A `local
+  branch check` line only appears when that PR's branch exists as a plain local branch in the
+  main checkout itself (not a worktree — the existing `worktree check` line already covers
+  that case, so this doesn't repeat it); `... is up to date with origin -- OK` is fine, any
+  other wording there names commits `origin` doesn't have, which `checkout_pr_head` refuses to
+  risk dropping via force-checkout.
 - **Gitlink check** — `OK` means the branch's recorded gitlink already matches engine
   `origin/master`. `MISMATCH` is *fine* if you're passing `--engine-pr` (the real run
   resolves it). If you're **not** passing `--engine-pr` and still see `MISMATCH`, that's
@@ -283,8 +303,12 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   text, and both read the ticket the same way: via the plans
   PR's own branch (`origin/<head>`, `_read_file_at_ref`), not your local `uma-tools-plans`
   working tree (PIPE-74) — so an `OK` here no longer depends on what branch your local
-  checkout happens to be on. It is not an absolute guarantee: the tree-state conditions this
-  preview stays silent on (PIPE-75) still live outside it. It refuses when: the ticket's
+  checkout happens to be on. It is not an absolute guarantee, though what escapes it is now
+  narrow: the plans-repo index-structure cluster (PIPE-78)
+  (`readme_remove_row`/`readme_insert_row`/`mkdocs_move`/`mkdocs_ensure_group` — a different,
+  not-yet-reproduced mechanism, split out of PIPE-75's scope by design) and anything that
+  depends on GitHub's state at merge time (a PR that stops being mergeable, or fails to report
+  a `mergeCommit` sha, between this dry run and Step 4's real run). It refuses when: the ticket's
   frontmatter has no `- **Status**:` line outside code blocks; there is no `## Outcome`
   heading outside code blocks; there is more than one; the heading is the
   file's last line with nothing after it; or a `- **Fixed**:` bullet was already written by
