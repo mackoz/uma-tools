@@ -39,20 +39,10 @@ Guidance for working in this repo. It's a browser-based Uma Musume: Pretty Derby
   writes the skeleton from `plans/work-queue/TEMPLATE.md`, and wires up the
   `plans/work-queue/README.md` row and mkdocs nav entry in one step, then `uv run
   plans/scripts/wq.py claim <id>` to move it to `in-progress/` and cut the branch — don't
-  do the file, README, nav, or link edits by hand. Since PIPE-24, `claim`/`complete`/`land
-  --complete-id` also retarget links across the lifecycle move: the moved ticket's own
-  relative links and inline-code-span citations are re-resolved at any depth, and every
-  other doc in the plans repo that pointed at the ticket's old path is repointed at its new
-  one, folded into the same commit — inline `[...](...)` links and inline code spans only;
-  reference-style links and indented-code-block contents are known gaps, tracked as PIPE-72. A doc with uncommitted changes is skipped rather than
-  rewritten, and the skip is printed — that one line is the only case needing a hand fix.
-  Complementing that, since PIPE-25 the plans repo's pre-commit hook refuses a commit that
-  adds a *new* relative markdown link into a movable ticket file from any doc in that repo
-  (`scripts/check-wq-links.py --staged`) — write "see PIPE-22", not
-  `[PIPE-22](../tooling/pipe-22.md)`. It resolves each link's real target rather than
-  matching path text, so depth doesn't matter; inline code spans, links that already existed
-  before the commit, and `work-queue/README.md`'s generated rows are all deliberately
-  exempt, which is why PIPE-24's retargeting commits still pass. `wq.py file` itself commits directly on whatever
+  do the file, README, nav, or link edits by hand. Link retargeting across lifecycle moves
+  and the plans pre-commit link guard (plain "see PIPE-22" refs, never relative links into
+  ticket files) are automatic since PIPE-24/25 — see `/wq`; the printed skip on a doc with
+  uncommitted changes is the only hand fix. `wq.py file` itself commits directly on whatever
   branch `uma-tools-plans` currently has checked out (no branch of its own, no PR) — session-
   agnostic: it's whatever's checked out at the moment, regardless of which session (or a manual
   `git checkout`) left it there. **Filing on whatever branch is checked out is fine, including a
@@ -132,11 +122,7 @@ The `pkg-guard` and `deps` stages (PIPE-56) are tripwires against an `npm` insta
 
 **Repo scripts** (PIPE-67): five workflow scripts in `scripts/` wrap the git/gh sequences the three-repo loop drives most often — all bash, all take `--dry-run`/`--help`, all source `scripts/repo-env.sh` for the `$UMA_CODE_REPO`/`$UMA_ENGINE_REPO`/`$UMA_PLANS_REPO` paths.
 
-- `scripts/repo-status.sh` — read-only tri-repo status: branch, ahead/behind, dirty count, worktree count, the code repo's gitlink vs the engine's `origin/master`, and open PRs per repo.
-- `scripts/commit-push.sh --repo <code|engine|plans> -m "<msg>" -- <path>...` — explicit-path add → commit → push, refusing `-A`/`.`, an empty pathspec, or a commit directly on the repo's default branch without `--allow-default`.
-- `scripts/pr-status.sh [TICKET-ID] [--link]` — one line per open PR (draft/mergeable/review/checks) plus which sibling repos' PRs it cross-links in its body; `--link` appends the missing links.
-- `scripts/sync-main.sh [--repo <slot>]...` — post-landing sync: checks out and pulls the default branch, deletes branches that are gone upstream or merged, refusing per-repo on a dirty tree or unpushed commits rather than failing the whole run.
-- `scripts/dev-serve.sh start|stop|status [--app umalator-global|skill-visualizer-global] [--port N]` — a pidfile-scoped dev server; `stop` only ever signals a pid it recorded and confirmed is still a `build.mjs --serve` process, never a bare `pkill -f`.
+The five: `repo-status.sh`, `commit-push.sh`, `pr-status.sh`, `sync-main.sh`, `dev-serve.sh` — each documents itself via `--help`.
 
 There is no `tsc` step in any build — esbuild transpiles directly, so a build succeeding does **not** mean the TypeScript typechecks. Run `npm run typecheck` (`tsc --noEmit`) yourself if you want that guarantee; it isn't wired into any build script. `strict` is pinned `false` in `tsconfig.json` (PIPE-58, `docs/adr/0020-pin-strict-false-reenable-per-flag.md`) — TS 7 defaults `strict: true`, which this repo never chose, and which alone pushed the count to ~1030; per-flag re-enable, deliberately, is the tracked path back, the parent-repo counterpart of the engine's own PIPE-59. `npm run verify`'s tsc baseline is live again (currently 103, well under the cap) and can once more fail on a real regression — before PIPE-58 the recorded baseline was itself above the cap, so that guard could structurally never fire. The remaining 103 is real pre-strict looseness, not config noise, concentrated in `umalator/compare.ts`, `umalator/app.tsx`, `components/SkillList.tsx`, and the small apps — tracked by PIPE-64 (the burn-down); PIPE-65 is the per-flag re-enable that follows it, and until its `noImplicitAny` pass lands, implicit-`any` is not reported by `tsc` at all. Don't treat introducing a handful of *new* errors in a file you're already touching as fine because "it's already broken" — check `git diff` against a `tsc --noEmit` run before/after your change on files you edited, the way `uma-skill-tools/CLAUDE.md`'s own `test/`/`tools/` section models. tsc 7.x (typescript-go) still hard-caps reported diagnostics at 1000 — true as ever, just no longer saturated.
 
@@ -161,14 +147,12 @@ Two parallel datasets, both derived from the same generator logic run against di
 | | JP | Global |
 |---|---|---|
 | Location | repo root (`umas.json`, `skill_meta.json`, `icons.json`) + `uma-skill-tools/data/jp/` | `umalator-global/` (`umas.json`, `skill_meta.json`, `unreleased.json`, `presets.ts`) + `uma-skill-tools/data/global/` |
-| Roster | 141 umas | 76 umas (Global lags JP releases) |
 | Skill names | `["ja", "en"]` tuples | `["en"]` single-element |
-| Courses | 139 | 119 (Global still lacks some JP courses) |
-| CM/LOH presets | `presets.ts` (repo root), 9 entries | `umalator-global/presets.ts`, 24 entries |
+| CM/LOH presets | `presets.ts` (repo root) | `umalator-global/presets.ts` |
 
-Icons are **not** duplicated — both datasets reference the same `icons/` tree via the same `icons.json`. When adding data by hand for a quick test, don't cross-wire JP data into a Global-built app or vice versa; the shapes differ (see the skillnames array-length difference above) and code branches on `CC_GLOBAL`, not on which JSON happens to be loaded.
+Global lags JP on both roster and courses. Icons are **not** duplicated — both datasets reference the same `icons/` tree via the same `icons.json`. When adding data by hand for a quick test, don't cross-wire JP data into a Global-built app or vice versa; the shapes differ (see the skillnames array-length difference above) and code branches on `CC_GLOBAL`, not on which JSON happens to be loaded.
 
-Of that 76, 12 umas are **not actually released on Global yet** (every outfit staged) and 11 more have only an alt outfit staged on an already-released uma — datamined from the Global client's own staged text and ported from JP mechanics via `scripts/add-staged-global-umas.mjs`, gated behind the "Show Unreleased Umas" toggle in umalator's Settings pane (default off; see `umalator-global/unreleased.json`, whose `.outfits`/`.skills` arrays stage 23 outfit ids and 46 skills respectively, and the root `unreleased.json` which is always empty for the JP build). See that script's own comments and `scripts/data/global-release-order.json` for how the JP-implementation-date cutoff works and how to extend it to a later batch.
+Of the Global roster, 12 umas are **not actually released on Global yet** (every outfit staged) and 11 more have only an alt outfit staged on an already-released uma — datamined from the Global client's own staged text and ported from JP mechanics via `scripts/add-staged-global-umas.mjs`, gated behind the "Show Unreleased Umas" toggle in umalator's Settings pane (default off; see `umalator-global/unreleased.json`, whose `.outfits`/`.skills` arrays stage 23 outfit ids and 46 skills respectively, and the root `unreleased.json` which is always empty for the JP build). See that script's own comments and `scripts/data/global-release-order.json` for how the JP-implementation-date cutoff works and how to extend it to a later batch.
 
 ## Code conventions
 
