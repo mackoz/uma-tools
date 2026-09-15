@@ -219,8 +219,8 @@ findings, like this session's PIPE-3 land did).
 
 **2.2 — The ticket's `## Outcome` section must already exist, with a real narrative, before
 you run anything with `--complete-id`.** This is enforced by the script (`land --dry-run`
-and the real run both refuse without it), but *writing it during the run isn't possible* —
-you have to add it yourself first. PIPE-8's landing hit this the hard way: the first `land`
+and the real run both refuse without it, via one shared predicate), but *writing it during
+the run isn't possible* — you have to add it yourself first. PIPE-8's landing hit this the hard way: the first `land`
 attempt correctly stopped short of the plans PR because the Outcome section wasn't there
 yet, after engine and code had already merged. Write a real narrative — what was
 implemented, what review found and how it was fixed, what verification ran — not a
@@ -277,7 +277,20 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   `ui-25`) — stop and resolve it (bump the gitlink, or add `--engine-pr`) before proceeding.
 - **complete-id check** — must read `OK`, not `PROBLEM`. A `PROBLEM` here means Step 2.2
   isn't actually done yet (missing `## Outcome`, or a stray `Fixed` bullet you added by
-  hand) — go fix it, don't try to work around the refusal.
+  hand) — go fix it, don't try to work around the refusal. This line and the real run's own
+  gate both call `outcome_problem()` (PIPE-71), which is the single place every refusal
+  lives — **but they read the ticket from different places**: the preview reads your local
+  `uma-tools-plans` working tree, while the real run checks out the plans PR's branch first.
+  So an `OK` here means the real run will accept the ticket *provided your local checkout is
+  already on that branch and up to date with it* (PIPE-74). If it isn't — you're on `main`,
+  or the branch has commits you haven't pulled — check the Outcome section on the PR itself
+  before trusting this line. It refuses when: there
+  is no `## Outcome` heading outside code blocks; there is more than one; the heading is the
+  file's last line with nothing after it; or a `- **Fixed**:` bullet was already written by
+  hand. The heading may carry trailing text — `## Outcome (2026-09-14): confirmed` — as long
+  as the line starts with `##`, whitespace, then `Outcome`; `### Outcome` and `## Outcomes`
+  are not. Headings quoted inside fenced code blocks are ignored, so a ticket can show the
+  format as an example.
 - **Pages deploy check** (since PIPE-30) — a line starting `Pages deploy check:` predicting
   whether the merge will trigger a Pages deploy, from `uma-tools`' own `deploy.yml` trigger
   config against the code PR's changed files. `none expected` is normal and correct for a
