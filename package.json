@@ -21,14 +21,15 @@
     "verify": "node scripts/verify.mjs",
     "verify:baseline": "node scripts/verify.mjs --baseline",
     "smoke": "node scripts/smoke.mjs",
-    "test": "vitest run",
+    "lint:tests": "biome lint --only=suspicious/noFocusedTests --only=suspicious/noSkippedTests --only=suspicious/noDuplicateTestHooks --only=suspicious/noExportsInTest .",
+    "test": "vitest run && npm run lint:tests",
     "test:stats": "npm run test",
     "prepare": "husky"
   },
   "author": "pecan",
   "license": "GPL-3.0-or-later",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,css}": "biome check --write --no-errors-on-unmatched",
+    "*.{ts,tsx,js,jsx,mjs,css}": "biome check --write --no-errors-on-unmatched",
     "*": "node scripts/check-no-pii.mjs"
   },
   "devDependencies": {
