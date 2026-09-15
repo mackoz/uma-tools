@@ -131,6 +131,19 @@ changes)`** — a doc that was dirty at the time is left alone deliberately (nev
 `finish_completion` runs inside `land --complete-id` *after* the engine and code PRs have merged,
 and `land` is non-resumable), so its link to the old path is still broken and is yours to fix.
 
+**The commit-time counterpart (PIPE-25, 2026-09-14).** Retargeting repairs a link when its
+*target* moves; the plans repo's pre-commit hook now refuses a commit that introduces a *new*
+relative markdown link into a movable ticket file in the first place, from any doc in that repo
+(`python3 scripts/check-wq-links.py --staged`, replacing an older `fork-comparison/`-scoped grep
+that had never actually fired). If a commit is rejected with `check-wq-links: ERROR: <file>:<line>
+... -> PIPE-22`, the fix is to write the plain ID (`see PIPE-22`) instead of the link at that
+line — not `--no-verify`, unless the link genuinely has to be a path. It resolves each link's
+real target, so depth is irrelevant, and three things are deliberately never flagged: an inline
+code span (quoted text, indistinguishable from a historical quote), a ticket the same file
+already linked to before the commit (grandfathered — this is what lets PIPE-24's own retargeting
+commits through), and `work-queue/README.md`'s generated rows. Links that predate PIPE-25 are
+grandfathered too, so an untouched doc never becomes uncommittable.
+
 **`--branch` is how you get one PR for several tickets.** Without it the branch defaults to
 `<id>-work`, so claiming three tickets for one fix set silently opens three branches and three
 PRs — pass `--branch <first-id>-work` on the second and third claims instead. `claim` prints
