@@ -291,9 +291,12 @@ This is read-only — no mutating git/gh calls. Check four things in its output:
   hand. The heading may carry trailing text — `## Outcome (2026-09-14): confirmed` — as long
   as the line starts with `##`, whitespace, then `Outcome`; `### Outcome` and `## Outcomes`
   are not. Headings quoted inside fenced code blocks are ignored, so a ticket can show the
-  format as an example. A `PROBLEM -- not on branch '<head>'` (rather than the usual
-  `-- ticket has no '## Outcome' heading` etc.) means the ticket exists locally but the claim
-  commit for it was never pushed to the plans PR's branch — push it, then re-run the preview.
+  format as an example. Two verdicts point at the branch rather than the ticket's prose:
+  `PROBLEM -- not on branch '<head>'` means the ticket exists locally but the claim commit for
+  it was never pushed — push it, then re-run the preview; `couldn't read (fetch/rev-parse
+  failed)` means the plans PR's head didn't resolve at all, so nothing was evaluated. That
+  last one is neither `OK` nor a ticket problem — treat it as a stop, and fix the branch
+  before landing.
 - **Pages deploy check** (since PIPE-30) — a line starting `Pages deploy check:` predicting
   whether the merge will trigger a Pages deploy, from `uma-tools`' own `deploy.yml` trigger
   config against the code PR's changed files. `none expected` is normal and correct for a
