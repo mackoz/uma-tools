@@ -164,6 +164,14 @@ someone opens it while you're mid-sequence — stop and reassess whether the nor
    the completion to this still-open branch, so the PR's own merge is what lands it, same
    principle as `land --complete-id` (just done by hand since that flag requires
    `wq.py land` to be running at all).
+   **Read this call's `link retarget:` line before moving on** (PIPE-24): completing a ticket
+   moves it `in-progress/` → `completed/`, and `wq.py` now repoints every other doc that
+   linked or cited the old path, in this same commit. That line is informational — but a
+   `warning: N file(s) skipped (uncommitted changes)` under it is not. A doc that was dirty
+   is deliberately left alone (never a `die()` — `finish_completion` also runs inside
+   `land --complete-id` *after* the engine and code PRs have merged, where a refusal would
+   strand a partial landing, cf. PIPE-71), so each named file still links to a path that no
+   longer exists. Fix those by hand before merging, or they ship broken.
 4. `gh pr merge N --squash --repo mackoz/uma-tools-plans`.
 
 **Single-repo code/engine path** (anomaly-checked, no ticket):
