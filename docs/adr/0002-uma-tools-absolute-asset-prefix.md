@@ -21,3 +21,7 @@ Every icon and font is referenced by an **absolute URL hardcoded to `/uma-tools/
 - The site only works when served under a path that literally is `/uma-tools/` — renaming the repository breaks every asset reference, and root-serving hosts (Cloudflare Pages, Netlify, a plain vhost) 404 all icons and fonts unless staged under a `uma-tools/` subfolder.
 - Local dev must reproduce the prefix: the dev server serves from the checkout's *parent* directory and only resolves cleanly if the clone is named `uma-tools` (`docs/deployment.md`'s local-dev gotcha).
 - In exchange, asset references are uniform and context-free: the same string works from any app at any depth, and there is no base-path plumbing to thread through components.
+
+## Amendments
+
+**2026-09-15:** The first Consequences bullet's "root-serving hosts … 404 all icons and fonts unless staged under a `uma-tools/` subfolder" now has a third resolution, alongside staging under a subfolder or making the prefix configurable: an edge rewrite that restores the `/uma-tools/` segment before the request reaches the origin. This is now how the site's custom domain (`umalator.mackoz.net`) — itself a root-serving host, from GitHub Pages' point of view — satisfies the constraint, without reversing the decision recorded above. See `docs/adr/0022-custom-domain-edge-rewrite.md`.

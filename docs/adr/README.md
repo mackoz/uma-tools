@@ -43,3 +43,4 @@ Numbers are never reused or renumbered, even if a record is retired — gaps are
 | [0019](0019-cooldown-rearm-design.md) | Cooldown re-arm draws spares up front, restricted to two sample-policy families | Accepted |
 | [0020](0020-pin-strict-false-reenable-per-flag.md) | Pin `strict: false` in `tsconfig.json`, re-enable per flag later | Accepted |
 | [0021](0021-repo-env-vars-and-pii-tripwire.md) | Repo paths as `UMA_*_REPO` env vars; PII tripwire with personal patterns kept out of git | Accepted |
+| [0022](0022-custom-domain-edge-rewrite.md) | Serve the custom domain via a Cloudflare edge rewrite, keep the `/uma-tools/` prefix hardcoded | Accepted |
