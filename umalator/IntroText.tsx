@@ -66,6 +66,20 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-09-14</summary>
+						<ul>
+							<li>
+								Fixed: downhill accel mode's speed boost now gets{' '}
+								<strong>bigger</strong> on steeper downhills (0.4/0.5/0.6 m/s at
+								1%/2%/3% grades) instead of shrinking away to nothing on the
+								steepest slopes -- a sign error had the bonus working backwards.
+								Confirmed against reverse-engineered server-side race simulation
+								data. This affects any uma that enters downhill accel mode on a
+								sloped course.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-13</summary>
 						<ul>
 							<li>
