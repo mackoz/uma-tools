@@ -42,7 +42,7 @@ Pages serves a custom domain at the **domain root**, which strips the `/uma-tool
 ### Setup, in this order
 
 1. **DNS first**: a `CNAME umalator → mackoz.github.io` record, **grey-clouded (DNS only)**. GitHub cannot complete its Let's Encrypt HTTP challenge through the Cloudflare proxy, so the record must stay unproxied until the certificate is issued.
-2. **Both Cloudflare rules next**, while nothing is proxied and they are therefore inert. Cloudflare warns that the rules may not match traffic because the record is not proxied — that warning is expected here; choose "Ignore and deploy rule anyway", **not** "Create a new proxied DNS record" (which would add a competing proxied record and block certificate issuance).
+2. **All three Cloudflare rules next**, while nothing is proxied and they are therefore inert. Cloudflare warns that the rules may not match traffic because the record is not proxied — that warning is expected here; choose "Ignore and deploy rule anyway", **not** "Create a new proxied DNS record" (which would add a competing proxied record and block certificate issuance).
 3. **Then Settings → Pages → Custom domain** = `umalator.mackoz.net`. **This is the cutover**: from this moment `github.io` redirects here. Wait for the certificate (minutes to about an hour), then tick **Enforce HTTPS** — without it GitHub emits `http://` in its redirect and plain HTTP 404s, breaking every legacy link.
 4. **Last**, orange-cloud the DNS record and set SSL/TLS to **Full (strict)**. Both rules start firing at this point.
 
@@ -50,9 +50,9 @@ The site is degraded between steps 3 and 4 — reachable but unstyled, since Clo
 
 **SSL/TLS must be Full (strict), and this is not optional.** Enforce HTTPS makes the origin redirect HTTP to HTTPS. On **Flexible**, Cloudflare connects to the origin over HTTP, receives that redirect, returns it to the browser, and connects over HTTP again on the retry — an infinite loop presenting as `ERR_TOO_MANY_REDIRECTS` across the whole site. Avoid "Automatic SSL/TLS" too: it probes the origin and can sit on a weaker mode while deciding. Note this is a **zone-wide** setting — it applies to every *proxied* hostname under `mackoz.net`, so check what else is orange-clouded before changing it. (`t.mackoz.net`, the PostHog telemetry proxy in `umalator/telemetry.ts`, is DNS-only and therefore unaffected.)
 
-### The two rules
+### The three rules
 
-Both use the dashboard's **Wildcard pattern** mode. Do not use `regex_replace()` — it is gated to Business/Enterprise plans and WAF Advanced, and saving a rule containing it on Free or Pro fails with an entitlement error ("not available to this plan"). Wildcard mode uses no expression functions and has no such gate.
+The first two use the dashboard's **Wildcard pattern** mode; the third is a cache rule. Do not use `regex_replace()` — it is gated to Business/Enterprise plans and WAF Advanced, and saving a rule containing it on Free or Pro fails with an entitlement error ("not available to this plan"). Wildcard mode uses no expression functions and has no such gate.
 
 **Rewrite rule** (Rules → URL rewrite rule) — strips the prefix so the hardcoded asset URLs resolve:
 
@@ -77,6 +77,20 @@ Both use the dashboard's **Wildcard pattern** mode. Do not use `regex_replace()`
 The absence of a `*` is load-bearing: a wildcard pattern must match the whole URL, so this matches only the root. Adding `*` would match every path on the site and redirect all of it, icons included, into a loop. 302 rather than 301 because browsers cache a 301 aggressively and it is painful to walk back.
 
 Shared simulator links survive the redirect: umalator serializes state into `location.hash` (`umalator/app.tsx:4426`), fragments are never sent to the server, and the browser reattaches the original fragment to the redirect target since the target carries none of its own.
+
+**Cache rule** (Caching → Cache Rules) — **required, not an optimization.** Before the custom domain, GitHub Pages' own CDN purged on every deploy, so a push was live immediately. Cloudflare does not know a deploy happened, and cached the build artifacts for four hours: a push would appear not to have taken effect, tempting you to debug a build that was in fact fine. Worst case is a stale `simulator.worker.js` — the simulation engine — behind a fresh UI, silently producing results that disagree with what the same build's changelog claims.
+
+Bypass cache for the three files that change on every deploy, leaving the 404 icons and three variable fonts (the files edge caching actually helps) cached normally. Set the filter via **Edit expression** rather than the row builder:
+
+```
+(http.request.full_uri wildcard r"https://umalator.mackoz.net/*bundle.*") or (http.request.full_uri wildcard r"https://umalator.mackoz.net/*simulator.worker.js")
+```
+
+Cache eligibility **Bypass cache**, and add **Browser TTL → Respect origin TTL**. Without the Browser TTL setting Cloudflare applies its own 4-hour default, and — as the dashboard itself warns — *purging Cloudflare's cache does not clear browsers' caches*, so a returning visitor would hold a stale bundle regardless. With it, GitHub Pages' own `max-age=600` passes through.
+
+Use the expression box rather than entering builder rows one at a time. Building this rule row-by-row silently dropped a different row on two consecutive attempts (`bundle.css` first, then `simulator.worker.js`), each time with a pattern shape identical to rows that worked — the cause was never established, and a dropped row fails silently.
+
+A new cache rule only governs future responses, so **purge once after creating it** (Caching → Configuration → Purge Everything) to clear whatever is already stored.
 
 ### Resulting behavior
 
@@ -108,6 +122,16 @@ curl -sIL https://mackoz.github.io/uma-tools/umalator-global/    # ends 200 on t
 ```
 
 The comma in `Inter-VariableFont_opsz,wght.ttf` is the likeliest thing to break through a proxy (see "Serving notes" below) — it survives this one, but re-check it after any edge-config change. A missing font shows as fallback serif/sans rather than a visible error, so it is easy to miss by eye.
+
+Check the cache rule with the response headers, not by eye — a stale bundle looks identical to a fresh one:
+
+```sh
+curl -sI https://umalator.mackoz.net/umalator-global/bundle.js | grep -i 'cf-cache-status\|cache-control'
+#   cf-cache-status: DYNAMIC     <- bypassing, correct
+#   cache-control: max-age=600   <- origin's own header, so Browser TTL is respected
+```
+
+`DYNAMIC` on all six build artifacts (`bundle.js`, `bundle.css`, `simulator.worker.js` × `umalator/` and `umalator-global/`) is the pass condition. `HIT` or `MISS` on any of them means the rule is not matching it, and `cache-control: max-age=14400` is the corroborating signal — that is Cloudflare's default leaking through where the rule missed. An icon should still go `MISS` then `HIT` on a second request; if icons report `DYNAMIC`, the rule is too broad and you have given up edge caching on the assets that most need it.
 
 If DNS looks wrong while testing, query a public resolver rather than trusting the local cache (`dig +short @1.1.1.1 umalator.mackoz.net`). A proxied record returns Cloudflare anycast IPs (`104.x`/`172.67.x`) and hides the CNAME target; a grey-clouded one reveals the target and GitHub's `185.199.x` addresses.
 
