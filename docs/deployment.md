@@ -33,14 +33,22 @@ Hosts that serve at the domain root (Cloudflare Pages, Netlify, Vercel, a plain 
 
 The site is also reachable at `https://umalator.mackoz.net/` (the bare hostname redirects to `/umalator-global/`), in addition to the `mackoz.github.io/uma-tools/` URL above. **Once the custom domain is set, GitHub redirects the `github.io` URL to it** — previously shared `mackoz.github.io/uma-tools/...` links now land on the new domain instead of serving from `github.io` directly. See `docs/adr/0022-custom-domain-edge-rewrite.md` for why this domain was worth adding rather than leaving the `github.io` URL as the only address.
 
-Setup:
+**Set up the DNS record before the `CNAME` file reaches `master`.** The order matters and is not
+reversible in a hurry: the deploy workflow ships `CNAME` in the Pages artifact, Pages applies it as
+the custom domain, and from that moment `mackoz.github.io/uma-tools/` *redirects* to
+`umalator.mackoz.net`. If that hostname doesn't resolve yet, the site is unreachable at both
+addresses until DNS propagates — landing the file first takes production down rather than leaving it
+where it was.
 
-1. **Repo-root `CNAME` file** containing `umalator.mackoz.net`, plus the same value entered in Settings → Pages → Custom domain.
-2. **DNS**: a `CNAME umalator → mackoz.github.io` record, **grey-clouded (DNS only) initially** — GitHub cannot complete its Let's Encrypt HTTP challenge through the Cloudflare proxy while it's orange-clouded. Wait for the Pages settings page to report the certificate provisioned, tick **Enforce HTTPS**, then switch the record to orange-clouded (proxied) and set the zone's SSL/TLS mode to **Full (strict)**.
+Setup, in this order:
+
+1. **DNS first**: a `CNAME umalator → mackoz.github.io` record, **grey-clouded (DNS only) initially** — GitHub cannot complete its Let's Encrypt HTTP challenge through the Cloudflare proxy while it's orange-clouded.
+2. **Then the repo-root `CNAME` file** containing `umalator.mackoz.net` (merged to `master`, so CI ships it), plus the same value entered in Settings → Pages → Custom domain. Wait for the Pages settings page to report the certificate provisioned, then tick **Enforce HTTPS**.
 3. **Cloudflare Transform Rule** (Rules → Transform Rules → Rewrite URL) — this is what makes the hardcoded `/uma-tools/` prefix resolve once Pages serves at the domain root instead of under `/uma-tools/`:
    - When `http.request.uri.path starts_with "/uma-tools/"`
    - Rewrite path (dynamic) to `regex_replace(http.request.uri.path, "^/uma-tools", "")`
 4. **Redirect rule**: `/` → `/umalator-global/`.
+5. **Last**, switch the DNS record to orange-clouded (proxied) and set the zone's SSL/TLS mode to **Full (strict)**. Assets 404 until this step — the rewrite in step 3 only fires on proxied traffic — so expect an unstyled page during the certificate window between steps 2 and 5.
 
 **This rewrite rule exists only in the Cloudflare dashboard — nothing in this repo references it.** If it is deleted, or the DNS record is set back to DNS-only (which bypasses Cloudflare and therefore the rewrite), the symptom is a completely unstyled page with no icons and no Japanese font — and there is no in-repo explanation for why, since the fix lives entirely outside version control. This is the single most important thing to know about this section.
 
