@@ -1,5 +1,6 @@
 import { Map as ImmMap, Record } from 'immutable';
 import skillmeta from '../skill_meta.json';
+import type { HorseDesc } from '../uma-skill-tools/RaceSolverBuilder';
 
 export function isDebuffSkill(id: string) {
 	// iconId 3xxxx is the debuff icons
@@ -110,6 +111,45 @@ export function SkillSet(ids: string[]): ImmMap<string, string> {
 	);
 }
 
+// Wider than HorseDesc on purpose: serialize()/deserialize() (umalator/app.tsx) round-trip
+// `outfitId`, `forcedSkillPositions` and `incomingDebuffs` through this same shape (share links,
+// `new HorseState(o.uma1)`), none of which HorseDesc declares -- narrowing this type to HorseDesc
+// would type-check a "simplification" that silently drops those fields from every share link.
+export interface FlatHorseState extends HorseDesc {
+	outfitId: string;
+	forcedSkillPositions: { [skillId: string]: number };
+	incomingDebuffs: { [skillId: string]: number };
+}
+
+// Converts a HorseState into its flat, plain-object form (FlatHorseState, a superset of the
+// engine's HorseDesc from uma-skill-tools/RaceSolverBuilder.ts) -- the shape
+// RaceSolverBuilder.horse() and JSON-serialization call sites actually want. Replaces the
+// `state.update('skills', (sk) => Array.from(sk.values())).toJS()` idiom that used to be
+// hand-rolled at each call site.
+//
+// Uses `toObject()` (shallow, and *typed* as the Record's own field types) rather than `toJS()`
+// (deep, and widened to something no narrower than `unknown`), then converts the three Immutable
+// collection fields explicitly. That keeps the result structurally checked against
+// FlatHorseState, so a field added to HorseDesc fails to compile here instead of being silently
+// absent -- the cast this replaced opted out of exactly that check. Spreading rather than naming
+// each scalar is deliberate: a field added to HorseState still flows through to the share link
+// automatically, which an exhaustive hand-written mapping would silently drop.
+//
+// `skills`, `forcedSkillPositions` and `incomingDebuffs` are HorseState's only Immutable-valued
+// fields, so converting those three is what makes the rest of the spread plain data. Output is
+// byte-identical to the three idioms this replaced -- same values and same key order, which
+// matters because `serialize()` hashes this object into share links (verified by JSON comparison
+// against `update(...).toJS()`, `set(...).toJS()` and the previous spread-of-`toJS()` form).
+export function toHorseDesc(state: HorseState): FlatHorseState {
+	const o = state.toObject();
+	return {
+		...o,
+		skills: Array.from(o.skills.values()),
+		forcedSkillPositions: o.forcedSkillPositions.toJS(),
+		incomingDebuffs: o.incomingDebuffs.toJS(),
+	};
+}
+
 export class HorseState extends Record({
 	outfitId: '',
 	speed: CC_GLOBAL ? 1200 : 1850,
@@ -124,7 +164,7 @@ export class HorseState extends Record({
 	mood: 2 as Mood,
 	skills: SkillSet([]),
 	// Map of skillId -> forced position (in meters). If a skill is in this map, it will be forced to activate at that position.
-	forcedSkillPositions: ImmMap(),
+	forcedSkillPositions: ImmMap() as ImmMap<string, number>,
 	// Map of a stamina-debuff bucket's representative skill id -> count (0-9). See
 	// components/StaminaDebuffs.ts for the bucket catalog.
 	incomingDebuffs: ImmMap() as ImmMap<string, number>,

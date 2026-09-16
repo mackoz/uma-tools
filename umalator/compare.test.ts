@@ -270,3 +270,130 @@ test('runComparisonBlock: survivesCount falls when incoming debuffs are configur
 	expect(without.survivesCount).toBe(block.size);
 	expect(withDebuffs.survivesCount).toBeLessThan(without.survivesCount);
 });
+
+// PIPE-64 slice 1 review gap: the pacer conversion at compare.ts's two `toHorseDesc(pacer)` call
+// sites (runComparison around line 193, runComparisonBlock around line 1119) changed from an
+// Immutable Record to toHorseDesc's plain-object FlatHorseState, but until now no test ever drove
+// PosKeepMode.Virtual with a non-null `pacer` argument at all. `seed` must be set explicitly here
+// -- the shared `options` above omits it, and runComparison/runComparisonBlock both derive their
+// pacer-trigger RNG from `options.seed`/`block.seed` respectively, so an undefined seed would make
+// pacer-trigger sampling non-deterministic (NaN-seeded) for these pacemakerCount>0 cases even
+// though the debuff-only tests above tolerate it fine (they never build a pacer).
+const posKeepOptions = {
+	...options,
+	posKeepMode: PosKeepMode.Virtual,
+	pacemakerCount: 1,
+	seed: 5150,
+};
+
+// 200341 (all_corner_random Accel, +4000 modifier, cooldown 30) is equipped as a Self skill on the
+// pacer so the pacer's own equipped-skill list (`horse.skills`, read by
+// RaceSolverBuilder.ts's setupPacer) is actually exercised, not just its raw stats.
+function pacerWithSkill(): HorseState {
+	return new TestHorse().set(
+		'skills',
+		ImmMap({ '200341': '200341' }),
+	) as unknown as HorseState;
+}
+
+test('runComparisonBlock with a Virtual-pos-keep pacer is deterministic for a fixed seed', () => {
+	const uma1 = new TestHorse() as unknown as HorseState;
+	const uma2 = new TestHorse() as unknown as HorseState;
+	const pacer = pacerWithSkill();
+
+	const block = { seed: 5150, size: 64 };
+
+	const a = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		pacer,
+		posKeepOptions,
+	);
+	const b = runComparisonBlock(
+		block,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		pacer,
+		posKeepOptions,
+	);
+
+	expect(Array.from(a.lengths)).toEqual(Array.from(b.lengths));
+	expect(Array.from(a.times)).toEqual(Array.from(b.times));
+});
+
+// These assert on `runComparison`'s `minrun.pacerT`/`pacerP` -- the pacer's own per-tick trace --
+// rather than `runComparisonBlock`'s `lengths`/`times`, because the latter don't move with the
+// pacer in this config. Both test umas are Senkou, so `RaceSolver.getPacer()` promotes the
+// frontmost of *them* to position-keep reference (`umas-filter-by-strategy-matches` ->
+// `pacer-promotion-nige`) and never falls through to the `isPacer` branch that would select the
+// constructed pacer (`virtual-pacemaker-nige`). The pacer's skills therefore never reach either
+// uma's trajectory here -- it isn't that an equal effect cancels out of the diff. The pacer is in
+// `this.umas` too (compare.ts's `initUmas([s2, ...pacers])`) and is itself Senkou by TestHorse
+// default, so it just competes in that same branch; a real Nige pacemaker would be picked by the
+// first branch outright. Nothing here is unreachable -- `lengths` simply isn't the signal to
+// assert on when every runner shares a strategy.
+test("runComparison: a pacer equipped with a skill measurably changes the pacer's own trajectory", () => {
+	const uma1 = new TestHorse() as unknown as HorseState;
+	const uma2 = new TestHorse() as unknown as HorseState;
+
+	const withSkill = runComparison(
+		1,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		pacerWithSkill(),
+		posKeepOptions,
+	);
+	const noSkill = runComparison(
+		1,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		new TestHorse() as unknown as HorseState,
+		posKeepOptions,
+	);
+
+	const pacerTWith = withSkill.runData.minrun.pacerT[0];
+	const pacerTNo = noSkill.runData.minrun.pacerT[0];
+	expect(pacerTWith.length).toBeGreaterThan(0);
+	expect(pacerTNo.length).toBeGreaterThan(0);
+	// If toHorseDesc ever stopped carrying the pacer's skills through (e.g. dropped or emptied the
+	// `skills` field), this pacer would run identically to one with no skill at all and this
+	// assertion would go from a real check to a tautology.
+	expect(pacerTWith.at(-1)).not.toBe(pacerTNo.at(-1));
+});
+
+test('runComparison: a Virtual-pos-keep pacer trajectory is deterministic for a fixed seed', () => {
+	const uma1 = new TestHorse() as unknown as HorseState;
+	const uma2 = new TestHorse() as unknown as HorseState;
+	const pacer = pacerWithSkill();
+
+	const a = runComparison(
+		1,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		pacer,
+		posKeepOptions,
+	);
+	const b = runComparison(
+		1,
+		course,
+		racedef,
+		uma1,
+		uma2,
+		pacer,
+		posKeepOptions,
+	);
+
+	expect(a.runData.minrun.pacerT[0]).toEqual(b.runData.minrun.pacerT[0]);
+	expect(a.runData.minrun.pacerP[0]).toEqual(b.runData.minrun.pacerP[0]);
+});

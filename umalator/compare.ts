@@ -1,4 +1,4 @@
-import type { HorseState } from '../components/HorseDefTypes';
+import { type HorseState, toHorseDesc } from '../components/HorseDefTypes';
 import {
 	clampDebuffCount,
 	isOpponentStaminaDebuff,
@@ -74,8 +74,8 @@ export function runComparison(
 		standard.desync();
 	}
 
-	const uma1_ = uma1.update('skills', (sk) => Array.from(sk.values())).toJS();
-	const uma2_ = uma2.update('skills', (sk) => Array.from(sk.values())).toJS();
+	const uma1_ = toHorseDesc(uma1);
+	const uma2_ = toHorseDesc(uma2);
 	standard.horse(uma1_);
 	compare.horse(uma2_);
 
@@ -124,7 +124,7 @@ export function runComparison(
 	};
 	const sort = (a, b) => commonIdx(a) - commonIdx(b) || +a - +b;
 
-	const uma1Horse = uma1.toJS();
+	const uma1Horse = toHorseDesc(uma1);
 	const uma1BaseStats = buildBaseStats(uma1Horse, uma1Horse.mood);
 	const uma1AdjustedStats = buildAdjustedStats(
 		uma1BaseStats,
@@ -133,7 +133,7 @@ export function runComparison(
 	);
 	const uma1Wisdom = uma1AdjustedStats.rawWisdom;
 
-	const uma2Horse = uma2.toJS();
+	const uma2Horse = toHorseDesc(uma2);
 	const uma2BaseStats = buildBaseStats(uma2Horse, uma2Horse.mood);
 	const uma2AdjustedStats = buildAdjustedStats(
 		uma2BaseStats,
@@ -190,7 +190,7 @@ export function runComparison(
 		pacerHorse = standard.useDefaultPacer(true);
 	} else if (options.posKeepMode === PosKeepMode.Virtual) {
 		if (pacer) {
-			const pacer_ = pacer.update('skills', (sk) => Array.from(sk.values()));
+			const pacer_ = toHorseDesc(pacer);
 			pacerHorse = standard.pacer(pacer_);
 		} else {
 			pacerHorse = standard.useDefaultPacer();
@@ -1006,8 +1006,8 @@ export function runComparisonBlock(
 		standard.desync();
 	}
 
-	const uma1_ = uma1.update('skills', (sk) => Array.from(sk.values())).toJS();
-	const uma2_ = uma2.update('skills', (sk) => Array.from(sk.values())).toJS();
+	const uma1_ = toHorseDesc(uma1);
+	const uma2_ = toHorseDesc(uma2);
 	standard.horse(uma1_);
 	compare.horse(uma2_);
 
@@ -1051,7 +1051,7 @@ export function runComparisonBlock(
 	};
 	const sort = (a, b) => commonIdx(a) - commonIdx(b) || +a - +b;
 
-	const uma1Horse = uma1.toJS();
+	const uma1Horse = toHorseDesc(uma1);
 	const uma1BaseStats = buildBaseStats(uma1Horse, uma1Horse.mood);
 	const uma1AdjustedStats = buildAdjustedStats(
 		uma1BaseStats,
@@ -1060,7 +1060,7 @@ export function runComparisonBlock(
 	);
 	const uma1Wisdom = uma1AdjustedStats.rawWisdom;
 
-	const uma2Horse = uma2.toJS();
+	const uma2Horse = toHorseDesc(uma2);
 	const uma2BaseStats = buildBaseStats(uma2Horse, uma2Horse.mood);
 	const uma2AdjustedStats = buildAdjustedStats(
 		uma2BaseStats,
@@ -1116,7 +1116,7 @@ export function runComparisonBlock(
 		pacerHorse = standard.useDefaultPacer(true);
 	} else if (options.posKeepMode === PosKeepMode.Virtual) {
 		if (pacer) {
-			const pacer_ = pacer.update('skills', (sk) => Array.from(sk.values()));
+			const pacer_ = toHorseDesc(pacer);
 			pacerHorse = standard.pacer(pacer_);
 		} else {
 			pacerHorse = standard.useDefaultPacer();

@@ -35,6 +35,7 @@ import {
 	HorseState,
 	reconcileOonige,
 	SkillSet,
+	toHorseDesc,
 	withSkillsSynced,
 } from '../components/HorseDefTypes';
 import {
@@ -1920,9 +1921,9 @@ async function serialize(
 		seed,
 		posKeepMode,
 		racedef: racedef.toJS(),
-		uma1: uma1.set('skills', Array.from(uma1.skills.values())).toJS(),
-		uma2: uma2.set('skills', Array.from(uma2.skills.values())).toJS(),
-		pacer: pacer.set('skills', Array.from(pacer.skills.values())).toJS(),
+		uma1: toHorseDesc(uma1),
+		uma2: toHorseDesc(uma2),
+		pacer: toHorseDesc(pacer),
 		witVarianceSettings,
 		showVirtualPacemakerOnGraph,
 		pacemakerCount,
@@ -2025,7 +2026,7 @@ async function deserialize(hash) {
 							.set('skills', SkillSet(o.uma1.skills))
 							.set(
 								'forcedSkillPositions',
-								ImmMap(o.uma1.forcedSkillPositions || {}),
+								ImmMap<string, number>(o.uma1.forcedSkillPositions || {}),
 							)
 							.set(
 								'incomingDebuffs',
@@ -2039,7 +2040,7 @@ async function deserialize(hash) {
 							.set('skills', SkillSet(o.uma2.skills))
 							.set(
 								'forcedSkillPositions',
-								ImmMap(o.uma2.forcedSkillPositions || {}),
+								ImmMap<string, number>(o.uma2.forcedSkillPositions || {}),
 							)
 							.set(
 								'incomingDebuffs',
@@ -2054,7 +2055,7 @@ async function deserialize(hash) {
 									.set('skills', SkillSet(o.pacer.skills || []))
 									.set(
 										'forcedSkillPositions',
-										ImmMap(o.pacer.forcedSkillPositions || {}),
+										ImmMap<string, number>(o.pacer.forcedSkillPositions || {}),
 									)
 									.set(
 										'incomingDebuffs',

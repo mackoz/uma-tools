@@ -32,6 +32,8 @@ import skillmeta from '../skill_meta.json';
 import skilldata from '../uma-skill-tools/data/jp/skill_data.json';
 import umas from '../umas.json';
 
+export type { HorseState };
+
 const umaAltIds = Object.keys(umas).flatMap((id) =>
 	Object.keys(umas[id].outfits),
 );
