@@ -1,5 +1,5 @@
 {
-	"tsc": 103,
+	"tsc": 60,
 	"dark": {
 		"app": 0,
 		"IntroText": 0,
@@ -24,14 +24,14 @@
 		"BasinnChart": 1,
 		"InfoModal": 1,
 		"OCRModal": 2,
-		"ResultsPane": 6,
+		"ResultsPane": 8,
 		"ShopSkillFilter": 0,
 		"ShopSkillPanel": 0,
 		"SpOptimizerCard": 0,
 		"UmasTab": 106,
 		"Dropdown": 0,
 		"Tabs": 0,
-		"HorseDef": 82,
+		"HorseDef": 90,
 		"SkillPicker": 76,
 		"SkillList": 22,
 		"Tooltip": 0
