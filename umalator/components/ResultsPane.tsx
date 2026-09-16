@@ -3,7 +3,7 @@ import { h } from 'preact';
 import { useContext, useMemo } from 'preact/hooks';
 import { IntlContext } from 'preact-i18n';
 import { drainForSkill, formatPercent } from '../../components/StaminaDebuffs';
-import type { DisplayRun } from '../runSelection';
+import { type DisplayRun, displayingRunOf } from '../runSelection';
 import './ResultsPane.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ function ResultsSummary({
 	const stats = useMemo(() => calcStats(results), [results]);
 
 	const entries: Array<{
-		key: 'min' | 'max' | 'mean' | 'median';
+		key: DisplayRun;
 		label: string;
 	}> = [
 		{ key: 'min', label: 'Min' },
@@ -596,7 +596,7 @@ export function ResultsPane({
 	}
 
 	const { runData, staminaStats, firstUmaStats } = results;
-	const runKey = `${displayRun}run` as keyof typeof runData;
+	const runKey = displayingRunOf(displayRun) as keyof typeof runData;
 	const snapshot = runData[runKey] as RaceSnapshot;
 
 	return (

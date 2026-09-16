@@ -850,7 +850,7 @@
 	   saturated green gradient, against which --muted-2 falls to ~1.1:1 in dark theme.
 	   The smaller size and normal weight carry the visual hierarchy instead. */
 	font-weight: normal;
-	font-size: var(--font-xs);
+	font-size: var(--font-xs, 0.6875rem);
 }
 
 .skillProcDataClose {

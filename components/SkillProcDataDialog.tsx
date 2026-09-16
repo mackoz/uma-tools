@@ -84,6 +84,12 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 		return null;
 	}
 
+	// Capitalized to match how the same four runs are spelled everywhere else (the Skill
+	// Chart's Showing select, ResultsPane's stat tiles).
+	const runLabel = displaying
+		? displayRunOf(displaying).replace(/^./, (c) => c.toUpperCase())
+		: null;
+
 	let effectivenessRate = 0;
 	const totalCount = runData?.allruns?.totalRuns || 0;
 	let skillProcs = 0;
@@ -139,9 +145,14 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 				<div class="skillProcDataHeader">
 					<h3>
 						Skill Proc Data{' '}
-						<span class="skillProcDataRunLabel">
-							{displayRunOf(displaying)} run
-						</span>
+						{/* UI-38: guarded, not defaulted -- `displaying` has no fallback (see the
+						    prop comment above), so an absent value here must render nothing rather
+						    than evaluate `displayRunOf(undefined)`, which would throw during render
+						    and, with no error boundary anywhere in this app, take down the whole
+						    tree. */}
+						{runLabel && (
+							<span class="skillProcDataRunLabel">({runLabel} run)</span>
+						)}
 					</h3>
 					<button class="skillProcDataClose" onClick={onClose}>
 						✕

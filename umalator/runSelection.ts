@@ -20,3 +20,9 @@ export const DEFAULT_DISPLAYING_RUN: DisplayingRun = 'medianrun';
 export function displayRunOf(displaying: DisplayingRun): DisplayRun {
 	return displaying.slice(0, -3) as DisplayRun;
 }
+
+// The forward direction of the same mapping: builds the `DisplayingRun` key used to index a
+// result's runData map from the shorter `DisplayRun` form (see the file-level comment above).
+export function displayingRunOf(run: DisplayRun): DisplayingRun {
+	return `${run}run` as DisplayingRun;
+}

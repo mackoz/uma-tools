@@ -133,6 +133,7 @@ import {
 	DEFAULT_DISPLAYING_RUN,
 	type DisplayingRun,
 	type DisplayRun,
+	displayingRunOf,
 	displayRunOf,
 } from './runSelection';
 import {
@@ -5908,7 +5909,7 @@ function App(props) {
 	function handleDisplayRunChange(run: DisplayRun) {
 		// `displayRun` is now derived from `displaying` (see its declaration above) -- setting
 		// `displaying` here is the only state change needed; `displayRun` follows automatically.
-		setChartData(`${run}run`);
+		setChartData(displayingRunOf(run));
 	}
 
 	// Memoized rather than computed inline in the render body below (PIPE-2 review, round 3): this
