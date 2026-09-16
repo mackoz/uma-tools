@@ -650,6 +650,18 @@ body.splitterDragging {
 	color: var(--muted-2);
 }
 
+.expandedChartNoProc {
+	width: 400px;
+	height: 200px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	font-size: var(--font-xs);
+	color: var(--muted-2);
+}
+
 .expandedCredit {
 	position: absolute;
 	bottom: 0;

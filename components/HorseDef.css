@@ -845,6 +845,17 @@
 	font-size: 1.2em;
 }
 
+.skillProcDataRunLabel {
+	/* Inherits the header's white rather than a --muted-* token: the header sits on a
+	   saturated green gradient, against which --muted-2 falls to ~1.1:1 in dark theme.
+	   The smaller size and normal weight carry the visual hierarchy instead.
+	   White is better, not good -- ~1.7:1 against the gradient's light end. That is the
+	   header's pre-existing ratio, shared with its h3 and close button, and is not fixed
+	   here; this label is its smallest text. UI-42. */
+	font-weight: normal;
+	font-size: var(--font-xs, 0.6875rem);
+}
+
 .skillProcDataClose {
 	background: transparent;
 	border: none;

@@ -130,6 +130,13 @@ import {
 } from './racePresets';
 import { type DecodedUma, decodeRoster } from './rosterDecoder';
 import {
+	DEFAULT_DISPLAYING_RUN,
+	type DisplayingRun,
+	type DisplayRun,
+	displayingRunOf,
+	displayRunOf,
+} from './runSelection';
+import {
 	addShopSkill,
 	applyShopFilter,
 	isShopFilterActive,
@@ -315,13 +322,6 @@ function pruningLabel(pruning: number): string {
 
 const DEFAULT_SAMPLES = 500;
 const DEFAULT_SEED = 2615953739;
-
-// Round 9 (C-R4): the single default among 'meanrun'/'medianrun'/'minrun'/'maxrun' that
-// `displaying`, `displayRun`, and the course map's chartData all fall back to when nothing has
-// been explicitly selected yet. Was a duplicated string literal at four call sites -- see the
-// HP-7 review-4 (M4)/review-3 (Finding 3) comments at each remaining use below for why they all
-// have to agree.
-const DEFAULT_DISPLAYING_RUN = 'medianrun';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -1051,7 +1051,13 @@ export function VelocityChart(props) {
 
 	const skillData = getSkillPositionsFromRun(skillId, selectedRun);
 	if (!skillData || skillData.positions.length === 0) {
-		return null;
+		return (
+			<div class="expandedChartNoProc">
+				This skill did not activate in the run being shown.
+				<br />
+				Another run may show it.
+			</div>
+		);
 	}
 
 	const uma1Times = selectedRun.t[0];
@@ -3560,14 +3566,14 @@ function App(props) {
 	// structurally impossible: there is only one stored value now. The four `displaying` values
 	// this reducer ever produces are exactly 'meanrun'/'medianrun'/'minrun'/'maxrun' (updateResultsState
 	// above, and the 'string' dispatch branch that always receives one of those four from
-	// handleDisplayRunChange/the Skill Chart's own selector), so slicing off the trailing 'run' is
-	// an exact, lossless inverse of the `${run}run` template used to build `displaying` -- not a
-	// heuristic.
-	const displayRun = (displaying || DEFAULT_DISPLAYING_RUN).slice(0, -3) as
-		| 'mean'
-		| 'median'
-		| 'min'
-		| 'max';
+	// handleDisplayRunChange/the Skill Chart's own selector); `displayRunOf` (runSelection.ts) is
+	// the exact, lossless inverse of the `${run}run` template used to build `displaying`.
+	// `displaying` itself can still be the empty-string "nothing selected yet" sentinel, so that
+	// default is resolved here, at the one site that needs it -- `displayRunOf` itself takes only
+	// an already-valid `DisplayingRun`.
+	const displayRun = displayRunOf(
+		(displaying || DEFAULT_DISPLAYING_RUN) as DisplayingRun,
+	);
 
 	// tableData is purely a rendered view of chartRunRef.current -- see refreshTableRowsNow(). It's
 	// still a useState (not a ref) because BasinnChart needs to re-render when it changes.
@@ -5900,10 +5906,10 @@ function App(props) {
 			? { results, runData, staminaStats, firstUmaStats }
 			: null;
 
-	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
+	function handleDisplayRunChange(run: DisplayRun) {
 		// `displayRun` is now derived from `displaying` (see its declaration above) -- setting
 		// `displaying` here is the only state change needed; `displayRun` follows automatically.
-		setChartData(`${run}run`);
+		setChartData(displayingRunOf(run));
 	}
 
 	// Memoized rather than computed inline in the render body below (PIPE-2 review, round 3): this
@@ -6208,6 +6214,7 @@ function App(props) {
 					}
 					runData={mode == Mode.Compare ? runData : null}
 					umaIndex={mode == Mode.Compare ? 0 : null}
+					displaying={displaying}
 					hiddenOutfitIds={showUnreleasedUmas ? undefined : unreleasedOutfitIds}
 					hiddenSkillIds={showUnreleasedUmas ? undefined : unreleasedSkillIds}
 					headerActions={
@@ -6260,6 +6267,7 @@ function App(props) {
 						}
 						runData={runData}
 						umaIndex={1}
+						displaying={displaying}
 						hiddenOutfitIds={
 							showUnreleasedUmas ? undefined : unreleasedOutfitIds
 						}
