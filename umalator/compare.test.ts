@@ -326,15 +326,17 @@ test('runComparisonBlock with a Virtual-pos-keep pacer is deterministic for a fi
 	expect(Array.from(a.times)).toEqual(Array.from(b.times));
 });
 
-// Why these tests read `runComparison`'s `minrun.pacerT`/`pacerP` rather than
-// `runComparisonBlock`'s `lengths`/`times`: the latter are a *difference* between uma1 and uma2
-// (`lengths[i] = posDifference / 2.5`, compare.ts), and both umas here are identical TestHorse
-// builds. A pacer therefore moves both of them identically and cancels out of the difference
-// exactly, whatever it does -- that is arithmetic, not a property of this course or config, and
-// not a gap in runComparisonBlock. The pacer's own per-tick trace (`pacerT`/`pacerP`, exposed by
-// runComparison but not by ComparisonBlockOutput) is an absolute signal rather than a differential
-// one, so it can actually observe that toHorseDesc(pacer) carried this pacer's real skills and
-// stats into setupPacer instead of a shared default.
+// These assert on `runComparison`'s `minrun.pacerT`/`pacerP` -- the pacer's own per-tick trace --
+// rather than `runComparisonBlock`'s `lengths`/`times`, because the latter don't move with the
+// pacer in this config. Both test umas are Senkou, so `RaceSolver.getPacer()` promotes the
+// frontmost of *them* to position-keep reference (`umas-filter-by-strategy-matches` ->
+// `pacer-promotion-nige`) and never falls through to the `isPacer` branch that would select the
+// constructed pacer (`virtual-pacemaker-nige`). The pacer's skills therefore never reach either
+// uma's trajectory here -- it isn't that an equal effect cancels out of the diff. The pacer is in
+// `this.umas` too (compare.ts's `initUmas([s2, ...pacers])`) and is itself Senkou by TestHorse
+// default, so it just competes in that same branch; a real Nige pacemaker would be picked by the
+// first branch outright. Nothing here is unreachable -- `lengths` simply isn't the signal to
+// assert on when every runner shares a strategy.
 test("runComparison: a pacer equipped with a skill measurably changes the pacer's own trajectory", () => {
 	const uma1 = new TestHorse() as unknown as HorseState;
 	const uma2 = new TestHorse() as unknown as HorseState;
