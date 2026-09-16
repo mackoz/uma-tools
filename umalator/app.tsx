@@ -1049,7 +1049,13 @@ export function VelocityChart(props) {
 
 	const skillData = getSkillPositionsFromRun(skillId, selectedRun);
 	if (!skillData || skillData.positions.length === 0) {
-		return null;
+		return (
+			<div class="expandedChartNoProc">
+				This skill did not activate in the run being shown.
+				<br />
+				Try a different run.
+			</div>
+		);
 	}
 
 	const uma1Times = selectedRun.t[0];

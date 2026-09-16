@@ -86,7 +86,8 @@ export function IntroText(props) {
 								selection -- opening it right after a Compare run could already
 								show a different race than the card and course map, before you
 								touched anything. It now charts whichever run is selected, and
-								its header names which one.
+								its header names which one. A run where the skill never
+								activated now says so instead of rendering blank space.
 							</li>
 						</ul>
 					</details>
