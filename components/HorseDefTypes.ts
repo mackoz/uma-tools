@@ -111,22 +111,32 @@ export function SkillSet(ids: string[]): ImmMap<string, string> {
 	);
 }
 
-// Converts a HorseState into the engine's HorseDesc (uma-skill-tools/RaceSolverBuilder.ts) --
-// the shape RaceSolverBuilder.horse() and JSON-serialization call sites actually want. Replaces
-// the `state.update('skills', (sk) => Array.from(sk.values())).toJS()` idiom that used to be
+// Wider than HorseDesc on purpose: serialize()/deserialize() (umalator/app.tsx) round-trip
+// `outfitId`, `forcedSkillPositions` and `incomingDebuffs` through this same shape (share links,
+// `new HorseState(o.uma1)`), none of which HorseDesc declares -- narrowing this type to HorseDesc
+// would type-check a "simplification" that silently drops those fields from every share link.
+export interface FlatHorseState extends HorseDesc {
+	outfitId: string;
+	forcedSkillPositions: { [skillId: string]: number };
+	incomingDebuffs: { [skillId: string]: number };
+}
+
+// Converts a HorseState into its flat, plain-object form (FlatHorseState, a superset of the
+// engine's HorseDesc from uma-skill-tools/RaceSolverBuilder.ts) -- the shape
+// RaceSolverBuilder.horse() and JSON-serialization call sites actually want. Replaces the
+// `state.update('skills', (sk) => Array.from(sk.values())).toJS()` idiom that used to be
 // hand-rolled at each call site: HorseState['skills'] is an Immutable map (SkillSet), so a bare
 // `.toJS()` deep-converts it to a plain {groupId: skillId} object rather than the string[]
 // HorseDesc declares, and TS widens `.toJS()`'s return to `unknown` besides. Spreading
 // `state.toJS()` and then overwriting `skills` with the array form is behaviorally identical to
-// the old update-then-toJS idiom (verified: both deep-convert `forcedSkillPositions`/
+// the old update-then-toJS idiom: verified that both deep-convert `forcedSkillPositions`/
 // `incomingDebuffs` to plain objects the same way, since neither field is touched by the
-// `skills` update) -- see PIPE-64's brief for the verification script this was checked against.
-// The Immutable Record's `.toJS()` typing itself doesn't know its own field shapes narrowly
-// enough to satisfy HorseDesc's declared fields (e.g. `mood: Mood` vs `.toJS()`'s widened
-// return), hence the cast at this one boundary.
-export function toHorseDesc(state: HorseState): HorseDesc {
+// `skills` update. The Immutable Record's `.toJS()` typing itself doesn't know its own field
+// shapes narrowly enough to satisfy FlatHorseState's declared fields (e.g. `mood: Mood` vs
+// `.toJS()`'s widened return), hence the cast at this one boundary.
+export function toHorseDesc(state: HorseState): FlatHorseState {
 	return {
-		...(state.toJS() as unknown as HorseDesc),
+		...(state.toJS() as unknown as FlatHorseState),
 		skills: Array.from(state.skills.values()),
 	};
 }
@@ -145,7 +155,7 @@ export class HorseState extends Record({
 	mood: 2 as Mood,
 	skills: SkillSet([]),
 	// Map of skillId -> forced position (in meters). If a skill is in this map, it will be forced to activate at that position.
-	forcedSkillPositions: ImmMap(),
+	forcedSkillPositions: ImmMap() as ImmMap<string, number>,
 	// Map of a stamina-debuff bucket's representative skill id -> count (0-9). See
 	// components/StaminaDebuffs.ts for the bucket catalog.
 	incomingDebuffs: ImmMap() as ImmMap<string, number>,

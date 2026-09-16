@@ -2026,7 +2026,7 @@ async function deserialize(hash) {
 							.set('skills', SkillSet(o.uma1.skills))
 							.set(
 								'forcedSkillPositions',
-								ImmMap(o.uma1.forcedSkillPositions || {}),
+								ImmMap<string, number>(o.uma1.forcedSkillPositions || {}),
 							)
 							.set(
 								'incomingDebuffs',
@@ -2040,7 +2040,7 @@ async function deserialize(hash) {
 							.set('skills', SkillSet(o.uma2.skills))
 							.set(
 								'forcedSkillPositions',
-								ImmMap(o.uma2.forcedSkillPositions || {}),
+								ImmMap<string, number>(o.uma2.forcedSkillPositions || {}),
 							)
 							.set(
 								'incomingDebuffs',
@@ -2055,7 +2055,7 @@ async function deserialize(hash) {
 									.set('skills', SkillSet(o.pacer.skills || []))
 									.set(
 										'forcedSkillPositions',
-										ImmMap(o.pacer.forcedSkillPositions || {}),
+										ImmMap<string, number>(o.pacer.forcedSkillPositions || {}),
 									)
 									.set(
 										'incomingDebuffs',

@@ -21,7 +21,10 @@ import {
 function buildHorseState(raw: any): HorseState {
 	return new HorseState(raw)
 		.set('skills', fromJS(raw.skills))
-		.set('forcedSkillPositions', ImmMap(raw.forcedSkillPositions || {}))
+		.set(
+			'forcedSkillPositions',
+			ImmMap<string, number>(raw.forcedSkillPositions || {}),
+		)
 		.set(
 			'incomingDebuffs',
 			// HP-7 review-3, Important 6: this is the third incomingDebuffs construction site
