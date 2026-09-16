@@ -864,6 +864,7 @@ export function HorseDef(props) {
 					compareRunData={props.runData}
 					courseDistance={props.courseDistance}
 					umaIndex={props.umaIndex}
+					displaying={props.displaying}
 					onClose={() => setProcDataSkillId(null)}
 				/>
 			)}

@@ -6,6 +6,7 @@ import {
 	LengthDifferenceChart,
 	VelocityChart,
 } from '../umalator/app';
+import { type DisplayingRun, displayRunOf } from '../umalator/runSelection';
 
 function extractSkillRunData(compareRunData: any, umaIndex: number): any {
 	if (!compareRunData?.allruns) {
@@ -38,7 +39,13 @@ interface SkillProcDataDialogProps {
 	compareRunData: any;
 	courseDistance: number;
 	umaIndex: number;
-	displaying?: string;
+	// UI-38: required, with no default and no `|| DEFAULT_DISPLAYING_RUN` fallback. The dialog
+	// only mounts when HorseDef's `runData` is non-null, and the only reducer branch that sets
+	// `runData` non-null also sets `displaying` to one of the four DisplayingRun values (see
+	// app.tsx's updateResultsState) -- so there's no live path where this arrives unset, and a
+	// fallback here would just reintroduce the bug this ticket fixed (this component silently
+	// disagreeing with the rest of the screen about which run it's showing).
+	displaying: DisplayingRun;
 	onClose: () => void;
 }
 
@@ -48,16 +55,14 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 		compareRunData,
 		courseDistance,
 		umaIndex,
-		displaying = 'meanrun',
+		displaying,
 		onClose,
 	} = props;
 	const dialogRef = useRef<HTMLDivElement>(null);
 
-	const runData = extractSkillRunData(compareRunData, umaIndex);
-	if (!runData) {
-		return null;
-	}
-
+	// UI-38: these hooks must run unconditionally, before the `!runData` early return below --
+	// moved above it (previously latent, since HorseDef unmounts this component whenever
+	// `runData` goes null, but not safe to rely on for any future re-render trigger here).
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
@@ -73,6 +78,11 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 			dialogRef.current.focus();
 		}
 	}, []);
+
+	const runData = extractSkillRunData(compareRunData, umaIndex);
+	if (!runData) {
+		return null;
+	}
 
 	let effectivenessRate = 0;
 	const totalCount = runData?.allruns?.totalRuns || 0;
@@ -127,7 +137,12 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 			<div class="skillProcDataOverlay" onClick={onClose} />
 			<div class="skillProcDataDialog" ref={dialogRef} tabIndex={-1}>
 				<div class="skillProcDataHeader">
-					<h3>Skill Proc Data</h3>
+					<h3>
+						Skill Proc Data{' '}
+						<span style="font-weight: normal; font-size: 0.7em;">
+							{displayRunOf(displaying)} run
+						</span>
+					</h3>
 					<button class="skillProcDataClose" onClick={onClose}>
 						✕
 					</button>

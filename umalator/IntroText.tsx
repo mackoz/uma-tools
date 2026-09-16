@@ -79,6 +79,15 @@ export function IntroText(props) {
 								you expect. Shared simulator links carry their full state across
 								the redirect too; nothing needs re-sharing.
 							</li>
+							<li>
+								Fixed: the <strong>Skill Proc Data</strong> dialog (View Proc
+								Data on an expanded skill row) always charted the Mean run's
+								velocity, ignoring the card's own <strong>Showing</strong>{' '}
+								selection -- opening it right after a Compare run could already
+								show a different race than the card and course map, before you
+								touched anything. It now charts whichever run is selected, and
+								its header names which one.
+							</li>
 						</ul>
 					</details>
 					<details class="release">
