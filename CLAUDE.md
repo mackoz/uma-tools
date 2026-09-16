@@ -106,7 +106,7 @@ cd umadle && node build.mjs
 
 npm run build                                # all of the above in one shot
 
-npm run test                                 # 16 unit-test files via Vitest (`vitest run`), then `npm run lint:tests` (the PIPE-76 test-lint tripwire); test:stats is a kept alias
+npm run test                                 # 17 unit-test files via Vitest (`vitest run`), then `npm run lint:tests` (the PIPE-76 test-lint tripwire); test:stats is a kept alias
 npm run verify                               # build both umalator apps + run unit tests + typecheck + CSS metrics + browser smoke + docs + pkg-guard + deps, one-line diff vs scripts/verify-baseline.json
 npm run verify:baseline                      # re-record that baseline (run on master right after a merge; skips the tests/smoke/docs stages)
 npm run smoke                                # browser smoke alone: Playwright chromium drives umalator-global (light+dark), asserts contrast/stacking/clipping

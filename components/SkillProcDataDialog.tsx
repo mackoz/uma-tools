@@ -44,7 +44,11 @@ interface SkillProcDataDialogProps {
 	// `runData` non-null also sets `displaying` to one of the four DisplayingRun values (see
 	// app.tsx's updateResultsState) -- so there's no live path where this arrives unset, and a
 	// fallback here would just reintroduce the bug this ticket fixed (this component silently
-	// disagreeing with the rest of the screen about which run it's showing).
+	// disagreeing with the rest of the screen about which run it's showing). The reducer's
+	// string branch does preserve a non-null `runData` while overwriting `displaying` from the
+	// dispatched value, so the invariant that actually has to hold is that no setChartData
+	// caller dispatches a string outside the union -- true of both call sites today, and not
+	// something the type system can defend across HorseDef's implicit-any props.
 	displaying: DisplayingRun;
 	onClose: () => void;
 }
