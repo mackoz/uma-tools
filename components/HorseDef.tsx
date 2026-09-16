@@ -15,6 +15,9 @@ import {
 	withSkillsSynced,
 	withStrategySynced,
 } from './HorseDefTypes';
+
+export type { HorseState };
+
 import { scalingContextForHorseDesc } from './ScalingContext';
 import { ExpandedSkillView, SkillPickerModal } from './SkillPicker';
 import { SkillProcDataDialog } from './SkillProcDataDialog';

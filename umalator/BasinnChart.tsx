@@ -20,6 +20,7 @@ import {
 	buildBaseStats,
 	buildSkillData,
 	conditionsWithActivateCountsAsRandom,
+	type HorseDesc,
 	Perspective,
 } from '../uma-skill-tools/RaceSolverBuilder';
 import { Region, RegionList } from '../uma-skill-tools/Region';
@@ -126,7 +127,16 @@ export function getActivateableSkills(
 	racedef: RaceParameters,
 	parser: { parse: any; tokenize: any } = getParser(),
 ) {
-	const h2 = buildBaseStats(horse, horse.mood);
+	// PIPE-64: HorseState's `skills` (an Immutable map) doesn't structurally satisfy HorseDesc's
+	// `skills?: string[]`, but buildBaseStats never reads `skills` at all (see its body in
+	// RaceSolverBuilder.ts), so a real conversion here would be pure overhead. Deliberately not
+	// using HorseDefTypes.ts's toHorseDesc() helper: that pulls in a *runtime* import of
+	// HorseDefTypes.ts, whose HorseState Record initializer evaluates a bare `CC_GLOBAL` at module
+	// load (an esbuild `define`, not a real global) and throws under Vitest -- see
+	// umalator/compare.test.ts's TestHorse comment for the same constraint. This diagnostic was
+	// masked pre-PIPE-64 by HorseState failing to import at all (TS2459); exporting it (task 3)
+	// unmasked it without changing runtime behavior.
+	const h2 = buildBaseStats(horse as unknown as HorseDesc, horse.mood);
 	const wholeCourse = new RegionList();
 	wholeCourse.push(new Region(0, course.distance));
 	return skills.filter((id) => {

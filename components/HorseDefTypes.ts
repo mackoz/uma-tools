@@ -1,5 +1,6 @@
 import { Map as ImmMap, Record } from 'immutable';
 import skillmeta from '../skill_meta.json';
+import type { HorseDesc } from '../uma-skill-tools/RaceSolverBuilder';
 
 export function isDebuffSkill(id: string) {
 	// iconId 3xxxx is the debuff icons
@@ -108,6 +109,26 @@ export function SkillSet(ids: string[]): ImmMap<string, string> {
 			{ entries: [] as [string, string][], ndebuff: 0 },
 		).entries,
 	);
+}
+
+// Converts a HorseState into the engine's HorseDesc (uma-skill-tools/RaceSolverBuilder.ts) --
+// the shape RaceSolverBuilder.horse() and JSON-serialization call sites actually want. Replaces
+// the `state.update('skills', (sk) => Array.from(sk.values())).toJS()` idiom that used to be
+// hand-rolled at each call site: HorseState['skills'] is an Immutable map (SkillSet), so a bare
+// `.toJS()` deep-converts it to a plain {groupId: skillId} object rather than the string[]
+// HorseDesc declares, and TS widens `.toJS()`'s return to `unknown` besides. Spreading
+// `state.toJS()` and then overwriting `skills` with the array form is behaviorally identical to
+// the old update-then-toJS idiom (verified: both deep-convert `forcedSkillPositions`/
+// `incomingDebuffs` to plain objects the same way, since neither field is touched by the
+// `skills` update) -- see PIPE-64's brief for the verification script this was checked against.
+// The Immutable Record's `.toJS()` typing itself doesn't know its own field shapes narrowly
+// enough to satisfy HorseDesc's declared fields (e.g. `mood: Mood` vs `.toJS()`'s widened
+// return), hence the cast at this one boundary.
+export function toHorseDesc(state: HorseState): HorseDesc {
+	return {
+		...(state.toJS() as unknown as HorseDesc),
+		skills: Array.from(state.skills.values()),
+	};
 }
 
 export class HorseState extends Record({

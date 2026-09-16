@@ -1,4 +1,4 @@
-import type { HorseState } from '../components/HorseDefTypes';
+import { type HorseState, toHorseDesc } from '../components/HorseDefTypes';
 import {
 	clampDebuffCount,
 	isOpponentStaminaDebuff,
@@ -74,8 +74,8 @@ export function runComparison(
 		standard.desync();
 	}
 
-	const uma1_ = uma1.update('skills', (sk) => Array.from(sk.values())).toJS();
-	const uma2_ = uma2.update('skills', (sk) => Array.from(sk.values())).toJS();
+	const uma1_ = toHorseDesc(uma1);
+	const uma2_ = toHorseDesc(uma2);
 	standard.horse(uma1_);
 	compare.horse(uma2_);
 
@@ -1006,8 +1006,8 @@ export function runComparisonBlock(
 		standard.desync();
 	}
 
-	const uma1_ = uma1.update('skills', (sk) => Array.from(sk.values())).toJS();
-	const uma2_ = uma2.update('skills', (sk) => Array.from(sk.values())).toJS();
+	const uma1_ = toHorseDesc(uma1);
+	const uma2_ = toHorseDesc(uma2);
 	standard.horse(uma1_);
 	compare.horse(uma2_);
 
