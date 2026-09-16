@@ -1,5 +1,13 @@
 import { cloneElement, Fragment, h } from 'preact';
-import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import {
+	type Dispatch,
+	type StateUpdater,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'preact/hooks';
 import { IntlProvider, Localizer, Text } from 'preact-i18n';
 
 import { getParser } from '../uma-skill-tools/ConditionParser';
@@ -322,6 +330,9 @@ function fmtString(strId: string) {
 	);
 }
 
+// The Proxy's get() trap below wraps each raw formatArg function (or the "unknown
+// condition" fallback) into a full ConditionFormatter at read time -- the target object
+// itself never matches that shape, so it can't be typed structurally like a normal Proxy<T>.
 const conditionFormatters = new Proxy(
 	{
 		accumulatetime: fmtSeconds,
@@ -463,7 +474,7 @@ const conditionFormatters = new Proxy(
 			};
 		},
 	},
-);
+) as unknown as { [cond: string]: ConditionFormatter };
 
 interface OpFormatter {
 	format(): any;
@@ -796,8 +807,10 @@ function textSearch(id: string, searchText: string, searchConditions: boolean) {
 export function SkillList(props) {
 	const lang = useLanguage();
 	const [visible, setVisible] = useState(() => new Set(props.ids));
-	const active = {},
-		setActive = {};
+	const active: { [group: string]: { [filter: string]: boolean } } = {},
+		setActive: {
+			[group: string]: { [filter: string]: Dispatch<StateUpdater<boolean>> };
+		} = {};
 	Object.keys(groups_filters).forEach((group) => {
 		active[group] = {};
 		setActive[group] = {};
@@ -954,7 +967,12 @@ export function SkillList(props) {
 							type="text"
 							class="filterSearch"
 							value={searchText}
-							placeholder={<Text id="skillfilters.search" />}
+							// preact-i18n's <Localizer> replaces this JSX with a plain string at
+							// render time (its whole purpose), so the runtime value is always a
+							// string -- Preact's own prop types don't know that, hence the cast.
+							placeholder={
+								(<Text id="skillfilters.search" />) as unknown as string
+							}
 							onInput={updateFilters}
 							ref={searchInput}
 						/>

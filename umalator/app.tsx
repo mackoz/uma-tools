@@ -4,7 +4,7 @@ import './tokens.css';
 
 import { computePosition, flip } from '@floating-ui/dom';
 import * as d3 from 'd3';
-import { Map as ImmMap, Set as ImmSet, Record } from 'immutable';
+import { Map as ImmMap, Record as ImmRecord, Set as ImmSet } from 'immutable';
 import {
 	Bug,
 	Camera,
@@ -341,7 +341,7 @@ function useMobile() {
 	return isMobile;
 }
 
-class RaceParams extends Record({
+class RaceParams extends ImmRecord({
 	mood: 2 as Mood,
 	ground: GroundCondition.Good,
 	weather: Weather.Sunny,
@@ -1541,7 +1541,7 @@ function BasinnChartPopover(props) {
 	return (
 		<div
 			class="basinnChartPopover"
-			tabindex="1000"
+			tabindex={1000}
 			style="visibility:hidden"
 			ref={popover}
 		>
@@ -2412,9 +2412,6 @@ const COURSE_CHART_TEMPLATE_STATS = Object.freeze({
 const COURSE_CHART_STYLES = ['Nige', 'Senkou', 'Sasi', 'Oikomi'] as const;
 type CourseChartStyle = (typeof COURSE_CHART_STYLES)[number];
 
-// Not typed as Record<K, V> -- that identifier collides project-wide with Immutable.js's ambient
-// Record<TProps> (used for HorseState) once both are in scope; see ui-components/Tabs.tsx's own
-// note on the same trap.
 const COURSE_CHART_STYLE_LABEL: { [key in CourseChartStyle]: string } =
 	CC_GLOBAL
 		? {
@@ -2500,7 +2497,6 @@ const CHART_RARITY_FILTERS: ReadonlyArray<{
 	key: string;
 	label: string;
 	tooltip?: string;
-	// Not Record<K, V> -- collides project-wide with Immutable.js's ambient Record<TProps>.
 	style: { [key: string]: string };
 }> = [
 	{
@@ -3211,10 +3207,6 @@ function App(props) {
 	// persisted id that could never be a chart candidate (a character unique, a purple, or one
 	// this build no longer recognizes) doesn't sit in the shortlist as a dead, unremovable entry.
 	const [shopSkillIds, setShopSkillIds] = useState<string[]>(() => {
-		// Not `as Record<string, unknown>` -- `Record` is imported from immutable.js in this file
-		// (shadows the TS utility type, used for HorseState); see ui-components/Tabs.tsx for the
-		// same trap on the same identifier.
-		//
 		// Deliberately NOT also checking the inherited-unique-pairing exclusion
 		// computeChartSkillPool applies (see its own chart-inherited-unique-pairing-exclusion
 		// marker) -- that depends on uma1.skills, and uma1's useState isn't declared until below
@@ -4382,7 +4374,7 @@ function App(props) {
 				(
 					p,
 				): p is {
-					label: string;
+					label: 'maxrun' | 'meanrun' | 'medianrun' | 'minrun';
 					blockSeed: number;
 					blockSize: number;
 					index: number;
@@ -5371,30 +5363,32 @@ function App(props) {
 	const skillActivations =
 		chartData == null
 			? []
-			: chartData.sk.flatMap((a, i) => {
-					return Array.from(a.keys()).flatMap((id) => {
-						// Deliberately raw skillmeta[id].iconId, not the resolved (guessed) icon
-						// from components/SkillIcons.ts -- PIPE-2 review, round 2: NO_SHOW
-						// includes '10011', the exact generic "unknown icon" fallback
-						// getResolvedIconId returns for a zero-icon skill it can't place by
-						// (rarity, effect type). Switching this to the resolved id would hide
-						// activation labels for 4 currently-shown skills purely because their
-						// icon guess happened to land on the placeholder id (verified against
-						// today's data: 100201311, 107002121, 111302111, 204562).
-						if (NO_SHOW.indexOf(skillmeta[id].iconId) > -1) return [];
-						else
-							return a.get(id).map((ar) => ({
-								type: RegionDisplayType.Textbox,
-								color: colors[i],
-								text: skillnames[id][0],
-								skillId: id,
-								umaIndex: i,
-								regions: [
-									{ start: ar[0], end: ar[1] != -1 ? ar[1] : ar[0] + 100 },
-								],
-							}));
-					});
-				});
+			: chartData.sk.flatMap(
+					(a: Map<string, Array<[number, number]>>, i: number) => {
+						return Array.from(a.keys()).flatMap((id) => {
+							// Deliberately raw skillmeta[id].iconId, not the resolved (guessed) icon
+							// from components/SkillIcons.ts -- PIPE-2 review, round 2: NO_SHOW
+							// includes '10011', the exact generic "unknown icon" fallback
+							// getResolvedIconId returns for a zero-icon skill it can't place by
+							// (rarity, effect type). Switching this to the resolved id would hide
+							// activation labels for 4 currently-shown skills purely because their
+							// icon guess happened to land on the placeholder id (verified against
+							// today's data: 100201311, 107002121, 111302111, 204562).
+							if (NO_SHOW.indexOf(skillmeta[id].iconId) > -1) return [];
+							else
+								return a.get(id).map((ar) => ({
+									type: RegionDisplayType.Textbox,
+									color: colors[i],
+									text: skillnames[id][0],
+									skillId: id,
+									umaIndex: i,
+									regions: [
+										{ start: ar[0], end: ar[1] != -1 ? ar[1] : ar[0] + 100 },
+									],
+								}));
+						});
+					},
+				);
 
 	const rushedColors = [
 		{ stroke: 'rgb(42, 119, 197)', fill: 'rgba(42, 119, 197, 0.8)' }, // Blue for Uma 1
@@ -7352,7 +7346,7 @@ function App(props) {
 												onInput={(e) =>
 													setDuelingRates({
 														...duelingRates,
-														runaway: parseInt(e.target.value),
+														runaway: parseInt(e.currentTarget.value),
 													})
 												}
 											/>
@@ -7367,7 +7361,7 @@ function App(props) {
 												onInput={(e) =>
 													setDuelingRates({
 														...duelingRates,
-														frontRunner: parseInt(e.target.value),
+														frontRunner: parseInt(e.currentTarget.value),
 													})
 												}
 											/>
@@ -7382,7 +7376,7 @@ function App(props) {
 												onInput={(e) =>
 													setDuelingRates({
 														...duelingRates,
-														paceChaser: parseInt(e.target.value),
+														paceChaser: parseInt(e.currentTarget.value),
 													})
 												}
 											/>
@@ -7397,7 +7391,7 @@ function App(props) {
 												onInput={(e) =>
 													setDuelingRates({
 														...duelingRates,
-														lateSurger: parseInt(e.target.value),
+														lateSurger: parseInt(e.currentTarget.value),
 													})
 												}
 											/>
@@ -7412,7 +7406,7 @@ function App(props) {
 												onInput={(e) =>
 													setDuelingRates({
 														...duelingRates,
-														endCloser: parseInt(e.target.value),
+														endCloser: parseInt(e.currentTarget.value),
 													})
 												}
 											/>

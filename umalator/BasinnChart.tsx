@@ -720,7 +720,7 @@ export function BasinnChart(props) {
 													asc: 'basinnChartSortedAsc',
 													desc: 'basinnChartSortedDesc',
 													false: '',
-												}[header.column.getIsSorted()]
+												}[String(header.column.getIsSorted())]
 											}`}
 											title={
 												header.column.getCanSort() &&
@@ -728,7 +728,7 @@ export function BasinnChart(props) {
 													asc: 'Sort ascending',
 													desc: 'Sort descending',
 													false: 'Clear sort',
-												}[header.column.getNextSortingOrder()]
+												}[String(header.column.getNextSortingOrder())]
 											}
 											onClick={
 												header.column.getCanSort()
