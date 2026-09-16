@@ -326,16 +326,15 @@ test('runComparisonBlock with a Virtual-pos-keep pacer is deterministic for a fi
 	expect(Array.from(a.times)).toEqual(Array.from(b.times));
 });
 
-// runComparisonBlock's own diff-based `lengths`/`times` (uma1 vs uma2, both identical TestHorse
-// builds here) turn out to be insensitive to the pacer entirely in this course/config -- both
-// umas' position-keep engagement window closes well before the pacer's own skill trigger window,
-// so a pacer stat/skill change that never differentially affects uma1 vs uma2 leaves that diff
-// unchanged even though the pacer itself is behaving differently (confirmed by hand: pacerP/pacerT
-// differ between a skill-equipped and skill-less pacer, but runComparisonBlock's lengths/times do
-// not). runComparison's minrun.pacerP/pacerT (the pacer's own per-tick trace, only exposed via
-// runComparison, not runComparisonBlock's ComparisonBlockOutput) is a directly observable, less
-// incidental signal that toHorseDesc(pacer) is actually carrying real per-horse data (not just a
-// shared default) into the pacer RaceSolver setupPacer/buildPacer builds.
+// Why these tests read `runComparison`'s `minrun.pacerT`/`pacerP` rather than
+// `runComparisonBlock`'s `lengths`/`times`: the latter are a *difference* between uma1 and uma2
+// (`lengths[i] = posDifference / 2.5`, compare.ts), and both umas here are identical TestHorse
+// builds. A pacer therefore moves both of them identically and cancels out of the difference
+// exactly, whatever it does -- that is arithmetic, not a property of this course or config, and
+// not a gap in runComparisonBlock. The pacer's own per-tick trace (`pacerT`/`pacerP`, exposed by
+// runComparison but not by ComparisonBlockOutput) is an absolute signal rather than a differential
+// one, so it can actually observe that toHorseDesc(pacer) carried this pacer's real skills and
+// stats into setupPacer instead of a shared default.
 test("runComparison: a pacer equipped with a skill measurably changes the pacer's own trajectory", () => {
 	const uma1 = new TestHorse() as unknown as HorseState;
 	const uma2 = new TestHorse() as unknown as HorseState;

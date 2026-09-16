@@ -125,19 +125,28 @@ export interface FlatHorseState extends HorseDesc {
 // engine's HorseDesc from uma-skill-tools/RaceSolverBuilder.ts) -- the shape
 // RaceSolverBuilder.horse() and JSON-serialization call sites actually want. Replaces the
 // `state.update('skills', (sk) => Array.from(sk.values())).toJS()` idiom that used to be
-// hand-rolled at each call site: HorseState['skills'] is an Immutable map (SkillSet), so a bare
-// `.toJS()` deep-converts it to a plain {groupId: skillId} object rather than the string[]
-// HorseDesc declares, and TS widens `.toJS()`'s return to `unknown` besides. Spreading
-// `state.toJS()` and then overwriting `skills` with the array form is behaviorally identical to
-// the old update-then-toJS idiom: verified that both deep-convert `forcedSkillPositions`/
-// `incomingDebuffs` to plain objects the same way, since neither field is touched by the
-// `skills` update. The Immutable Record's `.toJS()` typing itself doesn't know its own field
-// shapes narrowly enough to satisfy FlatHorseState's declared fields (e.g. `mood: Mood` vs
-// `.toJS()`'s widened return), hence the cast at this one boundary.
+// hand-rolled at each call site.
+//
+// Uses `toObject()` (shallow, and *typed* as the Record's own field types) rather than `toJS()`
+// (deep, and widened to something no narrower than `unknown`), then converts the three Immutable
+// collection fields explicitly. That keeps the result structurally checked against
+// FlatHorseState, so a field added to HorseDesc fails to compile here instead of being silently
+// absent -- the cast this replaced opted out of exactly that check. Spreading rather than naming
+// each scalar is deliberate: a field added to HorseState still flows through to the share link
+// automatically, which an exhaustive hand-written mapping would silently drop.
+//
+// `skills`, `forcedSkillPositions` and `incomingDebuffs` are HorseState's only Immutable-valued
+// fields, so converting those three is what makes the rest of the spread plain data. Output is
+// byte-identical to the three idioms this replaced -- same values and same key order, which
+// matters because `serialize()` hashes this object into share links (verified by JSON comparison
+// against `update(...).toJS()`, `set(...).toJS()` and the previous spread-of-`toJS()` form).
 export function toHorseDesc(state: HorseState): FlatHorseState {
+	const o = state.toObject();
 	return {
-		...(state.toJS() as unknown as FlatHorseState),
-		skills: Array.from(state.skills.values()),
+		...o,
+		skills: Array.from(o.skills.values()),
+		forcedSkillPositions: o.forcedSkillPositions.toJS(),
+		incomingDebuffs: o.incomingDebuffs.toJS(),
 	};
 }
 
