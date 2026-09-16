@@ -132,6 +132,7 @@ import { type DecodedUma, decodeRoster } from './rosterDecoder';
 import {
 	DEFAULT_DISPLAYING_RUN,
 	type DisplayingRun,
+	type DisplayRun,
 	displayRunOf,
 } from './runSelection';
 import {
@@ -1053,7 +1054,7 @@ export function VelocityChart(props) {
 			<div class="expandedChartNoProc">
 				This skill did not activate in the run being shown.
 				<br />
-				Try a different run.
+				Another run may show it.
 			</div>
 		);
 	}
@@ -3566,7 +3567,12 @@ function App(props) {
 	// above, and the 'string' dispatch branch that always receives one of those four from
 	// handleDisplayRunChange/the Skill Chart's own selector); `displayRunOf` (runSelection.ts) is
 	// the exact, lossless inverse of the `${run}run` template used to build `displaying`.
-	const displayRun = displayRunOf(displaying as DisplayingRun | '');
+	// `displaying` itself can still be the empty-string "nothing selected yet" sentinel, so that
+	// default is resolved here, at the one site that needs it -- `displayRunOf` itself takes only
+	// an already-valid `DisplayingRun`.
+	const displayRun = displayRunOf(
+		(displaying || DEFAULT_DISPLAYING_RUN) as DisplayingRun,
+	);
 
 	// tableData is purely a rendered view of chartRunRef.current -- see refreshTableRowsNow(). It's
 	// still a useState (not a ref) because BasinnChart needs to re-render when it changes.
@@ -5899,7 +5905,7 @@ function App(props) {
 			? { results, runData, staminaStats, firstUmaStats }
 			: null;
 
-	function handleDisplayRunChange(run: 'mean' | 'median' | 'min' | 'max') {
+	function handleDisplayRunChange(run: DisplayRun) {
 		// `displayRun` is now derived from `displaying` (see its declaration above) -- setting
 		// `displaying` here is the only state change needed; `displayRun` follows automatically.
 		setChartData(`${run}run`);

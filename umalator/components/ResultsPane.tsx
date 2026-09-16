@@ -3,6 +3,7 @@ import { h } from 'preact';
 import { useContext, useMemo } from 'preact/hooks';
 import { IntlContext } from 'preact-i18n';
 import { drainForSkill, formatPercent } from '../../components/StaminaDebuffs';
+import type { DisplayRun } from '../runSelection';
 import './ResultsPane.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -97,8 +98,8 @@ export interface ResultsPaneProps {
 	isRunning: boolean;
 	progress?: number;
 	courseId?: string | number;
-	displayRun: 'mean' | 'median' | 'min' | 'max';
-	onDisplayRunChange: (run: 'mean' | 'median' | 'min' | 'max') => void;
+	displayRun: DisplayRun;
+	onDisplayRunChange: (run: DisplayRun) => void;
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -174,8 +175,8 @@ function debuffActivationCount(
 
 interface ResultsSummaryProps {
 	results: number[];
-	displayRun: 'mean' | 'median' | 'min' | 'max';
-	onDisplayRunChange: (run: 'mean' | 'median' | 'min' | 'max') => void;
+	displayRun: DisplayRun;
+	onDisplayRunChange: (run: DisplayRun) => void;
 }
 
 function ResultsSummary({
@@ -228,7 +229,7 @@ function ResultsSummary({
 
 interface HistogramProps {
 	results: number[];
-	displayRun: 'mean' | 'median' | 'min' | 'max';
+	displayRun: DisplayRun;
 	width?: number;
 	height?: number;
 }

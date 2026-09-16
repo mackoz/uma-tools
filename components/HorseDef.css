@@ -845,6 +845,12 @@
 	font-size: 1.2em;
 }
 
+.skillProcDataRunLabel {
+	font-weight: normal;
+	font-size: var(--font-xs);
+	color: var(--muted-2);
+}
+
 .skillProcDataClose {
 	background: transparent;
 	border: none;

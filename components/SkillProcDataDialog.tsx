@@ -139,7 +139,7 @@ export function SkillProcDataDialog(props: SkillProcDataDialogProps) {
 				<div class="skillProcDataHeader">
 					<h3>
 						Skill Proc Data{' '}
-						<span style="font-weight: normal; font-size: 0.7em;">
+						<span class="skillProcDataRunLabel">
 							{displayRunOf(displaying)} run
 						</span>
 					</h3>
