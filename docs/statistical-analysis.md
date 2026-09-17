@@ -628,7 +628,7 @@ npm run test                             # statisticalAnalysis.ts, chartLadder.t
 npm --prefix uma-skill-tools test        # engine tests, including activation-sampling stability
 cd umalator && node build.mjs            # JP app build
 cd umalator-global && node build.mjs     # Global app build
-npm run build                            # all seven maintained apps
+npm run build                            # all five maintained apps
 ```
 
 `npm run test:stats` is kept as an alias for `npm run test` for anyone with the older command
