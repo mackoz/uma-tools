@@ -77,14 +77,6 @@ jobs:
         run: node build.mjs
         working-directory: courseimages
 
-      - name: Build rougelike
-        run: node build.mjs
-        working-directory: rougelike
-
-      - name: Build umadle
-        run: node build.mjs
-        working-directory: umadle
-
       # Pages serves this repo's tree directly (each app at its own root-relative
       # path, e.g. /umalator-global/) so `path: .` below can't be narrowed to a
       # single dist folder -- but that also means every non-served directory

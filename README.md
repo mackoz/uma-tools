@@ -31,8 +31,6 @@ Bundles for the seven maintained build targets aren't committed to git — GitHu
 | `skill-visualizer/`, `skill-visualizer-global/` | Standalone tool: visualize where a skill's activation regions fall on a course, without running a full comparison. |
 | `build-planner/` | Skill-list + region-overlay viewer for a fixed reference horse. |
 | `courseimages/` | Utility to export course-diagram PNGs. |
-| `umadle/` | An Uma Musume Wordle clone. |
-| `rougelike/` | A hex-color-guessing Wordle clone — not Uma-related, just lives here. |
 | `components/`, `strings/` | Shared Preact components (skill list/picker, course track SVG, uma editor) and i18n strings, used across the apps above. |
 | `icons/`, `fonts/`, `courseimages*` | Static assets, referenced by an absolute `/uma-tools/...` URL prefix — see [docs/deployment.md](docs/deployment.md). |
 | `vendor/` | Vendored copy of TanStack table-core + a Preact adapter, used by Umalator's results table. |

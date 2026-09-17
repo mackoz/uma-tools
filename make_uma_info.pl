@@ -53,7 +53,10 @@ my $umas = decode_json(read_binary('umas.json'));
 my $icons = decode_json(read_binary('icons.json'));
 
 # temporary: for importing english names from the old icons file
-my $en_icons = decode_json(read_binary('umadle/icons.json'));
+# (relocated from the now-deleted umadle/ app, PIPE-80 -- the path values below are vestigial
+# leftovers from that app's own icon tree and point at nothing; only the chr_icon_<id> embedded
+# in each path is actually read, via the regex just below)
+my $en_icons = decode_json(read_binary('scripts/data/en-uma-names.json'));
 my %en_names;
 for my $en (keys %$en_icons) {
 	my $path = $en_icons->{$en};
