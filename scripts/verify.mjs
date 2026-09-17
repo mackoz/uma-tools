@@ -260,7 +260,10 @@ function runTests() {
 function runDocs() {
 	const plansDir = process.env.UMA_PLANS_REPO || path.join(root, 'plans');
 	const mkdocsBin = path.join(plansDir, '.venv', 'bin', 'mkdocs');
-	if (!fs.existsSync(path.join(plansDir, 'mkdocs.yml')) || !fs.existsSync(mkdocsBin)) {
+	if (
+		!fs.existsSync(path.join(plansDir, 'mkdocs.yml')) ||
+		!fs.existsSync(mkdocsBin)
+	) {
 		return { label: 'docs -', ok: true };
 	}
 	const r = spawnSync(mkdocsBin, ['build', '--strict'], {
@@ -358,9 +361,12 @@ function runPkgGuard() {
 // compared an installed package's own version against anything.
 //
 // Presence uses directory-existence rather than `npm ls`: confirmed while
-// implementing PIPE-56 that `npm ls --all` exits 1 on this repo's
-// pre-existing accessible-autocomplete/preact peer conflict even when
-// nothing is actually missing (see scripts/verify-helpers.mjs). Freshness
+// implementing PIPE-56 that `npm ls --all` exited 1 on this repo's
+// then-pre-existing accessible-autocomplete/preact peer conflict even when
+// nothing was actually missing (see scripts/verify-helpers.mjs). PIPE-80
+// removed that dependency along with umadle (its only importer), and `npm ls`
+// exits 0 cleanly now, but the check stays directory-existence-based rather
+// than switching back. Freshness
 // uses package-lock.json's resolved version rather than semver-range
 // satisfaction, for the same "don't add a dependency to fix a
 // dependency-freshness checker" and "unassert-cli has no range to check
