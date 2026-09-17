@@ -11,7 +11,7 @@ Built bundles (`bundle.js`/`bundle.css`/`simulator.worker.js`) were committed to
 
 All seven maintained apps' bundles are gitignored; `deploy.yml` rebuilds them from source on every push to `master`, and Pages is configured `build_type: workflow` so it serves exactly that CI-built artifact — the workflow is the *only* deploy path. Four apps that previously had only Windows `.bat` scripts got a `build.mjs` each so CI could build them (PR #5).
 
-**Recorded exception (retired):** `build-planner`'s bundles stayed committed because its source did not currently compile — its committed bundle was already found broken at the time (stale, pre-dating the submodule rename). Rather than fixing the build, PIPE-84 retired the app outright, so this exception no longer exists and the CI-only rule is unconditional again.
+**Recorded exception (retired):** `build-planner`'s bundles stayed committed because its source did not compile — its committed bundle was already found broken at the time (stale, pre-dating the submodule rename). Rather than fixing the build, PIPE-84 retired the app outright, so this exception no longer exists and the CI-only rule is unconditional again.
 
 ## Options considered
 
