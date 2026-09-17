@@ -71,8 +71,9 @@ export function UmaSelector(props) {
 	// Optional, Global-only: an outfit's own selection always works regardless (a saved slot or
 	// share link referencing an unreleased uma must not break), but it's left out of picker search
 	// results unless the umalator/app.tsx "Show Unreleased Umas" setting is on. The prop is
-	// optional and umalator/app.tsx is the only consumer that passes it -- nothing else imports
-	// HorseDef today -- so a future consumer that omits it gets unfiltered search.
+	// optional, and UmaSelector is used only by HorseDef just below -- nothing imports it -- so
+	// the only thing that ever passes it is umalator/app.tsx, through HorseDef. A future consumer
+	// that omits it gets unfiltered search.
 	function update(q) {
 		return { input: q, suggestions: searchNames(q, props.hiddenOutfitIds) };
 	}
