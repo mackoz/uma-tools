@@ -54,9 +54,7 @@ jobs:
 
       # Every app with a build.mjs is rebuilt in CI and none of their bundles
       # are tracked in git (see .gitignore) — this workflow is their only
-      # build path. build-planner is the one holdout: its source doesn't
-      # compile against the current uma-skill-tools layout, so its bundle
-      # stays committed as-is. See docs/apps.md for the full explanation.
+      # build path.
       - name: Build umalator
         run: node build.mjs
         working-directory: umalator

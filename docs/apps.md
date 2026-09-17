@@ -1,6 +1,6 @@
 # Sub-apps
 
-Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Five of the six are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
+Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. All five are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed. See [deployment.md](deployment.md) for why and what that means for you.
 
 ## `umalator-global/` — the primary app (Global/EN data)
 
@@ -26,17 +26,9 @@ Standalone tool: pick skills, see color-coded regions on a `RaceTrack` showing w
 - `skill-visualizer/` — JP data, has a language switch. `build.mjs` (`node build.mjs [--debug]`), CI-built; a legacy `build.bat` also exists but `build.mjs` is authoritative.
 - `skill-visualizer-global/` — hard-locked to English, has both `build.bat` and `build.mjs` (`node build.mjs [--debug|--serve [port]]`). Its `redirectData` plugin splits the same way umalator-global's does: the shared `redirectEngineData` plugin sends its 4 engine-data imports from `uma-skill-tools/data/jp/` to `uma-skill-tools/data/global/` (inside the submodule), while a `datadir` pointed at `../umalator-global` covers `skill_meta.json`/`umas.json` only — so **it has no JSON data of its own**, but reuses two different datasets' worth rather than umalator-global's alone.
 
-## `build-planner/`
-
-Renders `SkillList` + a `RaceTrack` region overlay for a fixed hardcoded horse (all stats 2000, Nige, S distance aptitude).
-
-- **⚠️ Currently broken in production.** The committed `bundle.js` was built from a stale source tree that still imported from a `../../skilltool/` path (the pre-rename name for what's now `uma-skill-tools/`) and calls `require("assert")` at module-eval time — `require` doesn't exist in a browser, so the app throws immediately on load, before rendering anything. Confirmed by running the committed bundle in a bare JS context with no `require` global. This app's source is a 75-line 2023-era stub — it predates the `uma-skill-tools` rename.
-- **Not rebuilt by CI and not gitignored** — its current source (`app.tsx`) doesn't compile against the present `uma-skill-tools` layout at all (`--external:assert` in its `build.bat` doesn't match the `node:assert` specifier the engine now imports; a raw esbuild run errors outright). Fixing it means updating `app.tsx`'s imports for the current directory layout and giving it a real `build.mjs` (the `mockAssert` plugin pattern used by `courseimages`/`skill-visualizer` would resolve the `node:assert` half) — a separate, larger task than a docs/CI change, not done here.
-- **Gotcha (still applies to the stale committed bundle):** `build-planner/index.html` loads `bundle.2.js`, not `bundle.js` — its `build.bat` has the minify-and-delete step commented out, so the intermediate `unassert` output (`bundle.2.js`) is the one actually served. Both files are committed; if you ever rebuild this app, make sure `bundle.2.js` stays in sync.
-
 ## `courseimages/`
 
 Utility app, not linked from the main UI. Renders a `RaceTrack` for a selected course, inlines computed styles onto the SVG, rasterizes it via canvas, and offers a PNG download (e.g. `tokyo-2400-out-dirt.png`).
 
-- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative — it adds the `mockAssert` plugin so `CourseData.ts`'s `node:assert` import resolves in the browser, which the raw `.bat` pipeline doesn't handle (see the `build-planner` note above for what that failure looks like when it's not caught).
+- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative — it adds the `mockAssert` plugin so `CourseData.ts`'s `node:assert` import resolves in the browser, which the raw `.bat` pipeline doesn't handle: without it, `node:assert` doesn't resolve in the browser and the app throws at module-eval time before rendering anything. A raw esbuild run over such a source errors outright rather than producing a working bundle, so this is a build-time failure to catch, not a runtime one to debug.
 
