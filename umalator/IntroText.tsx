@@ -1,4 +1,4 @@
-import { cloneElement, h, toChildArray } from 'preact';
+import { cloneElement, h, toChildArray, type VNode } from 'preact';
 
 import './IntroText.css';
 
@@ -24,6 +24,13 @@ function firstText(node) {
 	return '';
 }
 
+// toChildArray's element type is `VNode | string | number`; the release entries below are always
+// real elements (<details class="release">), never bare text, so this narrows that union down to
+// VNode for the .props/.type introspection below instead of asserting it.
+function isVNode(node: string | number | VNode): node is VNode {
+	return node != null && typeof node === 'object';
+}
+
 // The newest release is expanded by default and everything below it collapsed,
 // derived from list position — do not put `open` on individual <details class="release">
 // entries. Adding a new dated section at the top of the list is all that's needed.
@@ -31,13 +38,11 @@ function firstText(node) {
 // entries), the wrong one would expand silently -- the console.warn below is
 // the tripwire for that; it doesn't change which entry expands, only flags it.
 function ReleaseList(props) {
-	const releases = toChildArray(props.children).filter(
-		(release) => release != null && typeof release === 'object',
-	);
+	const releases = toChildArray(props.children).filter(isVNode);
 	if (releases.length > 1) {
 		const dates = releases.map((release) => {
 			const summary = toChildArray(release.props?.children).find(
-				(child) => child && child.type === 'summary',
+				(child): child is VNode => isVNode(child) && child.type === 'summary',
 			);
 			return summary ? firstText(summary.props.children).trim() : '';
 		});

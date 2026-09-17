@@ -1,5 +1,6 @@
 import { Map as ImmMap, Record } from 'immutable';
 import skillmeta from '../skill_meta.json';
+import type { Mood } from '../uma-skill-tools/RaceParameters';
 import type { HorseDesc } from '../uma-skill-tools/RaceSolverBuilder';
 
 export function isDebuffSkill(id: string) {

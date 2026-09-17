@@ -4,3 +4,8 @@
 // substitution and have no source declaration. PIPE-58.
 declare const CC_GLOBAL: boolean;
 declare const CC_DEBUG: boolean;
+
+interface Window {
+	// Set by umalator/telemetry.ts's posthog `loaded` callback for debugging/console access.
+	posthog?: unknown;
+}

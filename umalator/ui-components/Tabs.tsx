@@ -18,9 +18,7 @@ export interface TabItem {
 	disabled?: boolean;
 	// segmented: per-item color, e.g. {'--seg-bg': ..., '--seg-accent': ...}. Lets a
 	// caller (Skill Chart's rarity row) color each item without teaching this shared
-	// primitive what the colors mean. Not typed as Record<K, V> -- that identifier
-	// collides project-wide with Immutable.js's ambient Record<TProps> (used for
-	// HorseState) once both are in scope.
+	// primitive what the colors mean.
 	style?: { [key: string]: string };
 }
 

@@ -3,15 +3,26 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
-    # Skip the rebuild+redeploy when a push touches only docs -- nothing under docs/
-    # is served by any deployed app, so there's nothing for Pages to pick up. Only
-    # skips if EVERY file in the push matches; a push that also touches real source
-    # still builds. Caveat: if this workflow is ever made a required PR status check,
-    # a doc-only PR would leave that check permanently pending (a known GitHub Actions
-    # paths-ignore gotcha) -- not applicable today since this only runs on push to
-    # master, not on PRs.
+    # Skip the rebuild+redeploy when a push touches only files no deployed app reads
+    # at runtime: markdown, and scripts/verify-baseline.json (read solely by
+    # scripts/verify.mjs, never by any build.mjs -- it is re-recorded on master in its
+    # own commit after every tsc burn-down slice lands, which otherwise rebuilds all
+    # seven apps for a file no app reads).
+    #
+    # Note this is NOT the same as "not served": upload-pages-artifact below publishes
+    # the whole tree (path: .), so both are fetchable from Pages by URL like any other
+    # tracked path. Skipping doesn't remove them -- it leaves the already-live copy
+    # stale, which is harmless only because nothing fetches them there. Don't extend
+    # this list to anything an app might actually load.
+    #
+    # Only skips if EVERY file in the push matches; a push that also touches real
+    # source still builds. Caveat: if this workflow is ever made a required PR status
+    # check, a fully-skipped PR would leave that check permanently pending (a known
+    # GitHub Actions paths-ignore gotcha) -- not applicable today since this only runs
+    # on push to master, not on PRs.
     paths-ignore:
       - '**/*.md'
+      - 'scripts/verify-baseline.json'
   workflow_dispatch:
 
 permissions:
