@@ -1,6 +1,6 @@
 # Sub-apps
 
-Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Seven of the eight are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
+Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Five of the six are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
 
 ## `umalator-global/` — the primary app (Global/EN data)
 
