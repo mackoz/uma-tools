@@ -24,7 +24,7 @@ Hosts that serve at the domain root (Cloudflare Pages, Netlify, Vercel, a plain 
    - `https://mackoz.github.io/uma-tools/umalator-global/` — primary Global simulator
    - `https://mackoz.github.io/uma-tools/umalator/` — JP version
    - `https://mackoz.github.io/uma-tools/skill-visualizer-global/`, `.../skill-visualizer/`
-   - `https://mackoz.github.io/uma-tools/build-planner/`, `.../courseimages/`, `.../umadle/`, `.../rougelike/`
+   - `https://mackoz.github.io/uma-tools/build-planner/`, `.../courseimages/`
    - `https://mackoz.github.io/uma-tools/` — the root landing page (`index.html`), linking to all of the above.
 
 Those `mackoz.github.io` URLs now 301 to the custom domain — see "Custom domain" below.
@@ -137,9 +137,9 @@ If DNS looks wrong while testing, query a public resolver rather than trusting t
 
 ## Automated builds via GitHub Actions
 
-`.github/workflows/deploy.yml` rebuilds every app that has a `build.mjs` — `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages`, `rougelike`, `umadle` — on every push to `master`, then publishes the whole repo tree to Pages via `upload-pages-artifact`. A `paths-ignore` filter skips the run when *every* file in the push is markdown or `scripts/verify-baseline.json` — no deployed app reads either at runtime, and the baseline is re-recorded in its own commit after each `tsc` burn-down slice. Note that skipping does not make those files absent from Pages: `path: .` above publishes them like any other tracked path, so what a skip actually leaves behind is a stale already-live copy, harmless only because nothing fetches them there. A push that also touches real source still builds. This is now the **only** deploy path: Pages' `build_type` is `workflow`, not the legacy branch-source builder, so there's nothing serving the committed tree in parallel. (It used to be both at once — the legacy branch-source pipeline and this workflow both created a `github-pages` deployment on every push, seconds apart, and whichever finished last silently won; that's why bundles used to need to be committed and current. Fixed 2026-08-20 by flipping Pages' source to GitHub Actions via `gh api -X PUT repos/mackoz/uma-tools/pages -f build_type=workflow`.)
+`.github/workflows/deploy.yml` rebuilds every app that has a `build.mjs` — `umalator`, `umalator-global`, `skill-visualizer-global`, `skill-visualizer`, `courseimages` — on every push to `master`, then publishes the whole repo tree to Pages via `upload-pages-artifact`. A `paths-ignore` filter skips the run when *every* file in the push is markdown or `scripts/verify-baseline.json` — no deployed app reads either at runtime, and the baseline is re-recorded in its own commit after each `tsc` burn-down slice. Note that skipping does not make those files absent from Pages: `path: .` above publishes them like any other tracked path, so what a skip actually leaves behind is a stale already-live copy, harmless only because nothing fetches them there. A push that also touches real source still builds. This is now the **only** deploy path: Pages' `build_type` is `workflow`, not the legacy branch-source builder, so there's nothing serving the committed tree in parallel. (It used to be both at once — the legacy branch-source pipeline and this workflow both created a `github-pages` deployment on every push, seconds apart, and whichever finished last silently won; that's why bundles used to need to be committed and current. Fixed 2026-08-20 by flipping Pages' source to GitHub Actions via `gh api -X PUT repos/mackoz/uma-tools/pages -f build_type=workflow`.)
 
-None of those seven apps' `bundle.js`/`bundle.css`/`simulator.worker.js` are tracked in git anymore — see `.gitignore`. `build-planner` is the one app CI does **not** rebuild: its source doesn't compile against the current `uma-skill-tools` layout, and its committed bundle is in fact already broken in production as a result — see [apps.md#build-planner](apps.md#build-planner) for the specifics. That one bundle stays committed until someone fixes the underlying source.
+None of those five apps' `bundle.js`/`bundle.css`/`simulator.worker.js` are tracked in git anymore — see `.gitignore`. `build-planner` is the one app CI does **not** rebuild: its source doesn't compile against the current `uma-skill-tools` layout, and its committed bundle is in fact already broken in production as a result — see [apps.md#build-planner](apps.md#build-planner) for the specifics. That one bundle stays committed until someone fixes the underlying source.
 
 ## Local dev
 
@@ -153,7 +153,7 @@ Then open `http://localhost:8000/uma-tools/umalator-global/`. An agent (or anyon
 can be stopped without `pkill -f` guesswork) should use `scripts/dev-serve.sh start|status|stop
 [--port N]` instead — it is idempotent and only ever signals the process it started (PIPE-67).
 
-The other `build.mjs`-capable apps (`umalator/`, `skill-visualizer-global/`, `skill-visualizer/`, `courseimages/`, `rougelike/`, `umadle/`) work the same way from their own directories — only `umalator-global/` and `skill-visualizer-global/` have a `--serve` mode; the rest use `node build.mjs [--debug]` and reload manually, or serve statically. `npm run build` at the repo root builds all of them in one shot.
+The other `build.mjs`-capable apps (`umalator/`, `skill-visualizer-global/`, `skill-visualizer/`, `courseimages/`) work the same way from their own directories — only `umalator-global/` and `skill-visualizer-global/` have a `--serve` mode; the rest use `node build.mjs [--debug]` and reload manually, or serve statically. `npm run build` at the repo root builds all of them in one shot.
 
 ### Local dev gotcha: the server root is your checkout's *parent* directory
 

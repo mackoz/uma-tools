@@ -75,10 +75,6 @@ plans
 /skill-visualizer/bundle.css
 /courseimages/bundle.js
 /courseimages/bundle.css
-/rougelike/bundle.js
-/rougelike/bundle.css
-/umadle/bundle.js
-/umadle/bundle.css
 
 # Playwright smoke-test artifacts (scripts/smoke.mjs) -- screenshots + report, never committed
 /scripts/smoke-artifacts/

@@ -1,6 +1,6 @@
 # Sub-apps
 
-Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Seven of the eight are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
+Every sub-app is a separate esbuild entry point sharing `components/`, `strings/`, and `uma-skill-tools/`. Five of the six are rebuilt by CI on every push and their `bundle.js`/`bundle.css`/`simulator.worker.js` are gitignored, not committed — `build-planner` is the sole holdout, still shipping a committed (and currently broken, see below) bundle. See [deployment.md](deployment.md) for why and what that means for you.
 
 ## `umalator-global/` — the primary app (Global/EN data)
 
@@ -40,15 +40,3 @@ Utility app, not linked from the main UI. Renders a `RaceTrack` for a selected c
 
 - **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative — it adds the `mockAssert` plugin so `CourseData.ts`'s `node:assert` import resolves in the browser, which the raw `.bat` pipeline doesn't handle (see the `build-planner` note above for what that failure looks like when it's not caught).
 
-## `umadle/`
-
-An Uma Musume Wordle clone — guess the character in 10 tries with per-stat high/low/correct feedback. Self-contained data (`umadle/icons.json`, `umadle/numbers.json`, `umadle/icons/`), daily puzzle seeded via `Rule30CARng` from `uma-skill-tools/Random`.
-
-- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative.
-- `accessible-autocomplete` is now a real `package.json` dependency (previously the long-standing gap here — `umadle/app.tsx` imports `accessible-autocomplete/preact`, which used to not be listed anywhere). Installed with `--legacy-peer-deps`: its `peerDependencies` wants `preact@^8`, this repo is on `preact@^10`, and the peer is marked optional but npm still errors on the version mismatch without the flag. That resolution is baked into `package-lock.json`, so a plain `npm ci` (what CI runs) needs no flag itself. `components/autocomplete.jsx`, a vendored alternative that sits unused, is still there as a fallback if this dependency ever becomes unmaintainable — see [architecture.md](architecture.md#known-issues).
-
-## `rougelike/`
-
-Not Uma-related — a hex-color-guessing Wordle clone (`colorconversion.js` does OKHSV↔sRGB conversion). Included here only because it lives in this repo and shares the build pattern.
-
-- **Build:** `build.mjs` (`node build.mjs [--debug]`), CI-built. A legacy `build.bat` also exists but `build.mjs` is authoritative.

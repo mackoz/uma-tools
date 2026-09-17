@@ -19,7 +19,7 @@ Then open `http://localhost:8000/uma-tools/umalator-global/`.
 
 > **Note:** the dev server serves static assets (icons, fonts) from the *parent* of your checkout directory, so this only resolves cleanly if your local clone is named `uma-tools`. See [docs/deployment.md](docs/deployment.md#local-dev-gotcha-the-server-root-is-your-checkouts-parent-directory) if you hit missing icons.
 
-Bundles for the seven maintained build targets aren't committed to git — GitHub Actions rebuilds them on every push and Pages serves that CI output directly (see [docs/deployment.md](docs/deployment.md)). `build-planner` is the exception: its source does not currently compile, so its stale bundle remains committed and is not rebuilt by CI. To try the maintained apps locally, `npm install && npm run build` builds all seven once (no `--serve`, no live reload — just run it again after editing source).
+Bundles for the five maintained build targets aren't committed to git — GitHub Actions rebuilds them on every push and Pages serves that CI output directly (see [docs/deployment.md](docs/deployment.md)). `build-planner` is the exception: its source does not currently compile, so its stale bundle remains committed and is not rebuilt by CI. To try the maintained apps locally, `npm install && npm run build` builds all five once (no `--serve`, no live reload — just run it again after editing source).
 
 ## What's in here
 
@@ -31,8 +31,6 @@ Bundles for the seven maintained build targets aren't committed to git — GitHu
 | `skill-visualizer/`, `skill-visualizer-global/` | Standalone tool: visualize where a skill's activation regions fall on a course, without running a full comparison. |
 | `build-planner/` | Skill-list + region-overlay viewer for a fixed reference horse. |
 | `courseimages/` | Utility to export course-diagram PNGs. |
-| `umadle/` | An Uma Musume Wordle clone. |
-| `rougelike/` | A hex-color-guessing Wordle clone — not Uma-related, just lives here. |
 | `components/`, `strings/` | Shared Preact components (skill list/picker, course track SVG, uma editor) and i18n strings, used across the apps above. |
 | `icons/`, `fonts/`, `courseimages*` | Static assets, referenced by an absolute `/uma-tools/...` URL prefix — see [docs/deployment.md](docs/deployment.md). |
 | `vendor/` | Vendored copy of TanStack table-core + a Preact adapter, used by Umalator's results table. |

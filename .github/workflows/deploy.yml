@@ -7,7 +7,7 @@ on:
     # at runtime: markdown, and scripts/verify-baseline.json (read solely by
     # scripts/verify.mjs, never by any build.mjs -- it is re-recorded on master in its
     # own commit after every tsc burn-down slice lands, which otherwise rebuilds all
-    # seven apps for a file no app reads).
+    # five apps for a file no app reads).
     #
     # Note this is NOT the same as "not served": upload-pages-artifact below publishes
     # the whole tree (path: .), so both are fetchable from Pages by URL like any other
@@ -76,14 +76,6 @@ jobs:
       - name: Build courseimages
         run: node build.mjs
         working-directory: courseimages
-
-      - name: Build rougelike
-        run: node build.mjs
-        working-directory: rougelike
-
-      - name: Build umadle
-        run: node build.mjs
-        working-directory: umadle
 
       # Pages serves this repo's tree directly (each app at its own root-relative
       # path, e.g. /umalator-global/) so `path: .` below can't be narrowed to a

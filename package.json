@@ -12,9 +12,7 @@
     "build:skill-visualizer-global": "cd skill-visualizer-global && node build.mjs",
     "build:skill-visualizer": "cd skill-visualizer && node build.mjs",
     "build:courseimages": "cd courseimages && node build.mjs",
-    "build:rougelike": "cd rougelike && node build.mjs",
-    "build:umadle": "cd umadle && node build.mjs",
-    "build": "npm run build:umalator && npm run build:umalator-global && npm run build:skill-visualizer-global && npm run build:skill-visualizer && npm run build:courseimages && npm run build:rougelike && npm run build:umadle",
+    "build": "npm run build:umalator && npm run build:umalator-global && npm run build:skill-visualizer-global && npm run build:skill-visualizer && npm run build:courseimages",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
@@ -45,7 +43,6 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.2",
-    "accessible-autocomplete": "^3.0.1",
     "d3": "^7.9.0",
     "immutable": "^5.0.3",
     "lucide-preact": "^0.562.0",

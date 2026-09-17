@@ -22,14 +22,18 @@ export function forbiddenPkgKeys(pkgJson) {
 // Returns the names of dependencies (dependencies + devDependencies) declared
 // in pkgJson but absent from installedNames (an iterable of package names
 // actually present in node_modules -- scoped packages given as "@scope/name").
-// Deliberately does not shell out to `npm ls`: this repo's .npmrc sets
-// legacy-peer-deps for umadle's Preact 8 peer against this repo's Preact 10,
-// and `npm ls --all` exits 1 on that pre-existing peer conflict even when
-// every declared dependency is actually installed correctly (confirmed
-// 2026-09-05 while implementing this ticket -- `npm ls preact --all` reports
-// ELSPROBLEMS and exits 1 purely from the "invalid: ^8.0.0" peer mismatch, with
-// nothing actually missing). A directory-existence check sidesteps that noise
-// entirely.
+// Deliberately does not shell out to `npm ls`: until PIPE-80, this repo's
+// .npmrc set legacy-peer-deps for umadle's Preact 8 peer against this repo's
+// Preact 10, and `npm ls --all` exited 1 on that peer conflict even when
+// every declared dependency was actually installed correctly (confirmed
+// 2026-09-05 while implementing PIPE-56 -- `npm ls preact --all` reported
+// ELSPROBLEMS and exited 1 purely from the "invalid: ^8.0.0" peer mismatch,
+// with nothing actually missing). PIPE-80 deleted umadle (accessible-autocomplete's
+// only importer) and removed both the dependency and .npmrc's legacy-peer-deps
+// setting -- `npm ls`/`npm ls --all` now exit 0 cleanly (confirmed the same
+// way) -- but this stays a directory-existence check rather than switching
+// back to `npm ls`, since that's simpler and doesn't depend on no future
+// dependency reintroducing a peer conflict.
 export function missingDeps(pkgJson, installedNames) {
 	const installed = new Set(installedNames);
 	const declared = {
