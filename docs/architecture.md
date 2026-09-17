@@ -29,7 +29,7 @@ ConditionParser.ts                   v
                                                   v
                                     RaceSolverBuilder.ts   <- ENTRY POINT
                                                   |
-                          tools/*, test/*, umalator/*, build-planner/*, skill-visualizer/*
+                          tools/*, test/*, umalator/*, skill-visualizer/*
 ```
 
 ### Entry point: `RaceSolverBuilder`
@@ -56,7 +56,7 @@ End-to-end data flow for one `.build()` call:
 6. **Integration.** The caller steps the yielded `RaceSolver` at `dt = 1/15s` until `pos >= course.distance`. `RaceSolver.step()` (`RaceSolver.ts:661`) runs, in order: `updateHills` → `updatePhase` → `updateRushedState` → `processSkillActivations` → `applyPositionKeepStates` → `updatePositionKeepCoefficient` → `updateCompeteFight`/`updateLeadCompetition` → `updateLastSpurtState` → `updateTargetSpeed` → `applyForces` → (if lane movement enabled) `applyLaneMovement` → integrate velocity/position → `hp.tick()`.
 7. **Output.** Final `accumulatetime.t` at `pos == distance`, plus `onSkillActivate`/`onSkillDeactivate` callbacks and various activation logs. Comparing two solvers' `pos` at the same `t`, divided by 2.5m, gives the バ身 (basinn/length) gain — the number Umalator's whole UI exists to compute.
 
-**Canonical caller**: `umalator/compare.ts:200` — `const a = standard.build(),\n\t\tb = compare.build();` then both are stepped together and diffed. Other callers: `umalator/BasinnChart.tsx`, `build-planner/app.tsx`, `skill-visualizer/app.tsx`, `skill-visualizer-global/app.tsx`, `uma-skill-tools/tools/{gain,speedguts,basinnhyou}.ts`, `uma-skill-tools/test/arb/Race.ts`.
+**Canonical caller**: `umalator/compare.ts:200` — `const a = standard.build(),\n\t\tb = compare.build();` then both are stepped together and diffed. Other callers: `umalator/BasinnChart.tsx`, `skill-visualizer/app.tsx`, `skill-visualizer-global/app.tsx`, `uma-skill-tools/tools/{gain,speedguts,basinnhyou}.ts`, `uma-skill-tools/test/arb/Race.ts`.
 
 ### File reference
 

@@ -10,9 +10,7 @@
 			"**",
 			"!uma-skill-tools",
 			"!vendor",
-			"!**/*.json",
-			"!build-planner/bundle.js",
-			"!build-planner/bundle.2.js"
+			"!**/*.json"
 		]
 	},
 	"formatter": {

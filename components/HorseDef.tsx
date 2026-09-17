@@ -71,7 +71,7 @@ export function UmaSelector(props) {
 	// Optional, Global-only: an outfit's own selection always works regardless (a saved slot or
 	// share link referencing an unreleased uma must not break), but it's left out of picker search
 	// results unless the umalator/app.tsx "Show Unreleased Umas" setting is on. Undefined for every
-	// other consumer of this shared component (skill-visualizer, courseimages, build-planner), so
+	// other consumer of this shared component (skill-visualizer, courseimages), so
 	// their picker behavior is unchanged.
 	function update(q) {
 		return { input: q, suggestions: searchNames(q, props.hiddenOutfitIds) };

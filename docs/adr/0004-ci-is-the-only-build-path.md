@@ -11,7 +11,7 @@ Built bundles (`bundle.js`/`bundle.css`/`simulator.worker.js`) were committed to
 
 All seven maintained apps' bundles are gitignored; `deploy.yml` rebuilds them from source on every push to `master`, and Pages is configured `build_type: workflow` so it serves exactly that CI-built artifact — the workflow is the *only* deploy path. Four apps that previously had only Windows `.bat` scripts got a `build.mjs` each so CI could build them (PR #5).
 
-**Recorded exception:** `build-planner`'s bundles stay committed because its source does not currently compile — its committed bundle was already found broken at the time (stale, pre-dating the submodule rename), and fixing its build is a separate task (`docs/apps.md`). Don't add it to CI without fixing the source first (`CLAUDE.md` hard rule 2).
+**Recorded exception (retired):** `build-planner`'s bundles stayed committed because its source did not currently compile — its committed bundle was already found broken at the time (stale, pre-dating the submodule rename). Rather than fixing the build, PIPE-84 retired the app outright, so this exception no longer exists and the CI-only rule is unconditional again.
 
 ## Options considered
 
@@ -22,4 +22,4 @@ All seven maintained apps' bundles are gitignored; `deploy.yml` rebuilds them fr
 
 - Nobody needs to rebuild-and-commit before pushing; a push to `master` is sufficient and what's live always corresponds to the source at that commit.
 - A broken build now fails in CI instead of shipping a stale bundle — build locally before pushing to catch it earlier (`CLAUDE.md`'s build commands).
-- The one committed-bundle exception (`build-planner`) is quarantined and documented rather than silently precedent-setting.
+- The one committed-bundle exception (`build-planner`) was quarantined and documented rather than silently precedent-setting, until PIPE-84 retired the app and removed the exception entirely.

@@ -602,8 +602,7 @@ const formatEffect = Object.freeze({
 // with no context therefore renders those skills *lower* than it used to -- 210081 as +0.35 where
 // it read +0.42 -- not identically. So every call site builds one, and as of SKL-7 there are only
 // three: umalator/app.tsx's chart popover, and both skill-visualizer builds from their own fixed
-// inspection horse. (courseimages consumes no skill component at all, and build-planner imports
-// SkillList but never renders ExpandedSkillDetails.) The optional parameter is therefore a
+// inspection horse. (courseimages consumes no skill component at all.) The optional parameter is therefore a
 // defensive default for a future consumer with no horse to scale against, not a path anything
 // ships today -- if you add a call site, pass a context unless you genuinely have no horse.
 export function ExpandedSkillDetails(props) {
