@@ -3854,6 +3854,12 @@ function App(props) {
 		});
 		setSpBudget(budget);
 	}
+	// UI-43: ShopSkillFilter's "Deduct on add" checkbox wrapper -- reports the toggle so the
+	// opt-in's adoption is measurable, alongside spOptimizerUsed above.
+	function handleSpAutoDeductChange(on: boolean) {
+		postEvent('spAutoDeductToggled', { on });
+		setSpAutoDeduct(on);
+	}
 	// UI-33: same freeze-while-streaming treatment as purchaseOptionsRef/purchaseResult above --
 	// findBestValue scans the whole chart (~500+ rows), so re-running it on every incoming batch
 	// would be wasted work; the badge just holds its last-computed answer until the run settles.
@@ -7090,7 +7096,7 @@ function App(props) {
 										budget={spBudget}
 										onBudgetChange={handleSpBudgetChange}
 										autoDeduct={spAutoDeduct}
-										onAutoDeductChange={setSpAutoDeduct}
+										onAutoDeductChange={handleSpAutoDeductChange}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
