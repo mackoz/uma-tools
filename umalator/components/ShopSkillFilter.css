@@ -44,6 +44,29 @@
 	color: var(--muted-2);
 }
 
+.shopSkillAutoDeductLabel {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--font-sm);
+	color: var(--muted-2);
+	cursor: pointer;
+}
+
+.shopSkillAutoDeductLabel input {
+	accent-color: var(--accent);
+}
+
+/* Disabled while a chart runs -- same not-allowed/0.5 treatment as .shopSkillBudgetInput:disabled. */
+.shopSkillAutoDeductLabel:has(input:disabled) {
+	cursor: not-allowed;
+}
+
+.shopSkillAutoDeductLabel input:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
 .shopSkillBudgetInput {
 	width: 72px;
 	background: var(--input-bg);

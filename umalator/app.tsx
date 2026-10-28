@@ -150,6 +150,7 @@ import {
 } from './shopSkillFilter';
 import {
 	type BestValue,
+	budgetAfterAdd,
 	buildHintClusters,
 	type CostLookup,
 	discountedCost,
@@ -162,6 +163,7 @@ import {
 	type OptimizerResult,
 	optimizePurchases,
 	pruneHints,
+	purchaseCost,
 	remapHintKeys,
 } from './spOptimizer';
 import { summarizeLengths } from './statisticalAnalysis';
@@ -3302,6 +3304,14 @@ function App(props) {
 	useEffect(() => {
 		localStorage.setItem('chartSpBudget', String(spBudget));
 	}, [spBudget]);
+	// UI-43: opt-in "Deduct on add" -- double-clicking a Skill Chart row (addSkillFromTable) also
+	// subtracts the skill's purchase cost from spBudget. Persists like spBudget; default off.
+	const [spAutoDeduct, setSpAutoDeduct] = useState<boolean>(
+		() => localStorage.getItem('chartSpAutoDeduct') === 'true',
+	);
+	useEffect(() => {
+		localStorage.setItem('chartSpAutoDeduct', String(spAutoDeduct));
+	}, [spAutoDeduct]);
 	const [selectedBuyOption, setSelectedBuyOption] = useState<number | null>(
 		null,
 	);
@@ -3843,6 +3853,12 @@ function App(props) {
 			optionsShown: purchaseOptions.length,
 		});
 		setSpBudget(budget);
+	}
+	// UI-43: ShopSkillFilter's "Deduct on add" checkbox wrapper -- reports the toggle so the
+	// opt-in's adoption is measurable, alongside spOptimizerUsed above.
+	function handleSpAutoDeductChange(on: boolean) {
+		postEvent('spAutoDeductToggled', { on });
+		setSpAutoDeduct(on);
 	}
 	// UI-33: same freeze-while-streaming treatment as purchaseOptionsRef/purchaseResult above --
 	// findBestValue scans the whole chart (~500+ rows), so re-running it on every incoming batch
@@ -5255,6 +5271,23 @@ function App(props) {
 
 	function addSkillFromTable(skillId) {
 		postEvent('addSkill', { skillId, via: 'table' });
+		// UI-43: Deduct on add -- rules live in budgetAfterAdd. setSpBudget directly, not
+		// handleSpBudgetChange, which posts user-edit telemetry.
+		const nextBudget = budgetAfterAdd({
+			enabled: spAutoDeduct,
+			skillChart: mode === Mode.Chart,
+			budgetShown: shopSkillIds.length > 0,
+			budget: spBudget,
+			alreadyOwned: ownedSkills.has(skillId),
+			cost: purchaseCost(
+				skillId,
+				expandedShopHints,
+				SKILL_LADDER,
+				SKILL_BASE_COST,
+				ownedSkills,
+			).cost,
+		});
+		if (nextBudget !== spBudget) setSpBudget(nextBudget);
 		// withSkillsSynced, not a bare `.set('skills', ...)` -- adding 大逃げ/Runaway from the Skill
 		// Chart's candidate table must switch strategy to Oonige too, same as the picker (UI-25 code
 		// review: this call site was originally missed, relying on HorseDef's own reconcile effect to
@@ -7062,6 +7095,8 @@ function App(props) {
 										wontProcCount={shopSkillPartition.wontProc.length}
 										budget={spBudget}
 										onBudgetChange={handleSpBudgetChange}
+										autoDeduct={spAutoDeduct}
+										onAutoDeductChange={handleSpAutoDeductChange}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">
