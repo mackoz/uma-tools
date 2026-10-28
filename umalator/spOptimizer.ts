@@ -47,6 +47,29 @@ export interface BestValue {
 	ratio: number; // gain / cost, lengths per SP
 }
 
+// UI-43: the full SP cost of buying one skill right now -- its own discounted cost plus every
+// unowned cheaper rung in its ladder group (prerequisitesOf excludes the rung itself), with
+// chainIds being exactly that unowned-prerequisite list. Shared by findBestValue (the chart badge)
+// and app.tsx's Deduct-on-add, so a double-click deducts the same number the Buy list plans with.
+// An id with no costs entry costs 0.
+export function purchaseCost(
+	id: string,
+	hints: HintLevels,
+	ladder: LadderIndex,
+	costs: CostLookup,
+	owned: Set<string>,
+): { cost: number; chainIds: string[] } {
+	const chainIds = prerequisitesOf(id, ladder).filter(
+		(rung) => !owned.has(rung),
+	);
+	const ownCost = discountedCost(costs[id] ?? 0, hints[id] ?? 0);
+	const chainCost = chainIds.reduce(
+		(sum, rung) => sum + discountedCost(costs[rung] ?? 0, hints[rung] ?? 0),
+		0,
+	);
+	return { cost: ownCost + chainCost, chainIds };
+}
+
 // Picks the candidate with the best length-per-SP ratio, or null if none qualify.
 //
 // The caller is expected to have already dropped muted (screened/inert/pending) rows before this
@@ -75,18 +98,13 @@ export function findBestValue(
 	let best: BestValue | null = null;
 	for (const candidate of candidates) {
 		if (candidate.gain <= 0) continue;
-		const chainIds = prerequisitesOf(candidate.id, ladder).filter(
-			(id) => !owned.has(id),
+		const { cost, chainIds } = purchaseCost(
+			candidate.id,
+			hints,
+			ladder,
+			costs,
+			owned,
 		);
-		const ownCost = discountedCost(
-			costs[candidate.id] ?? 0,
-			hints[candidate.id] ?? 0,
-		);
-		const chainCost = chainIds.reduce(
-			(sum, id) => sum + discountedCost(costs[id] ?? 0, hints[id] ?? 0),
-			0,
-		);
-		const cost = ownCost + chainCost;
 		if (cost <= 0) continue;
 		const ratio = candidate.gain / cost;
 		const isBetter =

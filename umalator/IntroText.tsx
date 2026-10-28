@@ -71,6 +71,21 @@ export function IntroText(props) {
 				<summary>Changelog</summary>
 				<ReleaseList>
 					<details class="release">
+						<summary>2026-10-28</summary>
+						<ul>
+							<li>
+								New: a <strong>Deduct on add</strong> checkbox next to the Skill
+								Chart's <strong>SP budget</strong>. With it checked,
+								double-clicking a skill in the chart to add it to your uma also
+								subtracts its SP cost from the budget -- hint discounts and any
+								○ you'd have to buy first included, the same cost the Buy list
+								uses -- so the Buy list keeps planning against what you actually
+								have left. Off by default; removing a skill doesn't add its SP
+								back.
+							</li>
+						</ul>
+					</details>
+					<details class="release">
 						<summary>2026-09-15</summary>
 						<ul>
 							<li>

@@ -26,6 +26,10 @@ interface ShopSkillFilterProps {
 	// card only displays results. Same app.tsx state (spBudget) either way.
 	budget: number;
 	onBudgetChange: (sp: number) => void;
+	// UI-43: opt-in "Deduct on add" -- when on, double-clicking a Skill Chart row to add the skill
+	// also subtracts its purchase cost from the budget. State lives in app.tsx (spAutoDeduct).
+	autoDeduct: boolean;
+	onAutoDeductChange: (on: boolean) => void;
 	disabled?: boolean;
 }
 
@@ -36,6 +40,8 @@ export function ShopSkillFilter({
 	wontProcCount,
 	budget,
 	onBudgetChange,
+	autoDeduct,
+	onAutoDeductChange,
 	disabled,
 }: ShopSkillFilterProps) {
 	return (
@@ -77,6 +83,22 @@ export function ShopSkillFilter({
 							)
 						}
 					/>
+				</label>
+			)}
+			{skillIds.length > 0 && (
+				<label
+					class="shopSkillAutoDeductLabel"
+					title="When checked, double-clicking a skill in the Skill Chart to add it subtracts its SP cost (hint discount and any unowned ○ prerequisite included, same as the Buy list) from the SP budget."
+				>
+					<input
+						type="checkbox"
+						checked={autoDeduct}
+						disabled={disabled}
+						onChange={(e) =>
+							onAutoDeductChange((e.target as HTMLInputElement).checked)
+						}
+					/>
+					Deduct on add
 				</label>
 			)}
 			{wontProcCount > 0 && (

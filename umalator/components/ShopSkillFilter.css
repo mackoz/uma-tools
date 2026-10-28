@@ -44,6 +44,19 @@
 	color: var(--muted-2);
 }
 
+.shopSkillAutoDeductLabel {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--font-sm);
+	color: var(--muted-2);
+	cursor: pointer;
+}
+
+.shopSkillAutoDeductLabel input {
+	accent-color: var(--accent);
+}
+
 .shopSkillBudgetInput {
 	width: 72px;
 	background: var(--input-bg);

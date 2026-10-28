@@ -162,6 +162,7 @@ import {
 	type OptimizerResult,
 	optimizePurchases,
 	pruneHints,
+	purchaseCost,
 	remapHintKeys,
 } from './spOptimizer';
 import { summarizeLengths } from './statisticalAnalysis';
@@ -3302,6 +3303,14 @@ function App(props) {
 	useEffect(() => {
 		localStorage.setItem('chartSpBudget', String(spBudget));
 	}, [spBudget]);
+	// UI-43: opt-in "Deduct on add" -- double-clicking a Skill Chart row (addSkillFromTable) also
+	// subtracts the skill's purchase cost from spBudget. Persists like spBudget; default off.
+	const [spAutoDeduct, setSpAutoDeduct] = useState<boolean>(
+		() => localStorage.getItem('chartSpAutoDeduct') === 'true',
+	);
+	useEffect(() => {
+		localStorage.setItem('chartSpAutoDeduct', String(spAutoDeduct));
+	}, [spAutoDeduct]);
 	const [selectedBuyOption, setSelectedBuyOption] = useState<number | null>(
 		null,
 	);
@@ -5255,6 +5264,33 @@ function App(props) {
 
 	function addSkillFromTable(skillId) {
 		postEvent('addSkill', { skillId, via: 'table' });
+		// UI-43: Deduct on add. Gated on Mode.Chart (Uniques/Course chart rows aren't shop
+		// purchases -- same reasoning as the SpOptimizerCard's Mode.Chart gate), on
+		// shopSkillIds.length > 0 (the only time the budget input and checkbox are rendered, so a
+		// hidden budget never changes invisibly), and on spBudget > 0 (0 means unset). ownedSkills is
+		// the pre-add set, so a prerequisite you already own isn't charged. setSpBudget directly, not
+		// handleSpBudgetChange, which posts user-edit telemetry. One-way: removing a skill refunds
+		// nothing.
+		if (
+			spAutoDeduct &&
+			mode === Mode.Chart &&
+			shopSkillIds.length > 0 &&
+			spBudget > 0
+		) {
+			setSpBudget(
+				Math.max(
+					0,
+					spBudget -
+						purchaseCost(
+							skillId,
+							expandedShopHints,
+							SKILL_LADDER,
+							SKILL_BASE_COST,
+							ownedSkills,
+						).cost,
+				),
+			);
+		}
 		// withSkillsSynced, not a bare `.set('skills', ...)` -- adding 大逃げ/Runaway from the Skill
 		// Chart's candidate table must switch strategy to Oonige too, same as the picker (UI-25 code
 		// review: this call site was originally missed, relying on HorseDef's own reconcile effect to
@@ -7062,6 +7098,8 @@ function App(props) {
 										wontProcCount={shopSkillPartition.wontProc.length}
 										budget={spBudget}
 										onBudgetChange={handleSpBudgetChange}
+										autoDeduct={spAutoDeduct}
+										onAutoDeductChange={setSpAutoDeduct}
 										disabled={isSimulationRunning}
 									/>
 									<div class="chartFilterRow">

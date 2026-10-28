@@ -11,6 +11,7 @@ import {
 	type OptimizerInput,
 	optimizePurchases,
 	pruneHints,
+	purchaseCost,
 	remapHintKeys,
 } from './spOptimizer.ts';
 
@@ -649,6 +650,57 @@ describe('findBestValue', () => {
 			cost: 10,
 			chainIds: [],
 			ratio: 0.5,
+		});
+	});
+});
+
+// UI-43: purchaseCost is the single-skill cost primitive shared by findBestValue and app.tsx's
+// Deduct-on-add.
+describe('purchaseCost', () => {
+	const ladder: LadderIndex = {
+		white: { group: 'g1', rate: 1 },
+		gold: { group: 'g1', rate: 2 },
+	};
+	const costs = { gold: 20, white: 150, solo: 100 };
+
+	test('no hint: the skill own base cost, empty chain', () => {
+		assert.deepEqual(purchaseCost('solo', {}, ladder, costs, new Set()), {
+			cost: 100,
+			chainIds: [],
+		});
+	});
+
+	test('hinted: own cost is discounted', () => {
+		assert.deepEqual(
+			purchaseCost('solo', { solo: 2 }, ladder, costs, new Set()),
+			{
+				cost: 80,
+				chainIds: [],
+			},
+		);
+	});
+
+	test('unowned prerequisite is added (discounted) and listed in chainIds', () => {
+		assert.deepEqual(
+			purchaseCost('gold', { white: 1 }, ladder, costs, new Set()),
+			{
+				cost: 20 + 135,
+				chainIds: ['white'],
+			},
+		);
+	});
+
+	test('owned prerequisite is skipped', () => {
+		assert.deepEqual(
+			purchaseCost('gold', {}, ladder, costs, new Set(['white'])),
+			{ cost: 20, chainIds: [] },
+		);
+	});
+
+	test('id with no cost entry costs 0', () => {
+		assert.deepEqual(purchaseCost('missing', {}, ladder, costs, new Set()), {
+			cost: 0,
+			chainIds: [],
 		});
 	});
 });
