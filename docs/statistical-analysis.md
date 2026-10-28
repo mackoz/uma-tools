@@ -395,7 +395,8 @@ two controls fighting over the same flags.
    and the velocity trace for that skill's min/max/mean/median runs. **Refine** queues one more block
    of samples for just that row.
 8. Double-clicking a row adds that skill to Uma 1's build and marks the chart stale — rerun after
-   changing the baseline.
+   changing the baseline. With **Deduct on add** checked (UI-43, next to the SP budget field — see
+   "SP-budget optimizer" below), the add also subtracts the skill's purchase cost from the budget.
 
 Changing Model, Preset, or Pruning does not automatically rerun existing results — press Run again.
 
@@ -530,6 +531,12 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   that matter.
 - Budget persists to `localStorage` under `chartSpBudget`, same work-scoping-knob treatment as
   `chartShopSkills` below — not part of the serialized race state or shared URLs.
+- **Deduct on add** (UI-43, checkbox beside the budget field, `localStorage` `chartSpAutoDeduct`,
+  default off): when checked, double-clicking a Skill Chart row to add the skill also subtracts
+  `spOptimizer.ts`'s `purchaseCost` — the same hint-discounted cost plus unowned ○ prerequisites
+  the Best-value badge uses — from the budget, floored at 0. Mode.Chart only, and only while the
+  budget field is visible (non-empty shortlist) and above 0. One-way: removing a skill refunds
+  nothing.
 
 ## Best-value badge
 
