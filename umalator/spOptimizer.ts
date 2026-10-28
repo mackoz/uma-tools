@@ -70,6 +70,31 @@ export function purchaseCost(
 	return { cost: ownCost + chainCost, chainIds };
 }
 
+// UI-43: the budget after a Skill Chart double-click adds a skill with "Deduct on add" on. Pure,
+// so the gates are unit-testable apart from app.tsx. Every gate must hold or the budget comes back
+// unchanged: `enabled` is the checkbox; `skillChart` is Mode.Chart only (Uniques/Course chart rows
+// aren't shop purchases -- same reasoning as the SpOptimizerCard's Mode.Chart gate); `budgetShown`
+// is a non-empty shop shortlist, the only time the budget input is rendered, so a hidden budget
+// never changes invisibly; `budget > 0` because 0 means unset; `!alreadyOwned` because owned rows
+// stay visible in the chart (UI-44), so re-adding one must never charge twice. `cost` is
+// purchaseCost(...).cost computed against the pre-add owned set, so an owned prerequisite isn't
+// charged. One-way: removing a skill refunds nothing, and the result floors at 0.
+export interface DeductOnAddInput {
+	enabled: boolean; // the "Deduct on add" checkbox
+	skillChart: boolean; // Mode.Chart -- Uniques/Course chart rows aren't shop purchases
+	budgetShown: boolean; // shop shortlist non-empty, i.e. the budget input is rendered
+	budget: number;
+	alreadyOwned: boolean; // the skill being added is already on the uma
+	cost: number; // purchaseCost(...).cost
+}
+export function budgetAfterAdd(input: DeductOnAddInput): number {
+	const { enabled, skillChart, budgetShown, budget, alreadyOwned, cost } =
+		input;
+	if (!enabled || !skillChart || !budgetShown || budget <= 0 || alreadyOwned)
+		return budget;
+	return Math.max(0, budget - cost);
+}
+
 // Picks the candidate with the best length-per-SP ratio, or null if none qualify.
 //
 // The caller is expected to have already dropped muted (screened/inert/pending) rows before this

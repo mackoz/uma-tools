@@ -535,8 +535,9 @@ originally scoped for the ticket (see "Deferred to a follow-up branch" below, an
   default off): when checked, double-clicking a Skill Chart row to add the skill also subtracts
   `spOptimizer.ts`'s `purchaseCost` — the same hint-discounted cost plus unowned ○ prerequisites
   the Best-value badge uses — from the budget, floored at 0. Mode.Chart only, and only while the
-  budget field is visible (non-empty shortlist) and above 0. One-way: removing a skill refunds
-  nothing.
+  budget field is visible (non-empty shortlist) and above 0. Re-adding a skill the uma already
+  owns never charges. One-way: removing a skill refunds nothing. `budgetAfterAdd` (same file)
+  holds these rules.
 
 ## Best-value badge
 

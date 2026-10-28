@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
 import type { LadderIndex } from './shopSkillFilter.ts';
 import {
+	budgetAfterAdd,
 	buildHintClusters,
 	discountedCost,
 	expandHints,
@@ -703,4 +704,36 @@ describe('purchaseCost', () => {
 			chainIds: [],
 		});
 	});
+});
+
+describe('budgetAfterAdd', () => {
+	const open = {
+		enabled: true,
+		skillChart: true,
+		budgetShown: true,
+		budget: 1000,
+		alreadyOwned: false,
+		cost: 360,
+	};
+
+	test('all gates open: deducts the cost', () => {
+		assert.equal(budgetAfterAdd(open), 640);
+	});
+
+	test('floors at 0 when cost exceeds the budget', () => {
+		assert.equal(budgetAfterAdd({ ...open, budget: 100 }), 0);
+	});
+
+	for (const [name, override] of [
+		['enabled=false', { enabled: false }],
+		['skillChart=false', { skillChart: false }],
+		['budgetShown=false', { budgetShown: false }],
+		['budget=0', { budget: 0 }],
+		['alreadyOwned=true', { alreadyOwned: true }],
+	] as const) {
+		test(`${name}: budget unchanged`, () => {
+			const input = { ...open, ...override };
+			assert.equal(budgetAfterAdd(input), input.budget);
+		});
+	}
 });
